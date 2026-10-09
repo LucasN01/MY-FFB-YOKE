@@ -17,9 +17,16 @@ Rules:
   Para trazar el flujo completo, leer MiYoke_PD.ino directamente.
 - SimConnectBridge/*Model.h son wrappers de un include; la lógica está en la raíz.
 
-## Versionado del proyecto (reglas propias)
-- Tras aprobar la revisión, validar el usuario en hardware e integrar a master, ejecutar:
-  powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "<una línea: qué cambió>"
-- No crear copias de carpetas a mano ni versionar sin pasar por el script.
-- Para volver atrás: git checkout V1.x, o restaurar desde MiYoke_PD_VERSIONES\V1_x.
-- Nunca usar git add . ni git add -A (la carpeta graphify-ino/ no se versiona).
+## VERSIONADO OBLIGATORIO Y AUTOMATICO (regla del usuario)
+Cada vez que un agente (Claude o Codex) modifique codigo (.h .hpp .c .cpp .ino .ps1 .cmd .py .vcxproj), DEBE crear una version nueva sin que el usuario lo pida. Pasos, en este orden:
+1. Hacer commit por nombre de los archivos modificados (nunca git add . ni git add -A).
+2. Ejecutar: powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "<una linea breve, sin tildes, que diga que se modifico>"
+3. Verificar que imprima "Version Vx.y creada" y que exista ..\MiYoke_PD_VERSIONES\Vx_y\ACTUALIZACION_Vx_y.txt.
+4. Informar al usuario el numero de version creada en la respuesta final.
+Reglas:
+- Esta tarea se hace ANTES de dar el trabajo por terminado. Si no se creo la version, la tarea esta incompleta.
+- Numeracion: 1.0, 1.1 ... 1.9, 2.0, 2.1 ... (la asigna el script; no inventar numeros ni crear carpetas a mano).
+- Si el script se detiene por cambios sin commit, resolver con commit por nombre y repetir; no saltarse el script.
+- Cambios solo de documentacion (.md, .tex, .txt) no generan version.
+- Para volver atras: git checkout Vx.y, o restaurar desde MiYoke_PD_VERSIONES\Vx_y.
+- El agente revisor no crea versiones (no edita codigo).
