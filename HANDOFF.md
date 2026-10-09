@@ -38,16 +38,15 @@ Reglas:
 
 \## Última entrega
 
-\- Agente:
+\- Agente: Claude (2026-10-09) — fase DISEÑO del Flujo
 
-\- Rama:
+\- Rama: `mejora/usb-id-pico2` (desde `master` @ 42ae7e3)
 
-\- Tarea:
+\- Tarea: fijar el ID USB 2E8A:000F en el firmware (TinyUSB usa 239A:CAFE y el lanzador no encuentra la placa). Diseño: `LEEME md/DISENO_usb_id_pico2.md`. Para Codex: implementar exactamente el bloque de 9 líneas en `MiYoke_PD.ino` entre las líneas 102 y 103, compilar con Build-Pico2.ps1, graphify-sync y crear versión.
 
-\- Archivos modificados:
+\- Archivos modificados: `LEEME md/DISENO_usb_id_pico2.md` (nuevo), `HANDOFF.md`. Sin cambios de código; sin versión.
 
-\- Pendiente / riesgos:
-
+\- Pendiente / riesgos: implementación (Codex), revisión (Claude), validación en hardware (usuario: COM con VID_2E8A&PID_000F y lanzador OK). `mejora/prueba-flujo` (V1.2) sigue sin integrar a master.
 
 
 \## Revisión
