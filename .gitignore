@@ -1,0 +1,31 @@
+# Compilación y artefactos generados
+build-pico2/
+build-pico2-encoders/
+build-pico2-potentiometers/
+SimConnectBridge/bin/
+SimConnectBridge/obj/
+*.uf2
+*.elf
+*.bin
+*.o
+
+# Temporales, logs y respaldos
+logs/
+tmp/
+backups/
+*.bak
+
+# Software de terceros / SDK (no es código propio)
+Prepar3D-v3/
+VPforce-TelemFFB-refactor/
+
+# Graphify (el grafo es local, se regenera)
+graphify-out/
+# Artefactos de Visual Studio
+tests/bin/
+tests/obj/
+*.exe
+*.ilk
+*.pdb
+*.obj
+*.tlog

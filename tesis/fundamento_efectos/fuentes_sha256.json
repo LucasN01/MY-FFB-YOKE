@@ -1,0 +1,66 @@
+[
+  {
+    "archivo": "SimEffects.h",
+    "sha256": "bba9103a8ff591391e8dbd5ea475021c7819343d9b7716eca2fd1beeff2cd749"
+  },
+  {
+    "archivo": "SimTelemetry.h",
+    "sha256": "eb5073d95be16388489edac88f01ef2570ce3f166b3e5c2b630fff8db32f5000"
+  },
+  {
+    "archivo": "YokeMotion.h",
+    "sha256": "1b914f4e8112b0d8b892d4efa95eba10bd1c768d1254ebc7a008bfd923714a12"
+  },
+  {
+    "archivo": "GainSettings.h",
+    "sha256": "79a6b686187779f23824220839f6fb5d47d222b037abc12bb55f7db9eb1b510e"
+  },
+  {
+    "archivo": "MotorDriver.h",
+    "sha256": "d4209ba7f7560a72a77020db92d7d900d8f13b1cf1fbb8d02b39ba1ff90ca85c"
+  },
+  {
+    "archivo": "mis_defines.h",
+    "sha256": "c84f2467cbfe14baeabb6c4cd6e34949a9ee1dc1fe86c0cd5e9ac6a8d3383487"
+  },
+  {
+    "archivo": "MiYoke_PD_V2.3.ino",
+    "sha256": "0c222c45085c7d693394ca4a06bc397fda09e69513bdc71fd4c75af5e631945c"
+  },
+  {
+    "archivo": "CalibrationMenu.h",
+    "sha256": "b1d0119c8481608bd8b8ce90318b24a7bab5e0d6a18dd9323a6b6d8ec761b56f"
+  },
+  {
+    "archivo": "SimConnectBridge/main.cpp",
+    "sha256": "a7022a6038d1f2bf8a496c149c5e5ad7879f7137a60e8c975b1b55cf27437089"
+  },
+  {
+    "archivo": "SimConnectBridge/GustModel.h",
+    "sha256": "795f2743b9774af5e36adf9429a3588f9605b19b7c818b41694bfd2f5fc62918"
+  },
+  {
+    "archivo": "SimConnectBridge/BuffetModel.h",
+    "sha256": "f3482122cc94bfe12e23f42ae09c68f0dc614be1635d42144695eeb862a6e085"
+  },
+  {
+    "archivo": "SimConnectBridge/GroundModel.h",
+    "sha256": "983018207a94072692b2d07ff03e1235a26a220a7693da32ce3b8acc35d85137"
+  },
+  {
+    "archivo": "VPforce-TelemFFB-refactor/telemffb/utils/TurbulenceModulator.py",
+    "sha256": "508f3b75f31509f1f43d8046c8fc14a38cda2a2c075c985e38de65edde0b49d8"
+  },
+  {
+    "archivo": "VPforce-TelemFFB-refactor/telemffb/sim/base/BuffetingEffectMixIn.py",
+    "sha256": "4a358058c86e3aeb9da931581b287c2ee47b40a6e88a987ea9d8bcbb47a93dc7"
+  },
+  {
+    "archivo": "VPforce-TelemFFB-refactor/telemffb/sim/base/MotionEffectsMixIn.py",
+    "sha256": "86bed566ee1594e43a3f918a1e9f4a0e3a364b885445ff4daa2a5a21f4aea086"
+  },
+  {
+    "archivo": "VPforce-TelemFFB-refactor/telemffb/sim/msfs_xp/MsfsXpFlightControlsMixIn.py",
+    "sha256": "313c9696ab132372b32ed6b795a0f3e7c7c4652a4fe42b76b2ce6e62ac7111b1"
+  }
+]

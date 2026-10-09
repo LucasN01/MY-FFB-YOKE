@@ -1,0 +1,851 @@
+{
+  "hashes": [
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\SimConnectBridge\\main.cpp",
+      "sha256": "d3d7a87e4c0fa93056178a70af746dc3e0c404c17a5f42858497a79d810f9065",
+      "bytes": 14607
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\SimConnectBridge\\GustModel.h",
+      "sha256": "795f2743b9774af5e36adf9429a3588f9605b19b7c818b41694bfd2f5fc62918",
+      "bytes": 2007
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\SimConnectBridge\\BuffetModel.h",
+      "sha256": "f3482122cc94bfe12e23f42ae09c68f0dc614be1635d42144695eeb862a6e085",
+      "bytes": 1822
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\SimConnectBridge\\GroundModel.h",
+      "sha256": "983018207a94072692b2d07ff03e1235a26a220a7693da32ce3b8acc35d85137",
+      "bytes": 444
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\SimEffects.h",
+      "sha256": "93a16208f35ae10bc6cf27f08b66a7dcbfa4fa1be61f076979f0f5058039d3ee",
+      "bytes": 7036
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\SimTelemetry.h",
+      "sha256": "067e782e319b854867806ca3afad9339d1ac3e53d44a8115cfa2afc67216e40d",
+      "bytes": 4451
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\mis_defines.h",
+      "sha256": "14df6629344a46021b3b76a462706f74e36b8089976637dac0bd30958c85cb95",
+      "bytes": 13181
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\GainSettings.h",
+      "sha256": "b4a9f717bf096ef9e435b6b1ed7a3bb6b90b3e9cd1d028ec6248d97993efa11b",
+      "bytes": 2825
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\YokeMotion.h",
+      "sha256": "1b914f4e8112b0d8b892d4efa95eba10bd1c768d1254ebc7a008bfd923714a12",
+      "bytes": 1624
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\MotorDriver.h",
+      "sha256": "e99be2b75bab5217a7500f9528877f1389cf681e8692c09ed64e4034a06fb057",
+      "bytes": 2476
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\MiYoke_PD_V2.3.ino",
+      "sha256": "4da84625a404f70e73813bda6ce8a8da162b2912ed01250242684c562d51fd1a",
+      "bytes": 7091
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\LcdTelemetry.h",
+      "sha256": "0c99a129171a76d22fe42b84b2ad23ff1985ab875616e4e83482fd3b22a2370d",
+      "bytes": 8029
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\VPforce-TelemFFB-refactor\\telemffb\\utils\\TurbulenceModulator.py",
+      "sha256": "508f3b75f31509f1f43d8046c8fc14a38cda2a2c075c985e38de65edde0b49d8",
+      "bytes": 7464
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\VPforce-TelemFFB-refactor\\telemffb\\sim\\msfs_xp\\MsfsXpFlightControlsMixIn.py",
+      "sha256": "313c9696ab132372b32ed6b795a0f3e7c7c4652a4fe42b76b2ce6e62ac7111b1",
+      "bytes": 55548
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\VPforce-TelemFFB-refactor\\telemffb\\sim\\base\\BuffetingEffectMixIn.py",
+      "sha256": "4a358058c86e3aeb9da931581b287c2ee47b40a6e88a987ea9d8bcbb47a93dc7",
+      "bytes": 14758
+    },
+    {
+      "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\VPforce-TelemFFB-refactor\\telemffb\\sim\\base\\MotionEffectsMixIn.py",
+      "sha256": "86bed566ee1594e43a3f918a1e9f4a0e3a364b885445ff4daa2a5a21f4aea086",
+      "bytes": 26883
+    },
+    {
+      "path": "C:\\Users\\norie\\Downloads\\fsxnative_cessna182rg\\Cessna182RG_fsx\\aircraft.cfg",
+      "sha256": "2ae54624baca2b9735af247c85dbf54455397a0dcfee63c570bea72d093e1b65",
+      "bytes": 17095
+    },
+    {
+      "path": "C:\\Users\\norie\\Downloads\\fsxnative_cessna182rg\\Cessna182RG_fsx\\Cessna182.air",
+      "sha256": "642ed8b8f454e1b05c843504537edd3d46e2005c7d4bc8908475ed31cf54e1ec",
+      "bytes": 9378
+    },
+    {
+      "path": "C:\\Users\\norie\\Downloads\\fsxnative_cessna182rg\\Cessna182RG_fsx\\cessna182_ref.txt",
+      "sha256": "98c6bdb6480ebf877efb9ed793b225fee14716440d4fc4b0a454868106d73096",
+      "bytes": 1332
+    },
+    {
+      "path": "C:\\Users\\norie\\OneDrive\\Documentos\\Prepar3D v4 Add-ons\\Cessna182RG_AF_Scrub\\SimObjects\\Airplanes\\Cessna182RG_fsx\\aircraft.cfg",
+      "sha256": "5d8fbc80beeb0a26a60a2750677f119a2b8332dc9614c8f1a8351f46641872e9",
+      "bytes": 17159
+    },
+    {
+      "path": "C:\\Users\\norie\\OneDrive\\Documentos\\Prepar3D v4 Add-ons\\Cessna182RG_AF_Scrub\\SimObjects\\Airplanes\\Cessna182RG_fsx\\Cessna182.air",
+      "sha256": "642ed8b8f454e1b05c843504537edd3d46e2005c7d4bc8908475ed31cf54e1ec",
+      "bytes": 9378
+    },
+    {
+      "path": "C:\\Users\\norie\\OneDrive\\Documentos\\Prepar3D v4 Add-ons\\Cessna182RG_AF_Scrub\\SimObjects\\Airplanes\\Cessna182RG_fsx\\cessna182_ref.txt",
+      "sha256": "98c6bdb6480ebf877efb9ed793b225fee14716440d4fc4b0a454868106d73096",
+      "bytes": 1332
+    }
+  ],
+  "cfg_differences": [
+    {
+      "section": "autopilot",
+      "key": "yaw_control_uses_trim",
+      "original": null,
+      "installed": "0.000000"
+    },
+    {
+      "section": "autopilot",
+      "key": "yaw_slip_control_gain",
+      "original": null,
+      "installed": "0.000000"
+    }
+  ],
+  "air_files_identical": true,
+  "installed_cfg": {
+    "fltsim.0": {
+      "title": "Cessna Skylane FSX_RG",
+      "sim": "Cessna182",
+      "model": "RGfsx",
+      "panel": "",
+      "sound": "",
+      "texture": "RG",
+      "kb_checklists": "Cessna182_check",
+      "kb_reference": "Cessna182_ref",
+      "atc_id": "N1575S",
+      "ui_manufacturer": "Cessna",
+      "ui_type": "C 182 Skylane",
+      "ui_variation": "Skylane RG N1575S FSX",
+      "visual_damage": "1",
+      "description": "The Cessna 182 Skylane is an American four-seat, single-engined light airplane, built by Cessna of Wichita, Kansas.Introduced in 1956, the 182 has been produced in a number of variants, including a version with retractable landing gear, and is the second most popular Cessna model, after the 172. This is N1575S blue and white model with retracts."
+    },
+    "general": {
+      "atc_type": "CESSNA",
+      "atc_model": "C182",
+      "editable": "0",
+      "performance": "Maximum Speed\\t\\n175 kts            Cruise Speed\\t\\n171 kts            Engine\\t\\nTeledyne Continental IO-520-L     300-hp\\n\\nPropeller\\t\\nMcCauley 2-bladed constant speed\\n\\nMaximum Range\\t\\n1,065 nm          \\n\\nService Ceiling\\t\\n17,300 ft \t\\n\\nFuel Capacity\\t\\n90 U.S. gal\t \\n\\nEmpty Weight\\t\\n2,168 lb \\n\\nMaximum Gross Weight\\t\\n3,800 lb",
+      "category": "airplane"
+    },
+    "weight_and_balance": {
+      "max_gross_weight": "3110",
+      "empty_weight": "1810",
+      "reference_datum_position": "3.6, 0, 0",
+      "empty_weight_cg_position": "-3.0, 0, 0",
+      "max_number_of_stations": "50",
+      "station_load.0": "170, -3.0, -1.5, 0.0",
+      "station_load.1": "170, -3.0,  1.5, 0.0",
+      "station_load.2": "160, -6.2, -1.5, 0.0",
+      "station_load.3": "160, -6.2,  1.5, 0.0",
+      "station_load.4": "60, -8.0,  0.0, 0.0",
+      "empty_weight_pitch_moi": "1400.0",
+      "empty_weight_roll_moi": "1137.0",
+      "empty_weight_yaw_moi": "2360.0",
+      "empty_weight_coupled_moi": "0.0"
+    },
+    "flight_tuning": {
+      "cruise_lift_scalar": "1.0",
+      "parasite_drag_scalar": "1.0",
+      "induced_drag_scalar": "0.88",
+      "elevator_effectiveness": "1.0",
+      "aileron_effectiveness": "1.0",
+      "rudder_effectiveness": "1.0",
+      "pitch_stability": "1.0",
+      "roll_stability": "1.0",
+      "yaw_stability": "1.0",
+      "elevator_trim_effectiveness": "1.0",
+      "aileron_trim_effectiveness": "1.0",
+      "rudder_trim_effectiveness": "1.0"
+    },
+    "generalenginedata": {
+      "engine_type": "0",
+      "engine.0": "2.4, 0.0, 0.0",
+      "fuel_flow_scalar": "1.0",
+      "min_throttle_limit": "0.000000"
+    },
+    "piston_engine": {
+      "power_scalar": "1.1",
+      "cylinder_displacement": "86.600000",
+      "compression_ratio": "8.5",
+      "number_of_cylinders": "6",
+      "max_rated_rpm": "2850.000000",
+      "max_rated_hp": "300.000000",
+      "fuel_metering_type": "0",
+      "cooling_type": "0",
+      "normalized_starter_torque": "0.200000",
+      "turbocharged": "0",
+      "max_design_mp": "0",
+      "min_design_mp": "0",
+      "critical_altitude": "0",
+      "emergency_boost_type": "0",
+      "emergency_boost_mp_offset": "0.000000",
+      "emergency_boost_gain_offset": "0.000000",
+      "fuel_air_auto_mixture": "0",
+      "auto_ignition": "0",
+      "max_rpm_mechanical_efficiency_scalar": "1.00000",
+      "idle_rpm_mechanical_efficiency_scalar": "1.000000",
+      "max_rpm_friction_scalar": "1.000000",
+      "idle_rpm_friction_scalar": "1.000000"
+    },
+    "propeller": {
+      "thrust_scalar": "1.05",
+      "propeller_type": "0",
+      "propeller_diameter": "6.666667",
+      "propeller_blades": "2",
+      "propeller_moi": "5.500000",
+      "beta_max": "27.000000",
+      "beta_min": "11.000000",
+      "min_gov_rpm": "1400.000000",
+      "prop_tc": "0.100000",
+      "gear_reduction_ratio": "1.000000",
+      "fixed_pitch_beta": "0.000000",
+      "low_speed_theory_limit": "80.000000",
+      "prop_sync_available": "0",
+      "prop_deice_available": "0",
+      "prop_feathering_available": "0",
+      "prop_auto_feathering_available": "0",
+      "min_rpm_for_feather": "0.000000",
+      "beta_feather": "0.000000",
+      "power_absorbed_cf": "0.000000",
+      "defeathering_accumulators_available": "0",
+      "prop_reverse_available": "0",
+      "minimum_on_ground_beta": "0",
+      "minimum_reverse_beta": "0.000000"
+    },
+    "electrical": {
+      "flap_motor": "0, 5 , 17.0",
+      "gear_motor": "0, 5 , 17.0",
+      "autopilot": "0, 5 , 17.0",
+      "avionics_bus": "0, 10, 17.0",
+      "avionics": "1, 5 , 17.0",
+      "pitot_heat": "0, 2 , 17.0",
+      "additional_system": "0, 20, 17.0",
+      "marker_beacon": "1, 2 , 17.0",
+      "gear_warning": "0, 2 , 17.0",
+      "fuel_pump": "0, 5 , 17.0",
+      "starter1": "0, 20, 17.0",
+      "light_nav": "0, 5 , 17.0",
+      "light_beacon": "0, 5 , 17.0",
+      "light_landing": "0, 5 , 17.0",
+      "light_taxi": "0, 5 , 17.0",
+      "light_strobe": "0, 5 , 17.0",
+      "light_panel": "0, 5 , 17.0"
+    },
+    "contact_points": {
+      "point.0": "1,   0.80,   0.0, -3.58, 1181.1, 0, 0.522, 22.0, 0.3, 2.5, 0.7, 3.5, 3.5, 0, 0.0, 0.0",
+      "point.1": "1,  -5.52,  -4.5, -3.40, 1574.8, 1, 0.522,  0.0, 0.3, 2.5, 0.7, 4.7, 4.7, 2, 0.0, 0.0",
+      "point.2": "1,  -5.52,   4.5, -3.40, 1574.8, 2, 0.522,  0.0, 0.3, 2.5, 0.7, 5.2, 5.2, 3, 0.0, 0.0",
+      "point.3": "2,  -3.60, -17.9,  2.08, 1574.8, 0, 0.000,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5, 0.0, 0.0",
+      "point.4": "2,  -3.60,  17.9,  2.08, 1574.8, 0, 0.000,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 6, 0.0, 0.0",
+      "point.5": "2, -19.93,   0.0,  0.83, 1574.8, 0, 0.000,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 9, 0.0, 0.0",
+      "point.6": "2,   1.40,   0.0, -1.33, 1574.8, 0, 0.000,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4, 0.0, 0.0",
+      "point.7": "2, -19.93,   0.0,  6.83, 1574.8, 0, 0.000,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 7, 0.0, 0.0",
+      "point.8": "2,  -4.60,   0.0, -1.33, 1574.8, 0, 0.000,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 8, 0.0, 0.0",
+      "static_pitch": "3.82",
+      "static_cg_height": "3.01",
+      "gear_system_type": "0"
+    },
+    "views": {
+      "eyepoint": "-3.27, -0.99, 1.64"
+    },
+    "flaps.0": {
+      "type": "1",
+      "span-outboard": "0.5",
+      "extending-time": "5",
+      "flaps-position.0": "0",
+      "flaps-position.1": "10",
+      "flaps-position.2": "20",
+      "flaps-position.3": "30",
+      "damaging-speed": "250",
+      "blowout-speed": "300",
+      "lift_scalar": "1.0",
+      "drag_scalar": "1.0",
+      "pitch_scalar": "1.0",
+      "system_type": "0"
+    },
+    "radios": {
+      "audio.1": "1",
+      "com.1": "1, 1",
+      "com.2": "1, 1",
+      "nav.1": "1, 1, 1",
+      "nav.2": "1, 1, 0",
+      "adf.1": "1",
+      "transponder.1": "1",
+      "marker.1": "1"
+    },
+    "lights": {
+      "light.0": "3,  -2.79, -18.40, 3.87, fx_navred",
+      "light.1": "3,  -2.79,  18.40, 3.87, fx_navgre",
+      "light.2": "2,  -2.79, -18.40, 3.77, fx_strobe",
+      "light.3": "2,  -2.79,  18.40, 3.77, fx_strobe",
+      "light.4": "1, -21.80,   0.00, 7.30, fx_beacon",
+      "light.5": "4,  -2.27,   0.00, 1.40, fx_vclight",
+      "light.6": "5,  3.45,   0.60, -1.00, fx_landing",
+      "light.7": "5, 3.45,   -0.60, -1.00, fx_landing"
+    },
+    "keyboard_response": {
+      "elevator": "100,  180",
+      "aileron": "200, 1000",
+      "rudder": "200, 1000"
+    },
+    "direction_indicators": {
+      "direction_indicator.0": "1,0"
+    },
+    "effects": {
+      "wake": "fx_wake",
+      "water": "fx_spray",
+      "dirt": "fx_tchdrt",
+      "concrete": "fx_sparks",
+      "touchdown": "fx_tchdwn_s, 1"
+    },
+    "fuel": {
+      "leftmain": "-3.9, -2.1, 2.5, 44.0, 0.0",
+      "rightmain": "-3.9,  2.1, 2.5, 44.0, 0.0",
+      "fuel_type": "1",
+      "number_of_tank_selectors": "1",
+      "electric_pump": "1"
+    },
+    "airplane_geometry": {
+      "wing_area": "176.0",
+      "wing_span": "36.0",
+      "wing_root_chord": "4.9",
+      "wing_dihedral": "1.7",
+      "wing_incidence": "1.5",
+      "wing_twist": "-3.0",
+      "oswald_efficiency_factor": "0.7",
+      "wing_winglets_flag": "0",
+      "wing_sweep": "0.0",
+      "wing_pos_apex_lon": "-2.4",
+      "wing_pos_apex_vert": "0.0",
+      "htail_area": "39.0",
+      "htail_span": "11.7",
+      "htail_pos_lon": "-18.3",
+      "htail_pos_vert": "0.0",
+      "htail_incidence": "3.2",
+      "htail_sweep": "10.0",
+      "vtail_area": "18.0",
+      "vtail_span": "4.8",
+      "vtail_sweep": "40.0",
+      "vtail_pos_lon": "-16.2",
+      "vtail_pos_vert": "1.5",
+      "elevator_area": "16.6",
+      "aileron_area": "18.3",
+      "rudder_area": "6.7",
+      "elevator_up_limit": "28.0",
+      "elevator_down_limit": "21.0",
+      "aileron_up_limit": "20.0",
+      "aileron_down_limit": "15.0",
+      "rudder_limit": "24.0",
+      "elevator_trim_limit": "19.5",
+      "spoiler_limit": "0.0",
+      "spoilerons_available": "0",
+      "aileron_to_spoileron_gain": "0",
+      "min_ailerons_for_spoilerons": "0",
+      "min_flaps_for_spoilerons": "0",
+      "auto_spoiler_available": "0",
+      "positive_g_limit_flaps_up": "4.000000",
+      "positive_g_limit_flaps_down": "2.000000",
+      "negative_g_limit_flaps_up": "-1.500000",
+      "negative_g_limit_flaps_down": "-1.500000"
+    },
+    "reference speeds": {
+      "flaps_up_stall_speed": "65.000000",
+      "full_flaps_stall_speed": "56.00000",
+      "cruise_speed": "175",
+      "max_indicated_speed": "200.000000"
+    },
+    "autopilot": {
+      "autopilot_available": "1",
+      "flight_director_available": "0",
+      "default_vertical_speed": "900.0",
+      "autothrottle_available": "0",
+      "pitch_takeoff_ga": "8.000000",
+      "max_pitch": "10.000000",
+      "max_pitch_acceleration": "1.000000",
+      "max_pitch_velocity_lo_alt": "2.000000",
+      "max_pitch_velocity_hi_alt": "1.500000",
+      "max_pitch_velocity_lo_alt_breakpoint": "20000.000000",
+      "max_pitch_velocity_hi_alt_breakpoint": "28000.000000",
+      "max_bank": "25.000000",
+      "max_bank_acceleration": "1.800000",
+      "max_bank_velocity": "3.000000",
+      "max_throttle_rate": "0.100000",
+      "nav_proportional_control": "9.000000",
+      "nav_integrator_control": "0.250000",
+      "nav_derivative_control": "0.000000",
+      "nav_integrator_boundary": "2.500000",
+      "nav_derivative_boundary": "0.000000",
+      "gs_proportional_control": "9.520000",
+      "gs_integrator_control": "0.260000",
+      "gs_derivative_control": "0.000000",
+      "gs_integrator_boundary": "0.700000",
+      "gs_derivative_boundary": "0.000000",
+      "yaw_damper_gain": "0.000000",
+      "yaw_slip_control_gain": "0.000000",
+      "yaw_control_uses_trim": "0.000000"
+    },
+    "forcefeedback": {
+      "gear_bump_nose_magnitude": "6000",
+      "gear_bump_nose_direction": "18000",
+      "gear_bump_nose_duration": "250000",
+      "gear_bump_left_magnitude": "6000",
+      "gear_bump_left_direction": "35500",
+      "gear_bump_left_duration": "250000",
+      "gear_bump_right_magnitude": "6000",
+      "gear_bump_right_direction": "00500",
+      "gear_bump_right_duration": "250000",
+      "ground_bumps_magnitude1": "1250",
+      "ground_bumps_angle1": "8900",
+      "ground_bumps_intercept1": "5.0",
+      "ground_bumps_slope1": "0.48",
+      "ground_bumps_magnitude2": "750",
+      "ground_bumps_angle2": "9100",
+      "ground_bumps_intercept2": "0.075",
+      "ground_bumps_slope2": "1.0",
+      "crash_magnitude1": "10000",
+      "crash_direction1": "01000",
+      "crash_magnitude2": "10000",
+      "crash_direction2": "9000",
+      "crash_period2": "75000",
+      "crash_duration2": "2500000"
+    },
+    "brakes": {
+      "toe_brakes_scale": "0.671407",
+      "parking_brake": "1"
+    },
+    "gear_warning_system": {
+      "gear_warning_available": "1",
+      "pct_throttle_limit": "0.099976",
+      "flap_limit_power": "15.996982",
+      "flap_limit_idle": "0.000000"
+    },
+    "hydraulic_system": {
+      "normal_pressure": "0.000000"
+    },
+    "stall_warning": {
+      "type": "1",
+      "stick_shaker": "0"
+    },
+    "attitude_indicators": {
+      "attitude_indicator.0": "1"
+    },
+    "turn_indicators": {
+      "turn_indicator.0": "1,0"
+    },
+    "pitot_static": {
+      "pitot_heat": "1.000000"
+    },
+    "vacuum_system": {
+      "max_pressure": "5.150000",
+      "vacuum_type": "1",
+      "electric_backup_pressure": "0.000000",
+      "engine_map": "1,0,0,0"
+    },
+    "pneumatic_system": {
+      "max_pressure": "0.000000",
+      "bleed_air_scalar": "0.000000"
+    },
+    "deice_system": {
+      "structural_deice_type": "0"
+    },
+    "cameradefinition.0": {
+      "title": "\"Right Wing\"",
+      "guid": "{C690EAFD-223A-42d0-99E0-681ADF93BB59}",
+      "description": "View from the right wing tip looking at the cockpit",
+      "origin": "Center",
+      "snappbhadjust": "Swivel",
+      "snappbhreturn": "FALSE",
+      "panpbhadjust": "Swivel",
+      "panpbhreturn": "FALSE",
+      "track": "None",
+      "showaxis": "FALSE",
+      "allowzoom": "TRUE",
+      "initialzoom": "1.0",
+      "showweather": "Yes",
+      "initialxyz": "7.5, 0.75, 0",
+      "initialpbh": "5, 0, 270",
+      "xyzadjust": "TRUE",
+      "category": "Aircraft",
+      "clipmode": "Minimum"
+    },
+    "cameradefinition.1": {
+      "title": "\"Left Wing\"",
+      "guid": "{3A09FD6C-D406-4d8f-A5CD-FA4F5E0C12ED}",
+      "description": "View from the left wing tip looking at the cockpit",
+      "origin": "Center",
+      "snappbhadjust": "Swivel",
+      "snappbhreturn": "FALSE",
+      "panpbhadjust": "Swivel",
+      "panpbhreturn": "FALSE",
+      "track": "None",
+      "showaxis": "FALSE",
+      "allowzoom": "TRUE",
+      "initialzoom": "1.0",
+      "showweather": "Yes",
+      "initialxyz": "-7.5, 0.75, 0",
+      "initialpbh": "5, 0, 90",
+      "xyzadjust": "TRUE",
+      "category": "Aircraft",
+      "clipmode": "Minimum"
+    },
+    "cameradefinition.2": {
+      "title": "\"Tail\"",
+      "guid": "{D8D67955-2E9B-4e75-9D8B-8EFFBBFAC64A}",
+      "description": "Looking forward from the tip of the vertical stabilizer",
+      "origin": "Center",
+      "snappbhadjust": "Swivel",
+      "snappbhreturn": "FALSE",
+      "panpbhadjust": "Swivel",
+      "panpbhreturn": "FALSE",
+      "track": "None",
+      "showaxis": "FALSE",
+      "allowzoom": "TRUE",
+      "initialzoom": "0.75",
+      "showweather": "Yes",
+      "initialxyz": "0, 1.9, -5.75",
+      "initialpbh": "11, 0, 0",
+      "xyzadjust": "TRUE",
+      "category": "Aircraft",
+      "momentumeffect": "TRUE",
+      "clipmode": "Minimum"
+    },
+    "cameradefinition.001": {
+      "title": "\"Right Seat\"",
+      "guid": "{195EAB58-9E4A-1E2A-A34C-A8D9D948F078}",
+      "origin": "Virtual Cockpit",
+      "momentumeffect": "Yes",
+      "snappbhadjust": "Swivel",
+      "snappbhreturn": "False",
+      "panpbhadjust": "Swivel",
+      "panpbhreturn": "False",
+      "track": "None",
+      "showaxis": "YES",
+      "allowzoom": "TRUE",
+      "initialzoom": "0.75",
+      "smoothzoomtime": "2.0",
+      "zoompanscalar": "1.0",
+      "showweather": "Yes",
+      "xyzadjust": "TRUE",
+      "showlensflare": "FALSE",
+      "category": "Cockpit",
+      "pitchpanrate": "20",
+      "headingpanrate": "60",
+      "initialxyz": "0.5, 0.04, -0.1",
+      "initialpbh": "0, 0, 0"
+    },
+    "cameradefinition.002": {
+      "title": "\"Radio Stack\"",
+      "guid": "{195EAB58-9E4A-2E2A-A34C-A8D9D948F078}",
+      "origin": "Virtual Cockpit",
+      "momentumeffect": "Yes",
+      "snappbhadjust": "Swivel",
+      "snappbhreturn": "False",
+      "panpbhadjust": "Swivel",
+      "panpbhreturn": "False",
+      "track": "None",
+      "showaxis": "FALSE",
+      "allowzoom": "TRUE",
+      "initialzoom": "1.2",
+      "smoothzoomtime": "2.0",
+      "zoompanscalar": "1.0",
+      "showweather": "Yes",
+      "xyzadjust": "TRUE",
+      "showlensflare": "FALSE",
+      "category": "Cockpit",
+      "pitchpanrate": "20",
+      "headingpanrate": "60",
+      "initialxyz": "0, -0.2, 0",
+      "initialpbh": "9, 0, 22"
+    },
+    "cameradefinition.003": {
+      "title": "\"Light Switches\"",
+      "guid": "{195EAB58-9E4A-3E2A-A34C-A8D9D948F078}",
+      "origin": "Virtual Cockpit",
+      "momentumeffect": "Yes",
+      "snappbhadjust": "Swivel",
+      "snappbhreturn": "False",
+      "panpbhadjust": "Swivel",
+      "panpbhreturn": "False",
+      "track": "None",
+      "showaxis": "FALSE",
+      "allowzoom": "TRUE",
+      "initialzoom": "1.3",
+      "smoothzoomtime": "2.0",
+      "zoompanscalar": "1.0",
+      "showweather": "Yes",
+      "xyzadjust": "TRUE",
+      "showlensflare": "FALSE",
+      "category": "Cockpit",
+      "pitchpanrate": "20",
+      "headingpanrate": "60",
+      "initialxyz": "0, -0.5, 0",
+      "initialpbh": "0, 0, -5"
+    }
+  },
+  "air_record_count": 125,
+  "telemetry": {
+    "path": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\SimConnectBridge\\bin\\Win32\\Release\\telemetry.csv",
+    "sha256": "df9e923aef7e2aced2ca03c0ea53b1214ac937e8a44303db060f37bd93121ed8",
+    "rows": 35189,
+    "discarded_partial_rows": 0,
+    "duration_s": 370.688,
+    "dt_median_ms": 15.0,
+    "dt_max_ms": 11422,
+    "duplicate_timestamps": 16616,
+    "airborne_armed_rows": 19213,
+    "q_saturated_rows": 2248,
+    "fields": {
+      "time_ms": {
+        "min": 94051140.0,
+        "max": 94421828.0,
+        "invalid": 0,
+        "nonzero": 35189
+      },
+      "q_ratio": {
+        "min": 0.0,
+        "max": 1.0,
+        "invalid": 0,
+        "nonzero": 26640
+      },
+      "q_pa": {
+        "min": 0.0,
+        "max": 10303.23,
+        "invalid": 0,
+        "nonzero": 26711
+      },
+      "ias_knots": {
+        "min": 0.0,
+        "max": 256.87,
+        "invalid": 0,
+        "nonzero": 26387
+      },
+      "gust_roll": {
+        "min": 0.0,
+        "max": 0.0,
+        "invalid": 0,
+        "nonzero": 0
+      },
+      "gust_pitch": {
+        "min": 0.0,
+        "max": 0.0,
+        "invalid": 0,
+        "nonzero": 0
+      },
+      "on_ground": {
+        "min": 0.0,
+        "max": 1.0,
+        "invalid": 0,
+        "nonzero": 15089
+      },
+      "paused": {
+        "min": 0.0,
+        "max": 0.0,
+        "invalid": 0,
+        "nonzero": 0
+      },
+      "running": {
+        "min": 0.0,
+        "max": 1.0,
+        "invalid": 0,
+        "nonzero": 34228
+      },
+      "armed": {
+        "min": 0.0,
+        "max": 1.0,
+        "invalid": 0,
+        "nonzero": 34225
+      },
+      "wind_x_knots": {
+        "min": 0.0,
+        "max": 0.0,
+        "invalid": 0,
+        "nonzero": 0
+      },
+      "wind_y_knots": {
+        "min": 0.0,
+        "max": 0.0,
+        "invalid": 0,
+        "nonzero": 0
+      },
+      "wind_z_knots": {
+        "min": 0.0,
+        "max": 0.0,
+        "invalid": 0,
+        "nonzero": 0
+      },
+      "gust_gain": {
+        "min": 1.0,
+        "max": 1.0,
+        "invalid": 0,
+        "nonzero": 35189
+      },
+      "gust_longitudinal": {
+        "min": 0.25,
+        "max": 0.25,
+        "invalid": 0,
+        "nonzero": 35189
+      },
+      "stall_amp": {
+        "min": 0.0,
+        "max": 0.499,
+        "invalid": 0,
+        "nonzero": 5362
+      },
+      "gear_amp": {
+        "min": 0.0,
+        "max": 1.0,
+        "invalid": 0,
+        "nonzero": 1612
+      },
+      "spoiler_amp": {
+        "min": 0.0,
+        "max": 0.0,
+        "invalid": 0,
+        "nonzero": 0
+      },
+      "aoa_deg": {
+        "min": -87.02,
+        "max": 154.42,
+        "invalid": 0,
+        "nonzero": 27877
+      },
+      "stall_alpha_deg": {
+        "min": 16.1,
+        "max": 16.1,
+        "invalid": 0,
+        "nonzero": 35189
+      },
+      "flap_left": {
+        "min": 0.0,
+        "max": 0.997,
+        "invalid": 0,
+        "nonzero": 995
+      },
+      "flap_right": {
+        "min": 0.0,
+        "max": 0.997,
+        "invalid": 0,
+        "nonzero": 995
+      },
+      "vs0_knots": {
+        "min": 56.01,
+        "max": 56.01,
+        "invalid": 0,
+        "nonzero": 35189
+      },
+      "vs1_knots": {
+        "min": 65.01,
+        "max": 65.01,
+        "invalid": 0,
+        "nonzero": 35189
+      },
+      "gear_fraction": {
+        "min": 1.0,
+        "max": 1.0,
+        "invalid": 0,
+        "nonzero": 35189
+      },
+      "gear_retractable": {
+        "min": 1.0,
+        "max": 1.0,
+        "invalid": 0,
+        "nonzero": 35189
+      },
+      "spoiler_left": {
+        "min": null,
+        "max": null,
+        "invalid": 35189,
+        "nonzero": 0
+      },
+      "spoiler_right": {
+        "min": null,
+        "max": null,
+        "invalid": 35189,
+        "nonzero": 0
+      },
+      "Turbulencia": {
+        "min": 0.0,
+        "max": 0.0,
+        "invalid": 0,
+        "nonzero": 0
+      },
+      "Buffet_Perdida": {
+        "min": 0.0,
+        "max": 1.0,
+        "invalid": 0,
+        "nonzero": 5364
+      },
+      "Buffet_Tren": {
+        "min": 0.0,
+        "max": 1.0,
+        "invalid": 0,
+        "nonzero": 1612
+      },
+      "Buffet_Spoilers": {
+        "min": 0.0,
+        "max": 0.0,
+        "invalid": 0,
+        "nonzero": 0
+      },
+      "ground_speed_knots": {
+        "min": 0.0,
+        "max": 225.854,
+        "invalid": 0,
+        "nonzero": 26818
+      },
+      "ground_amp": {
+        "min": 0.0,
+        "max": 1.0,
+        "invalid": 0,
+        "nonzero": 6438
+      },
+      "Vibracion_Tierra": {
+        "min": 0.0,
+        "max": 1.0,
+        "invalid": 0,
+        "nonzero": 6436
+      },
+      "Centrado_Disponible": {
+        "min": 0.0,
+        "max": 1.0,
+        "invalid": 0,
+        "nonzero": 34225
+      },
+      "yoke_roll": {
+        "min": -0.09462,
+        "max": 0.09819,
+        "invalid": 0,
+        "nonzero": 35189
+      },
+      "yoke_pitch": {
+        "min": -0.65784,
+        "max": 0.4975,
+        "invalid": 0,
+        "nonzero": 35189
+      }
+    }
+  }
+}

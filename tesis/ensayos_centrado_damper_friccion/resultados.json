@@ -1,0 +1,264 @@
+{
+  "centrado": {
+    "source": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\SimConnectBridge\\bin\\Win32\\RealismoSC6\\telemetry - centrado.csv",
+    "sha256": "5f29b93325009d0e188abed3ab32624862189888ad3ddef99d681dcca9b8a2d6",
+    "rows": 23984,
+    "armed_rows": 23047,
+    "elapsed_s": 351.5,
+    "duplicate_timestamps": 10160,
+    "gaps_over_250ms": [
+      105219,
+      1141
+    ],
+    "paused_rows": 0,
+    "gain_total_user": 0.6,
+    "q_ratio": {
+      "min": 0.0,
+      "max": 0.55734
+    },
+    "q_pa": {
+      "min": 0.0,
+      "max": 1300.96
+    },
+    "ias_knots": {
+      "min": 0.0,
+      "max": 84.01
+    },
+    "yoke_roll": {
+      "min": -0.86039,
+      "max": 0.8857
+    },
+    "yoke_pitch": {
+      "min": -0.95105,
+      "max": 0.96674
+    },
+    "eas_max_knots": 89.58606153134255,
+    "q_over_reference_rows": 0,
+    "approximate_replays": [
+      {
+        "offset_ms": 0,
+        "samples": 7168,
+        "peak_abs_pwm_equivalent": [
+          30.95554223537999,
+          73.49695912764
+        ],
+        "peak_abs_velocity_normalized_s": [
+          4.579317398672778,
+          6.078431372549019
+        ]
+      },
+      {
+        "offset_ms": 5,
+        "samples": 7169,
+        "peak_abs_pwm_equivalent": [
+          30.95554223537999,
+          73.49695912764
+        ],
+        "peak_abs_velocity_normalized_s": [
+          4.579317398672778,
+          6.078431372549019
+        ]
+      },
+      {
+        "offset_ms": 10,
+        "samples": 7169,
+        "peak_abs_pwm_equivalent": [
+          30.95554223537999,
+          73.49695912764
+        ],
+        "peak_abs_velocity_normalized_s": [
+          4.579317398672778,
+          6.078431372549019
+        ]
+      },
+      {
+        "offset_ms": 15,
+        "samples": 7169,
+        "peak_abs_pwm_equivalent": [
+          30.95554223537999,
+          73.49695912764
+        ],
+        "peak_abs_velocity_normalized_s": [
+          4.579317398672778,
+          6.078431372549019
+        ]
+      }
+    ],
+    "static_all_rows_peak_pwm": {
+      "roll": 30.971312735778,
+      "pitch": 73.50330491647199
+    }
+  },
+  "damper": {
+    "source": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\SimConnectBridge\\bin\\Win32\\RealismoSC6\\telemetry - damper.csv",
+    "sha256": "c20ec9ead6188198befc0c9e692263804ad2b0ffcada4ba5acc83f7831d87820",
+    "rows": 7184,
+    "armed_rows": 7182,
+    "elapsed_s": 143.453,
+    "duplicate_timestamps": 3329,
+    "gaps_over_250ms": [
+      71047
+    ],
+    "paused_rows": 0,
+    "gain_total_user": 0.6,
+    "q_ratio": {
+      "min": 0.0,
+      "max": 0.39954
+    },
+    "q_pa": {
+      "min": 0.0,
+      "max": 932.63
+    },
+    "ias_knots": {
+      "min": 0.0,
+      "max": 75.22
+    },
+    "yoke_roll": {
+      "min": -0.75914,
+      "max": 0.89222
+    },
+    "yoke_pitch": {
+      "min": -0.98236,
+      "max": 0.96869
+    },
+    "eas_max_knots": 75.8513234866098,
+    "q_over_reference_rows": 0,
+    "approximate_replays": [
+      {
+        "offset_ms": 0,
+        "samples": 2185,
+        "peak_abs_pwm_equivalent": [
+          30.599999999999998,
+          61.199999999999996
+        ],
+        "peak_abs_velocity_normalized_s": [
+          3.68990995532213,
+          6.8260265820273744
+        ]
+      },
+      {
+        "offset_ms": 5,
+        "samples": 2185,
+        "peak_abs_pwm_equivalent": [
+          30.599999999999998,
+          61.199999999999996
+        ],
+        "peak_abs_velocity_normalized_s": [
+          3.68990995532213,
+          6.8260265820273744
+        ]
+      },
+      {
+        "offset_ms": 10,
+        "samples": 2185,
+        "peak_abs_pwm_equivalent": [
+          30.599999999999998,
+          61.199999999999996
+        ],
+        "peak_abs_velocity_normalized_s": [
+          3.68990995532213,
+          6.8260265820273744
+        ]
+      },
+      {
+        "offset_ms": 15,
+        "samples": 2185,
+        "peak_abs_pwm_equivalent": [
+          30.599999999999998,
+          61.199999999999996
+        ],
+        "peak_abs_velocity_normalized_s": [
+          3.68990995532213,
+          6.8260265820273744
+        ]
+      }
+    ]
+  },
+  "friccion": {
+    "source": "D:\\LUCAS\\UTN\\PROYECTO FINAL\\PROYECTO ALEMAN\\PROYECTO MODIFICADO\\MiYoke_PD_V2.3\\SimConnectBridge\\bin\\Win32\\RealismoSC6\\telemetry - friccion.csv",
+    "sha256": "9fd8273f7b68d37addb849de2a52373ee6176499c7ce06b69ff7ff87cc02c359",
+    "rows": 11096,
+    "armed_rows": 10139,
+    "elapsed_s": 154.359,
+    "duplicate_timestamps": 5049,
+    "gaps_over_250ms": [
+      39703,
+      1875,
+      329
+    ],
+    "paused_rows": 0,
+    "gain_total_user": 0.6,
+    "q_ratio": {
+      "min": 0.0,
+      "max": 0.53493
+    },
+    "q_pa": {
+      "min": 0.0,
+      "max": 1248.66
+    },
+    "ias_knots": {
+      "min": 0.0,
+      "max": 87.26
+    },
+    "yoke_roll": {
+      "min": -0.92386,
+      "max": 0.87937
+    },
+    "yoke_pitch": {
+      "min": -0.95496,
+      "max": 0.97064
+    },
+    "eas_max_knots": 87.76686222823491,
+    "q_over_reference_rows": 0,
+    "approximate_replays": [
+      {
+        "offset_ms": 0,
+        "samples": 3070,
+        "peak_abs_pwm_equivalent": [
+          2.2217645785867473,
+          4.392070662896893
+        ],
+        "peak_abs_velocity_normalized_s": [
+          6.087458985590555,
+          4.458018867924529
+        ]
+      },
+      {
+        "offset_ms": 5,
+        "samples": 3071,
+        "peak_abs_pwm_equivalent": [
+          2.2217645785867473,
+          4.392070662896893
+        ],
+        "peak_abs_velocity_normalized_s": [
+          6.087458985590555,
+          4.458018867924529
+        ]
+      },
+      {
+        "offset_ms": 10,
+        "samples": 3071,
+        "peak_abs_pwm_equivalent": [
+          2.2217645785867473,
+          4.392070662896893
+        ],
+        "peak_abs_velocity_normalized_s": [
+          6.087458985590555,
+          4.458018867924529
+        ]
+      },
+      {
+        "offset_ms": 15,
+        "samples": 3071,
+        "peak_abs_pwm_equivalent": [
+          2.2217645785867473,
+          4.392070662896893
+        ],
+        "peak_abs_velocity_normalized_s": [
+          6.087458985590555,
+          4.458018867924529
+        ]
+      }
+    ]
+  }
+}

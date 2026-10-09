@@ -1,0 +1,639 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb,array,longtable,booktabs}
+\usepackage{xcolor,hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!45!black,urlcolor=blue!55!black}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\setlength{\emergencystretch}{3em}
+\setcounter{tocdepth}{1}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\fuente}[1]{\par\smallskip{\small\textbf{Fuente local:} \nolinkurl{#1}.}\par}
+\newcommand{\efecto}[1]{\clearpage\section{#1}}
+\newcommand{\sat}{\operatorname{sat}}
+\title{Explicacion Efectos TelemFFB}
+\author{Guía resumida y comparación con MiYoke\_PD\_V2.3}
+\date{8 de octubre de 2026}
+\begin{document}
+\maketitle
+\textbf{Qué contiene.} Una explicación sencilla de la metodología y una ficha breve por efecto o familia estrechamente relacionada. Cada ficha comienza en una página nueva y se mantiene deliberadamente corta, para ocupar una o, como máximo previsto, dos páginas. Las variantes de un mismo efecto se explican juntas; no se repite una ficha por avión.
+
+\textbf{Copia analizada.} Se utilizó específicamente el directorio solicitado:
+\begin{quote}\small
+\nolinkurl{D:/LUCAS/UTN/PROYECTO FINAL/PROYECTO ALEMAN/PROYECTO MODIFICADO/VPforce-TelemFFB-refactor}
+\end{quote}
+No se presupone que coincida con otras copias, versiones publicadas o con el último estado de GitHub. Los nombres de archivo de las fichas son relativos a este directorio.
+
+\textbf{Cómo leerlo.} ``Entrada'' indica qué dato utiliza; ``cálculo'' explica cómo obtiene una sensación; ``salida'' indica el tipo de efecto enviado al dispositivo. Las ecuaciones identificadas como conceptuales explican el principio, pero no pretenden describir el firmware interno del dispositivo.
+
+\textbf{Alcance.} Incluye efectos de aviación general, motor, mecanismos, controles, helicópteros y combate. Su existencia en el código no significa que estén activos para todos los aviones: dependen del simulador, dispositivo, perfil y telemetría disponible. Los campos como \code{TAS} o \code{WeightOnWheels} son datos internos normalizados de TelemFFB; no todos son nombres literales de SimVars de SimConnect.
+
+Las intensidades normalizadas y los coeficientes FFB no equivalen directamente a newtons. No se ejecutaron efectos en motores ni se midió fuerza física para elaborar este documento.
+\tableofcontents
+
+\clearpage
+\section{Metodología: cómo genera los efectos}
+\subsection{Recorrido general}
+\begin{center}
+\fbox{\begin{minipage}{0.9\linewidth}
+Simulador $\rightarrow$ adaptador de telemetría $\rightarrow$ datos comunes $\rightarrow$ perfil del avión/dispositivo $\rightarrow$ cálculo de efectos en Python $\rightarrow$ interfaz FFB $\rightarrow$ dispositivo y sus motores.
+\end{minipage}}
+\end{center}
+\begin{enumerate}
+\item \textbf{Recibir.} MSFS utiliza SimConnect; X-Plane dispone de plugin; DCS, IL-2 y BMS tienen rutas de exportación/recepción propias. No existe una única lista de variables válida para todos.
+\item \textbf{Normalizar.} Los adaptadores traducen datos a campos comunes de \code{BaseTelemetryData}: velocidades, ángulos, RPM, posiciones y estados. En muchas rutas la velocidad interna se expresa en m/s y la presión en Pa.
+\item \textbf{Elegir configuración.} El avión y el tipo de dispositivo determinan qué clases y parámetros se utilizan. Se combinan valores predeterminados y personalizaciones; un valor inicial de una clase no garantiza el valor efectivo de un perfil.
+\item \textbf{Calcular.} Módulos especializados, llamados \emph{MixIns}, actualizan efectos desde \code{on_telemetry}. Comprueban habilitación, convierten datos en intensidades o coeficientes y aplican filtros, límites o curvas.
+\item \textbf{Enviar.} \code{HapticEffect} crea y actualiza efectos identificados por nombre. Envía parámetros; puede iniciar, detener o destruir un efecto. El dispositivo ejecuta los efectos admitidos por su interfaz.
+\end{enumerate}
+
+\subsection{Tres formas principales de producir sensación}
+\begin{itemize}
+\item \textbf{Fuerza constante actualizable:} intensidad y dirección. Aunque se llame constante, el programa puede cambiarla en cada actualización; así representa una ráfaga irregular.
+\item \textbf{Efecto periódico:} intensidad, frecuencia, forma de onda, dirección, fase y duración. El dispositivo genera la oscilación entre actualizaciones del PC.
+\item \textbf{Efecto condicional:} resorte, damper, fricción o inercia. Se envían coeficientes; la respuesta depende de la posición o movimiento que conoce el dispositivo.
+\end{itemize}
+Puede añadir envolventes de entrada/salida y direcciones variables. Varios efectos coexisten; algunos módulos sustituyen temporalmente otros, como la pérdida hidráulica que toma control de damper y fricción. Por ello, no todos los controles de intensidad representan fuerzas independientes que simplemente se duplican.
+
+\subsection{Del valor normalizado al dispositivo: no es PWM}
+En la ruta Rhino de \code{ffb_rhino.py}, una magnitud de fuerza constante se convierte aproximadamente en:
+\[
+M_{\rm HID}=\operatorname{round}(4096M),\qquad
+T_{\rm ms}=\operatorname{round}(1000/f)\quad\text{para efectos periódicos con }f>0.
+\]
+$M$ es intensidad normalizada y $f$ frecuencia en Hz. Por ejemplo, $M=0.20$ produce unas 819 unidades HID; $f=10$ produce período de 100 ms. En coeficientes condicionales, los argumentos flotantes se normalizan y escalan por 4096; los enteros pueden representar unidades de dispositivo directamente.
+
+\textbf{4096 no es un valor PWM.} Este repositorio de aplicación no permite reconstruir por sí solo la ley eléctrica final del firmware de cada dispositivo. También contiene otras rutas de backend; no debe suponerse que todas usan el mismo formato de reporte Rhino.
+\fuente{telemffb/sim/aircraft_base.py}
+\fuente{telemffb/sim/BaseTelemetryData.py}
+\fuente{telemffb/hw/ffb_rhino.py}
+
+\clearpage
+\section{Diferencias principales con tu proyecto}
+\begin{longtable}{p{0.20\linewidth}p{0.35\linewidth}p{0.36\linewidth}}
+\toprule
+Aspecto & TelemFFB analizado & MiYoke\_PD\_V2.3\\
+\midrule
+Arquitectura & Aplicación Python con modelos por simulador, avión y dispositivo. & Puente SimConnect en PC y modelo de fuerza específico en microcontrolador.\\
+Salida del PC & Órdenes FFB: magnitud, dirección, frecuencia, condiciones. & Trama SC6 con presión, ráfagas, envolventes, posiciones y estado.\\
+Oscilaciones & Se solicitan al dispositivo como efectos periódicos. & La placa genera las portadoras triangulares y suma comandos.\\
+Resorte & Puede variar rigidez y centro; contempla trim, AP, curvas y flujo de hélice según ruta. & Centro fijo; rigidez dependiente de presión y componente residual.\\
+Damper/fricción & Coeficientes de efectos condicionales ejecutados por el dispositivo. & Derivada de posición, filtro de 40 ms y leyes explícitas de resistencia.\\
+Posición del mando & Lee reportes del dispositivo cuando la lógica lo requiere; el dispositivo ejecuta condiciones. & Selector de posición SimConnect, potenciómetros o encoders.\\
+PWM & No se define un PWM final universal en el código Python. & Comando limitado a $\pm220/255$, factor 255 y límite eléctrico 220.\\
+Configuración & Perfiles, curvas, avión, tipo de dispositivo y particularidades de simulador. & Ganancias y habilitaciones de menú; otros parámetros al compilar.\\
+Variedad & Incluye efectos de motor, trim, hidráulica, helicópteros y combate. & Centrado, ráfagas, tres buffets, suelo, damper y fricción en la cadena actual.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Ejemplo sencillo: buffet de tren}
+TelemFFB puede calcular intensidad a partir de velocidad y extensión, y pedir al dispositivo dos oscilaciones sinusoidales. Tu puente calcula una envolvente y la envía a la placa, que la suaviza, genera una triangular y produce el PWM. El fenómeno representado se parece, pero la forma de onda, los ejes, los límites y el lugar del cálculo son distintos.
+
+\subsection{Qué se puede aprovechar}
+Son transferibles las ideas: separar intensidad de portadora, distinguir movimiento de mecanismos de buffet aerodinámico, utilizar perfiles y comprobar disponibilidad de datos. Copiar directamente un coeficiente HID a PWM no conserva la fuerza. Tampoco una variable disponible en MSFS o X-Plane está necesariamente disponible con el mismo significado en Prepar3D.
+
+Para ampliar tu yugo conviene seleccionar un efecto, identificar entradas disponibles, implementar una versión pequeña y ajustar con mediciones. El modelo más detallado no garantiza por sí solo mejor fidelidad si faltan datos o calibración mecánica.
+
+\subsection{Notación usada en las fichas}
+$\sat_{[a,b]}(z)$ limita $z$ entre $a$ y $b$.
+\[
+R(z;a,b)=\sat_{[0,1]}\left(\frac{z-a}{b-a}\right),\qquad b>a.
+\]
+$R$ es una rampa: cero antes de $a$, uno después de $b$, y crecimiento lineal entre ambos. $I$ representa una intensidad ajustable; $d$ una extensión de 0 a 1. Una portadora conceptual $I\sin(2\pi ft)$ describe la sensación solicitada, no una simulación exacta del motor.
+
+\efecto{Centrado aerodinámico o resorte dinámico}
+\subsection{Qué hace y qué datos usa}
+Endurece los mandos con el flujo de aire. En la ruta MSFS/X-Plane no FBW utiliza \code{DynPressure}, \code{AirDensity}, velocidades de diseño y datos de hélice como \code{PropThrust}. Puede tratar de manera distinta alerón, elevador y timón.
+\subsection{Cómo lo calcula}
+El principio conceptual es $u=-k(x-x_0)$: $x$ es posición, $x_0$ centro y $k$ rigidez. Para estimar el flujo de hélice, el código usa:
+\[
+V_p=\sqrt{V^2+\frac{2T}{\rho A}},\qquad A=\pi(D/2)^2.
+\]
+$T$ es empuje, $\rho$ densidad, $D$ diámetro de hélice y $V$ velocidad empleada por esa ruta. Mezcla la presión libre $q$ con $\rho V_p^2/2$ según cuánto flujo llega a cada superficie. Normaliza los coeficientes con una presión de referencia asociada a Vne y aplica curvas, ganancias y correcciones. La escala interna 0.005 aparece tanto en presión como en su normalización.
+
+No es una única fórmula idéntica para todos los aviones: hay modos avanzados, trim y rutas de simulador específicas. La estimación de Vne desde velocidad de diseño también es una elección de modelo, no una medición universal.
+\subsection{Salida, ajustes y comparación}
+Envía condiciones de resorte al dispositivo. Se ajustan curvas de fuerza, expo, referencia de velocidad, diámetro y proporción de flujo de hélice. Tu modelo usa $u=-Ggkx$, con centro fijo y presión común; no incluye esta estimación de propwash. Copiarla requiere comprobar unidades, datos y geometría.
+\fuente{telemffb/sim/msfs_xp/MsfsXpFlightControlsMixIn.py}
+
+\efecto{Resorte fijo, FBW y curvas avanzadas}
+\subsection{Qué hace y entrada}
+Permite que la sensación dependa de una configuración de mando, de una curva de velocidad o del resorte nativo del simulador. FBW significa \emph{fly-by-wire}: un mando de ese avión no tiene por qué endurecerse como un cable conectado directamente a una superficie.
+\subsection{Cálculo sencillo}
+La idea sigue siendo $u=-k(x-x_0)$, pero $k$ puede ser fijo o venir de una curva configurada $k_X(V),k_Y(V)$. El modo avanzado obtiene ganancias por eje mediante \code{get_gain_from_speed}. En ciertas rutas ajusta el resorte existente mediante \code{spring_adjuster}; en otras reproduce/ajusta información de FFB nativo a través de la infraestructura \code{FfbTapMixIn}.
+
+Los overrides de DCS e IL-2 son variantes de esta familia, no copias del resorte aerodinámico de MSFS. Su disponibilidad depende del backend y capacidades del dispositivo. La zona muerta es otro parámetro de respuesta del mando; no es una vibración adicional.
+\subsection{Salida y ajustes}
+Coeficientes por eje, centro, saturación y, según ruta, ajuste de resorte nativo. Se configuran modo, curva, rigidez y zona muerta. Elegir modos incompatibles o duplicar el resorte del juego puede producir sensaciones distintas de las previstas.
+\subsection{Diferencia con tu proyecto}
+Tu firmware no dispone de curvas por avión ni de captura de efectos nativos. Se podría añadir una curva de rigidez, pero no basta con copiar la llamada Python: habría que evaluarla y generar la fuerza en la placa o en el puente.
+\fuente{telemffb/sim/base/AdvancedSpringMixIn.py}
+\fuente{telemffb/sim/base/FfbTapMixIn.py}
+\fuente{telemffb/sim/base/DeadzoneMixIn.py}
+
+\efecto{Trim y seguimiento del piloto automático}
+\subsection{Qué se siente y entradas}
+El centro del mando puede desplazarse con el trim o seguir la actuación del piloto automático. Utiliza posición real del dispositivo, estados \code{APMaster}/\code{APServos}, trim y, según simulador/opción, deflexiones de superficies o servos del AP.
+\subsection{Cómo funciona}
+Se modifica $x_0$ en $u=-k(x-x_0)$. Por ejemplo, conceptualmente $x_0=g_t\,t$, donde $t$ es trim normalizado y $g_t$ su ganancia física. La implementación también diferencia desplazamiento físico del centro y compensación virtual de la entrada enviada al simulador: mover el centro y mover el avión no son operaciones equivalentes.
+
+Hay variantes que siguen trim y otras que siguen directamente el elevador o servos. Las calibraciones y signos dependen del avión. El programa puede enviar eventos de eje al simulador, por lo que esta función participa en el circuito de entrada además de generar fuerza.
+\subsection{Salida, ajustes y diferencia}
+Envía offsets y coeficientes de resorte. Se ajustan seguimiento, ganancias físicas/virtuales y asignaciones de ejes. No existe una relación única válida para todos los addons.
+
+Tu centrado conserva $x_0=0$ y el sketch no envía ejes a Prepar3D. Incorporar seguimiento requiere diseñar ambas partes: qué centro se ordena y qué entrada recibe el simulador, evitando contar el trim dos veces.
+\fuente{telemffb/sim/msfs_xp/MsfsXpFBWFlightControlsMixIn.py}
+\fuente{telemffb/sim/msfs_xp/MsfsXpFlightControlsMixIn.py}
+
+\efecto{Damper: resistencia a la velocidad}
+\subsection{Qué hace y entrada}
+Resiste movimientos rápidos. La idea física es $F_d=-b\dot{x}$: $b$ regula la resistencia y $\dot{x}$ es velocidad del mando. Esta ecuación es conceptual; la aplicación no reconstruye aquí la ley interna del firmware del dispositivo.
+\subsection{Cómo lo genera}
+El override básico toma \code{damper_force}, lo limita a $[0,1]$ y llama a \code{damper(force,force).start()}. No calcula en esa rutina una derivada de \code{YOKE X POSITION}: envía coeficientes para ambos ejes y el dispositivo FFB ejecuta la condición utilizando su movimiento.
+
+Una ganancia normalizada 0.12 corresponde aproximadamente a 492 unidades de coeficiente en la ruta Rhino. Eso no significa PWM 492 ni el mismo efecto físico que $B=0.12$ en tu firmware.
+\subsection{Ajustes y relaciones}
+Habilitación y coeficiente. La pérdida hidráulica puede sustituir temporalmente el override; algunos modos de bloqueo o trim también utilizan resistencias. Con resorte puede frenar el retorno y reducir oscilaciones, dependiendo del dispositivo.
+\subsection{Diferencia con tu proyecto}
+Tu código sí deriva posiciones, filtra con 40 ms y calcula explícitamente $-\operatorname{sgn}(v)H B\max(|v|-0.02,0)$, con límite compartido con fricción. Esos filtros y umbrales no deben atribuirse a TelemFFB.
+\fuente{telemffb/sim/base/FFBForcesMixIn.py}
+\fuente{telemffb/hw/ffb_rhino.py}
+
+\efecto{Fricción: resistencia al desplazamiento}
+\subsection{Qué hace}
+Solicita al dispositivo una sensación de rozamiento. El modelo ideal en movimiento suele explicarse como $F_f=-F_c\operatorname{sgn}(v)$: oposición al deslizamiento con magnitud aproximadamente constante. La regularización y el comportamiento en reposo dependen del dispositivo; no se deducen del nombre del efecto.
+\subsection{Entrada, cálculo y salida}
+El override básico limita \code{friction_force} a $[0,1]$ y ejecuta \code{friction(force,force).start()}. Su entrada directa es la configuración, no presión dinámica ni velocidad del avión. Envía coeficientes condicionales por eje.
+
+El módulo cede el control cuando otro efecto lo sustituye, por ejemplo fricción de dirección en tierra. Por ello, cambiar el override mientras existe una sustitución activa no siempre equivale a añadir una segunda fuerza independiente.
+\subsection{Ajustes y diferencia con tu proyecto}
+Se regula intensidad y habilitación. En tu proyecto la fórmula concreta es:
+\[
+u_f=-\operatorname{sgn}(v)H F_c\frac{m}{0.2+m},\qquad m=\max(|v|-0.02,0).
+\]
+Esa fracción racional se calcula localmente y desaparece al detenerse la estimación. No aparece como ley explícita en el override Python de TelemFFB; no puede afirmarse que ambos reproduzcan la misma adherencia o curva de roce.
+\fuente{telemffb/sim/base/FFBForcesMixIn.py}
+
+\efecto{Inercia del mando}
+\subsection{Qué representa}
+Intenta que cueste cambiar la velocidad del mando, como si tuviera más masa. La explicación conceptual es $F_i=-J\ddot{x}$, con $J$ como inercia equivalente y $\ddot{x}$ como aceleración. A velocidad constante ideal, este término sería nulo, mientras el damper seguiría resistiendo.
+\subsection{Cómo lo genera}
+El override limita \code{inertia_force} a $[0,1]$ y solicita \code{inertia(force,force)}. El cálculo del efecto condicional se delega al dispositivo. La aplicación no convierte aquí ese coeficiente a kilogramos, inercia rotacional o PWM.
+\subsection{Ajustes y comparación}
+Se habilita y ajusta el coeficiente. El sensor, filtrado y firmware del equipo condicionan mucho la sensación de aceleración. No hay base para copiar un valor de un dispositivo a otro esperando la misma masa aparente.
+
+Tu cadena actual no suma un término de inercia independiente. Derivar otra vez la posición filtrada sería una posible implementación, pero amplifica ruido y exigiría validar estimación, signo y respuesta. Aumentar damper no crea el mismo comportamiento que añadir inercia.
+\fuente{telemffb/sim/base/FFBForcesMixIn.py}
+
+\efecto{Turbulencias por cambios del viento relativo}
+\subsection{Datos y sensación}
+Usa componentes de \code{RelWind} en ejes del avión para producir empujes variables en pitch, roll y, en pedales, yaw. El modulador común adapta coeficientes al intervalo real de actualización.
+\subsection{Cálculo resumido}
+Para cada componente de viento $w$, calcula un pasaaltos:
+\[
+h_n=a(h_{n-1}+w_n-w_{n-1}),\qquad
+a=a_0^{\Delta t/(1/60)}.
+\]
+La mezcla implementada es:
+\[
+p=h_{\rm vertical}+0.25h_{\rm longitudinal},\quad
+r=-0.7h_{\rm lateral},\quad y=-0.5h_{\rm lateral}.
+\]
+La sensibilidad $S$ define un divisor $D=10-9S$. Normaliza conjuntamente pitch/roll para conservar dirección, limita la magnitud a la intensidad elegida y suaviza el resultado. Los coeficientes de mezcla son elecciones del modelo, no constantes universales del avión.
+
+Convierte pitch/roll a $M=\sqrt{p^2+r^2}$ y dirección mediante \code{atan2(-roll,pitch)}; envía una fuerza constante que se actualiza. El código de mezcla es la referencia: ciertos comentarios antiguos describen de forma imprecisa el origen del yaw.
+\subsection{Ajustes y diferencia}
+Intensidad, sensibilidad, pasaaltos y suavizado. Tu puente usa su propio modelo de ráfagas y envía componentes a la placa; no comparte necesariamente normalización vectorial, filtros ni signos. El modulador de TelemFFB no multiplica explícitamente esta fuerza por presión dinámica.
+\fuente{telemffb/utils/TurbulenceModulator.py}
+\fuente{telemffb/sim/msfs_xp/TurbulenceMixIn.py}
+
+\efecto{Viento genérico}
+\subsection{Qué hace y datos}
+Es una ruta diferente de las turbulencias vectoriales anteriores. Toma \code{Wind}, calcula la magnitud del viento y genera empujes con dirección variable.
+\subsection{Cómo lo calcula}
+\[
+W=\sqrt{w_x^2+w_y^2+w_z^2}.
+\]
+Aplica un filtro pasaaltos, luego un pasabajos; limita el resultado positivo a la intensidad máxima configurada, multiplica por \code{wind_effect_scaling} y vuelve a limitar a $[0,1]$. Cuando queda cero, elimina el efecto.
+
+La salida es fuerza constante actualizable con \code{RandomDirectionModulator}. Como utiliza la magnitud y una dirección modulada, no conserva la dirección física del vector de viento. Representa una sensación de perturbación, no una reconstrucción completa de cargas aerodinámicas.
+\subsection{Ajustes y diferencia}
+Habilitación, escala y máximo. Tu proyecto tiene su rama específica de ráfagas; no cuenta con este segundo generador genérico. Habilitar dos modelos que respondan al mismo fenómeno puede duplicar la sensación, por lo que deben evaluarse como rutas distintas.
+\fuente{telemffb/sim/base/WindEffectMixIn.py}
+
+\efecto{Vibraciones en suelo y baches}
+\subsection{Entrada y sensación}
+Usa cambios de compresión/contacto \code{WeightOnWheels}, en vez de generar únicamente una vibración por velocidad. En BMS puede utilizar \code{BumpIntensity}; IL-2 dispone de una ruta propia.
+\subsection{Cálculo de la ruta común}
+Con $W_c,W_l,W_r$ como señales de rueda central, izquierda y derecha:
+\[
+u_1=\sat_{[-0.5,0.5]}(I\,\mathrm{HPF}(W_c)),\qquad
+u_2=\sat_{[-0.5,0.5]}(I\,\mathrm{HPF}(W_l-W_r)).
+\]
+HPF significa filtro pasaaltos: enfatiza cambios de carga, no carga constante. Mientras existe carga total sobre ruedas, solicita dos fuerzas constantes variables con dirección modulada y envolvente de entrada. Los nombres de las ramas central/lateral no garantizan una dirección final fija, porque la llamada usa un modulador aleatorio.
+
+En BMS, los baches pueden disparar pulsos cuadrados de duración corta a partir de la intensidad entregada por el simulador.
+\subsection{Ajustes y diferencia}
+Intensidad y habilitación; antes hay que comprobar qué representa realmente la señal de ruedas en cada simulador. Tu suelo actual genera una triangular de 8 Hz a partir de una envolvente ligada a velocidad y estado de tierra, con predominio de roll. Es más simple y no utiliza esta excitación por cambios de compresión.
+\fuente{telemffb/sim/base/MotionEffectsMixIn.py}
+\fuente{telemffb/sim/aircrafts_il2.py}
+
+\efecto{Impacto de aterrizaje}
+\subsection{Qué representa y entrada}
+Un empuje breve o variable asociado a la aceleración vertical al tomar tierra o pasar un bache importante. Usa \code{SimOnGround} y aceleración vertical: \code{AccBody[1]} en MSFS/X-Plane; en otras rutas, \code{ACCs[1]-1} elimina la referencia de 1 g.
+\subsection{Cálculo}
+\[
+M=I_{\max}\,R(g_v;0,g_{\max}).
+\]
+$g_v$ es la aceleración vertical utilizada, $g_{\max}$ la referencia para alcanzar intensidad máxima e $I_{\max}$ el máximo configurado. La implementación redondea valores y envía fuerza constante hacia delante, dirección 180 grados, cuando el efecto está habilitado y el avión en tierra.
+
+No se limita necesariamente a un único evento ``aire a tierra'': la rutina evalúa la aceleración mientras está en suelo. Tampoco debe confundirse con el generador continuo de rodaje.
+\subsection{Ajustes y comparación}
+Se ajustan máximo de fuerza y referencia de g. Tu firmware no tiene un término específico equivalente; su vibración en suelo no reproduce por sí sola la aceleración de una toma. Añadirlo exigiría transmitir una señal de impacto o aceleración compatible con Prepar3D.
+\fuente{telemffb/sim/base/MotionEffectsMixIn.py:ac_update_touchdown_effect}
+
+\efecto{Buffet por pérdida}
+\subsection{Entrada}
+Ángulo de ataque \code{AoA}, velocidad \code{TAS}, flaps, datos de pérdida y contacto con ruedas. En MSFS utiliza \code{StallAoA}; X-Plane puede utilizar \code{WarnAlpha}. IL-2 puede entregar amplitud y frecuencia de buffet directamente.
+\subsection{Modelo común}
+En la ruta con ángulo de pérdida conocido:
+\[
+\alpha_0=(0.5+0.2d_f)\alpha_s,\qquad
+V_s=V_{s1}+(V_{s0}-V_{s1})d_f,
+\]
+\[
+M=\sat_{[0,1]}\left[I\,R(\alpha;\alpha_0,\alpha_s)
+\sat_{[0,Q_{\max}]}((TAS/V_s)^2)\right].
+\]
+$d_f$ es extensión media de flaps; $\alpha_0$ comienzo estimado y $\alpha_s$ ángulo de pérdida. Si faltan velocidades de pérdida utiliza una alternativa basada en velocidad; no inventa necesariamente esos datos. En X-Plane la banda se construye alrededor del ángulo de aviso, con factores propios.
+
+El estilo clásico solicita una vibración periódica. El dinámico cambia frecuencia con profundidad de pérdida y modula suavemente una envolvente aleatoria; usa triangular con compensación de amplitud. En joystick puede variar dirección; en dispositivos de un eje orienta la señal al eje útil.
+\subsection{Ajustes y comparación}
+Intensidad, frecuencia, estilo y umbrales según perfil. Tu modelo comparte parte del razonamiento de envolvente, pero sintetiza una portadora triangular fija de 13 Hz en la placa. No reproduce todas estas variantes de renderizado ni las rutas nativas de IL-2.
+\fuente{telemffb/sim/base/BuffetingEffectMixIn.py}
+
+\efecto{Buffet por tren de aterrizaje}
+\subsection{Datos y sensación}
+Vibración aerodinámica con tren extendido y velocidad suficiente. Usa posición de tren, IAS preferida o TAS alternativa. En X-Plane puede fijar los umbrales desde \code{Vle}.
+\subsection{Cálculo}
+\[
+M=I_g\,d_g\,R(V;V_{\rm bajo},V_{\rm alto}).
+\]
+$I_g$ es intensidad configurada, $d_g$ extensión y $V$ velocidad. La condición común exige extensión superior a 0.1 y velocidad por encima del umbral inferior. Genera dos efectos sinusoidales a la frecuencia configurada, orientados a 0 y 90 grados.
+
+La elección de umbrales desde Vle en una ruta es una regla del programa, no una demostración de que el buffet real empiece exactamente allí. No debe confundirse con la vibración del motor de retracción.
+\subsection{Ajustes y diferencia}
+Intensidad, frecuencia, límites de velocidad y habilitación. Tu proyecto utiliza una envolvente simplificada y triangular de 10 Hz, con roll a la mitad de pitch antes de la suma. La ruta descrita de TelemFFB solicita dos senoidales con la misma magnitud, sin esa relación fija de tu firmware.
+\fuente{telemffb/sim/base/MotionEffectsMixIn.py:ac_update_landing_gear}
+
+\efecto{Movimiento y enclavamiento del tren}
+\subsection{Entrada}
+Cambios de posición del tren. La ruta comprueba si existe movimiento reciente; ciertos simuladores aportan además si el tren es retráctil.
+\subsection{Cómo genera la sensación}
+Durante el movimiento solicita ondas cuadradas de 150 Hz en dos direcciones, con diferencia de fase. Al llegar a posición completamente retraída o extendida puede disparar un golpe cuadrado de 10 Hz y 40 ms. La intensidad del golpe se deriva de la de movimiento y se limita.
+
+La frecuencia alta representa vibración del mecanismo; el golpe final representa un enclavamiento. Son señales sintéticas activadas por cambios de estado, no sonidos grabados ni mediciones del actuador real.
+\subsection{Ajustes y comparación}
+Habilitación e intensidad de movimiento; la forma/frecuencias de esa rutina están fijadas en código. En tu proyecto actual existe buffet de tren, pero no este efecto separado de retracción y golpe final. Añadirlo no requiere alterar la envolvente aerodinámica: conviene mantener ambos fenómenos independientes.
+\fuente{telemffb/sim/base/MotionEffectsMixIn.py:ac_update_landing_gear}
+
+\efecto{Buffet y movimiento de spoilers}
+\subsection{Entrada}
+\code{Spoilers}, IAS o TAS y parámetros del perfil. Si recibe varias posiciones, utiliza su promedio en esta ruta.
+\subsection{Cálculo}
+La intensidad de buffet sigue la idea:
+\[
+M=I_s\,d_s\,R(V;V_{\rm bajo},V_{\rm alto}).
+\]
+Se activa con velocidad suficiente y extensión superior a 0.1. Solicita cuatro senoidales: 15 y 16 Hz en una dirección, 14 y 18 Hz en la otra. La superposición produce variaciones de amplitud y una sensación menos uniforme que un único tono.
+
+Además, el movimiento reciente del spoiler puede activar dos senoidales de 118 Hz. Movimiento y buffet tienen habilitaciones e intensidades diferentes.
+\subsection{Ajustes y diferencia}
+Intensidad de movimiento y de buffet, umbrales de velocidad. Tu implementación conserva una envolvente con una sola triangular de 15 Hz; no tiene la misma mezcla de frecuencias ni un efecto independiente de accionamiento.
+
+En un avión sin spoilers, el efecto debe permanecer ausente según datos/configuración. La existencia del módulo no significa que corresponda activarlo para todo avión.
+\fuente{telemffb/sim/base/MotionEffectsMixIn.py:ac_update_spoilers}
+
+\efecto{Aerofrenos: movimiento y buffet}
+\subsection{Qué hace y datos}
+Trata \code{SpeedbrakePos} o \code{speedbrakes_value} como una extensión de aerofreno. Hay aviones donde spoilers y aerofrenos se relacionan, pero el proyecto conserva rutas distintas.
+\subsection{Cálculo}
+Movimiento reciente: onda cuadrada de 180 Hz con intensidad configurada. Buffet: combina extensión y una rampa de velocidad, tras comprobar umbral y habilitación:
+\[
+M\approx I_b\,d_b\,R(V;V_0,V_1).
+\]
+La expresión resume el helper común; sus umbrales de habilitación y su rango de escala son parámetros distintos. Envía una vibración sinusoidal con dirección modulada; la frecuencia procede del atributo correspondiente o de la alternativa del helper.
+
+Esta llamada común no exige obligatoriamente estar en vuelo. No debe suponerse que todos los buffets del proyecto comparten la misma condición de aire/tierra.
+\subsection{Ajustes y comparación}
+Intensidades, umbral de velocidad y habilitaciones. Tu firmware no distingue un efecto propio de aerofreno del buffet por spoiler. Para incorporarlo hay que verificar si el avión expone una variable diferenciada o si se duplicaría la misma superficie.
+\fuente{telemffb/sim/base/MotionEffectsMixIn.py:ac_update_speed_brakes}
+
+\efecto{Movimiento de flaps}
+\subsection{Entrada y sensación}
+Cambios de \code{Flaps}. Busca transmitir que el mecanismo se está desplazando, no calcular directamente el cambio de sustentación.
+\subsection{Cómo lo genera}
+Cuando detecta cambios recientes y el efecto está habilitado, solicita una onda cuadrada de 180 Hz. La magnitud viene de \code{flaps_motion_intensity}; la dirección depende del tipo de dispositivo. Al cesar el cambio, se elimina la vibración.
+
+La lógica esencial es ``posición cambia $\rightarrow$ vibración de mecanismo''. No hace falta derivar la velocidad del yugo. La amplitud de esta rutina no es una medida de fuerza del motor de flaps.
+\subsection{Ajustes y comparación}
+Intensidad y habilitación; comprobar que la telemetría de posición cambia continuamente durante el recorrido. Tu proyecto utiliza flaps como entrada de la estimación de pérdida, pero no como generador de vibración de movimiento. Son dos usos distintos de un mismo dato.
+\fuente{telemffb/sim/base/MotionEffectsMixIn.py:ac_update_flaps}
+
+\efecto{Fuerzas por carga G}
+\subsection{Datos y sensación}
+Modifica el esfuerzo de pitch durante maniobras. Usa carga G/aceleraciones, posición del mando, centro del resorte y configuración. Existen modos legacy, nuevos y avanzados; no hay una única fórmula para todos.
+\subsection{Cómo lo calcula}
+La idea común es convertir carga en una intensidad mediante umbral, rampa o curva:
+\[
+M=I_G\,C(G),
+\]
+donde $C$ es la curva seleccionada. Algunas rutas ponderan además el desplazamiento del mando respecto del centro y distinguen G positivas y negativas. Pueden rechazar saltos de telemetría y limitar cargas extremas.
+
+La salida puede ser fuerza constante en pitch o desplazamiento del centro del resorte en modo avanzado. En el modelo aerodinámico también existe un término de peso/control que usa aceleración vertical y desplazamiento del eje. No deben sumarse mentalmente todas las variantes como si siempre estuvieran activas juntas.
+\subsection{Ajustes y diferencia}
+Ganancia, umbrales, curva, carga negativa y modo constante/offset según configuración. Tu firmware actual no calcula una carga G independiente. Endurecer el resorte sólo por presión no reproduce todos estos cambios de esfuerzo durante una maniobra.
+\fuente{telemffb/sim/base/GForceEffectMixIn.py}
+\fuente{telemffb/sim/msfs_xp/MsfsXpFlightControlsMixIn.py}
+
+\efecto{Desaceleración y frenado}
+\subsection{Entrada}
+Aceleración longitudinal: según simulador, proviene de aceleraciones del cuerpo o de diferencia de velocidades. La conversión desde velocidad responde a $a=(V_n-V_{n-1})/\Delta t$, seguida de división por 9.81 para expresar g.
+\subsection{Cálculo}
+La rutina suaviza con promedio de ocho muestras, rechaza ciertos saltos, exige desaceleración suficiente y limita su magnitud. Después aplica una escala y solicita fuerza constante, normalmente hacia delante; existe inversión configurable. En una ruta DCS en vuelo pondera también por aerofreno.
+
+Es una sensación de carga por frenado/desaceleración, no un damper del yugo: puede existir aunque la mano esté quieta porque la variable que cambia es el movimiento del avión.
+\subsection{Ajustes y comparación}
+Habilitación, escala, límite e inversión. Tu firmware no tiene este término. La vibración de suelo por velocidad no expresa cuánto está frenando el avión, y el damper responde a velocidad del mando, no a aceleración longitudinal.
+\fuente{telemffb/sim/base/DecelerationEffectMixIn.py}
+
+\efecto{Fuerza por ángulo de ataque y empuje de protección}
+\subsection{Dos sensaciones diferentes}
+Además del buffet, existen fuerzas continuas relacionadas con AoA. Una añade esfuerzo proporcional al ángulo; otra empuja hacia delante cuando se aproxima una región crítica. No son oscilaciones.
+\subsection{Cálculo resumido}
+La ruta básica combina dos rampas:
+\[
+M=I_{\max}R(|\alpha|;0,\alpha_s)R(TAS;V_{\min},V_{\max}).
+\]
+El signo del AoA selecciona dirección; esa ruta se omite para ciertos modos FBW. La protección promedia ocho muestras de AoA y aplica una curva no lineal entre \code{critical_aoa_start} y \code{critical_aoa_max}, con máximo configurado y condiciones de vuelo/velocidad.
+
+Su finalidad es representar esfuerzo o una indicación de reducir AoA. La existencia de esta opción no demuestra que todos los aviones tengan un sistema real de empuje automático.
+\subsection{Ajustes y diferencia}
+Umbrales, fuerza máxima y habilitación de cada ruta. Tu proyecto usa AoA para buffet de pérdida, pero no suma estas fuerzas continuas. Añadirlas sin distinguir aviso, esfuerzo aerodinámico y protección podría duplicar una sensación o representar un sistema inexistente.
+\fuente{telemffb/sim/base/AoAEffectsMixIn.py}
+
+\efecto{Caída del elevador a baja velocidad}
+\subsection{Qué representa}
+Una tendencia del mando hacia delante por el peso/caída del elevador cuando hay poco flujo. La ruta simple utiliza TAS; otra contribución está integrada en el modelo de controles aerodinámicos.
+\subsection{Cálculo}
+En el override simple, la fuerza cae linealmente desde el valor configurado a velocidad cero hasta cero a 20 kt:
+\[
+M=I_d\left[1-R(TAS;0,20\,\mathrm{kt})\right].
+\]
+Convierte las unidades a m/s internamente y solicita fuerza constante a 180 grados, con envolvente de entrada. No actúa como un resorte simétrico.
+
+La ruta aerodinámica tiene un término distinto, proporcional a \code{elevator_droop_moment} y carga G, dividido por $1+q_{e,\rm escalada}$. No debe confundirse esa presión escalada con Pa sin conversión.
+\subsection{Ajustes y comparación}
+Habilitación y fuerza/momento según ruta. Tu rigidez residual mantiene centrado simétrico a baja presión; no reproduce una tendencia direccional por peso. Sería un término adicional de sesgo, con necesidad de comprobar su sentido físico.
+\fuente{telemffb/sim/base/ElevatorDroopEffectMixIn.py}
+\fuente{telemffb/sim/msfs_xp/MsfsXpFlightControlsMixIn.py:elevator_droop_term_for}
+
+\efecto{Vibración de motor de pistón y hélice}
+\subsection{Entrada}
+\code{PropRPM} en MSFS/X-Plane, \code{ActualRPM} en DCS o RPM de la ruta correspondiente. Para varias RPM puede tomar el máximo. Se suprime por debajo del umbral mínimo de giro.
+\subsection{Cálculo}
+La frecuencia principal es $f=RPM/60$. Por ejemplo, 2400 RPM dan 40 Hz. La intensidad se interpola entre puntos de baja y alta RPM del perfil y se limita.
+
+Genera tonos principales y acompañantes ligeramente desafinados en ambos ejes. En esta copia, la profundidad y separación de esos acompañantes disminuyen al subir RPM; se compensa la magnitud principal para evitar un batido lento demasiado fuerte en crucero. La segunda dirección utiliza también un desplazamiento de frecuencia.
+
+IL-2 contiene una ruta propia de vibración de motor que puede aprovechar sus datos de amplitud/frecuencia; no todas las rutas se reducen al mismo cálculo de RPM.
+\subsection{Ajustes y diferencia}
+RPM de referencia e intensidades baja/alta, habilitación y parámetros del perfil. Tu proyecto actual no tiene vibración específica de motor; no debe confundirse con buffet o suelo. Sería necesario transmitir RPM o una envolvente/frecuencia, y decidir dónde generar la portadora.
+\fuente{telemffb/sim/base/EngineRumbleMixIn.py}
+\fuente{telemffb/sim/aircrafts_il2.py:il2_update_engine_shake}
+
+\efecto{Vibración de reactor y poscombustión}
+\subsection{Entrada}
+Potencia o porcentaje de RPM de motor, y estado/intensidad de \code{Afterburner}. X-Plane utiliza \code{EngPCT} en la ruta de reactor; otras rutas usan \code{EngRPM}.
+\subsection{Cálculo}
+Con $p$ como porcentaje dividido por 100:
+\[
+M=\sat_{[0,1]}(I_jp),\qquad f=f_0+10p.
+\]
+Añade pequeñas modulaciones y otra frecuencia desplazada en la segunda dirección. El objetivo es un zumbido continuo que cambia con potencia.
+
+La poscombustión utiliza intensidad proporcional a su señal y ondas triangulares alrededor de 20 Hz con modulación; la rutina activa dos direcciones. Es otro efecto, no una multiplicación universal del zumbido anterior.
+\subsection{Ajustes y comparación}
+Intensidad y frecuencia base de reactor, intensidad de poscombustión y habilitaciones. No existen en tu cadena actual. Para un avión de pistón no corresponden aunque el programa los ofrezca.
+\fuente{telemffb/sim/base/EngineRumbleMixIn.py:ac_update_jet_engine_rumble}
+\fuente{telemffb/sim/base/EngineRumbleMixIn.py:ac_update_ab_effect}
+
+\efecto{Pérdida de presión hidráulica}
+\subsection{Entrada y sensación}
+\code{HydSys}, y en ciertas rutas \code{HydPress}, representan salud/presión hidráulica. También puede configurarse una variable y transformación propias. La intención es aumentar resistencia al fallar la asistencia.
+\subsection{Cálculo}
+Obtiene una salud $h\in[0,1]$ y limita su rapidez de cambio con una rampa de 2.5 s para todo el recorrido. La primera lectura se toma directamente. Bajo el umbral $h_t$, interpola:
+\[
+B(h)=B_{\rm fallo}+(B_{\rm normal}-B_{\rm fallo})\frac{h}{h_t}.
+\]
+Hace lo mismo con fricción, limita coeficientes y solicita los dos efectos condicionales. En esa etapa sustituye los overrides normales; la inercia queda separada. La configuración exige tener habilitados los overrides de damper y fricción.
+\subsection{Ajustes y diferencia}
+Variable fuente, transformación, umbral y resistencias en fallo. Tu proyecto tiene ganancias de movimiento constantes y no recibe estado hidráulico para modificarlas. Esta idea sería una programación de ganancias por estado del avión, no un nuevo generador de vibración.
+\fuente{telemffb/sim/base/HydraulicLossMixIn.py}
+
+\efecto{Fricción de dirección en tierra}
+\subsection{Entrada y dispositivo}
+Efecto para pedales en la ruta MSFS. Usa \code{SimOnGround}, carga sobre rueda central, \code{GroundSpeed}, superficie y extensión del timón de agua cuando corresponde.
+\subsection{Cálculo}
+Parte de la fricción normal $F_0$ y calcula una contribución dependiente de velocidad y curva expo:
+\[
+F=\sat_{[0,1]}\left[F_0+(1-F_0)E(V)\right].
+\]
+$E(V)$ proviene de escalar velocidad de 0--20 m/s, intensidad y expo. En agua puede multiplicar por la extensión del timón. La intención es una resistencia de dirección que varía con la situación de rodaje.
+
+Sustituye el efecto de fricción base mientras corresponde y le devuelve el control al salir de esa condición. No es la misma variable que la velocidad de los pedales: aquí se modifica el coeficiente usando velocidad del avión.
+\subsection{Ajustes y comparación}
+Intensidad, expo, fricción base y habilitación. Tu fricción actual de roll/pitch no depende de ruedas, agua ni velocidad respecto del suelo. Esta función no se debería trasladar a un yugo como si fuera equivalente directa.
+\fuente{telemffb/sim/msfs_xp/MsfsXpSteeringFrictionMixIn.py}
+
+\efecto{Shimmy de rueda de nariz}
+\subsection{Entrada}
+Efecto de pedales en MSFS: velocidad de suelo, promedio de frenos, peso sobre ruedas y configuración de tren. Se omite en aviones de patín de cola y sin contacto con suelo.
+\subsection{Cálculo}
+Con velocidad superior al mínimo y frenado suficiente, transforma la fuerza de frenado mediante una curva no lineal de curvatura 2.5 y la multiplica por la intensidad configurada. La frecuencia se escala desde 8 a 16 Hz entre la velocidad mínima y su triple.
+
+En el código se usa una escala lineal sin recorte explícito de esa frecuencia en la expresión: fuera del intervalo no debe afirmarse que quede siempre entre 8 y 16 Hz. La salida es un efecto periódico en la dirección de pedales.
+\subsection{Ajustes y comparación}
+Velocidad mínima, frenado mínimo e intensidad. Tu efecto de suelo no representa esta oscilación de rueda asociada a frenado y pedales; su triangular continua tiene otro propósito.
+\fuente{telemffb/sim/msfs_xp/MsfsXpNosewheelShimmyMixIn.py}
+
+\efecto{Cabina, gancho, sonda y plegado de alas}
+\subsection{Una familia de efectos de mecanismo}
+Utiliza cambios de posiciones: cabina, \code{TailHook}, \code{FuelBoom} y \code{WingFold}, según disponibilidad. Cada mecanismo tiene habilitación e intensidad propias. Se agrupan aquí porque comparten la misma metodología.
+\subsection{Señales solicitadas}
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Mecanismo & Vibración de movimiento & Final de recorrido\\
+\midrule
+Cabina & Cuadrada, 120 Hz & Golpe breve\\
+Gancho & Diente de sierra ascendente, 160 Hz & Golpe breve\\
+Sonda & Diente de sierra descendente, 150 Hz & Golpe configurable por helper\\
+Alas plegables & Diente de sierra descendente, 100 Hz & Golpes en dos direcciones\\
+\bottomrule
+\end{tabular}
+\end{center}
+Detectar cambio reciente mantiene la sensación de movimiento; llegar a los extremos puede disparar un pulso de duración corta. El plegado de alas exige condición de tierra en la ruta común. No son cálculos de torque real del actuador: son avisos táctiles sintetizados.
+\subsection{Ajustes y comparación}
+Intensidad y habilitación por mecanismo; frecuencia, forma y temporización se fijan en sus rutinas/helpers. Tu proyecto no incluye estos efectos. Antes de incorporarlos conviene identificar si el avión posee el mecanismo y si su posición se publica de forma fiable.
+\fuente{telemffb/sim/base/MotionEffectsMixIn.py}
+
+\efecto{Vibración de rotor de helicóptero}
+\subsection{Entrada}
+RPM de rotor o \code{PropRPM} según simulador, número de palas y estado de motor. No utiliza la frecuencia de giro del yugo.
+\subsection{Cálculo}
+La ruta inspeccionada usa:
+\[
+f=\frac{RPM_{\rm rotor}}{45}\,N_{\rm palas}.
+\]
+Solicita dos periódicos, uno a $f$ y otro a $f+2$ Hz, con la mitad de la intensidad configurada en cada llamada. La ausencia de datos específicos puede activar valores alternativos definidos en la rutina.
+
+El divisor 45 es una elección de esa implementación. La frecuencia física de paso de palas sería $RPM\,N/60$; no deben confundirse ambas expresiones. Otro efecto, blade slap, sí usa el divisor 60.
+\subsection{Ajustes y comparación}
+Habilitación, intensidad y datos de rotor/palas por modelo. Tu proyecto no tiene esta rama. Añadir una vibración genérica de motor no equivale a reproducir todas las sensaciones de helicóptero.
+\fuente{telemffb/sim/base/HelicopterEffectsMixIn.py:ac_update_heli_engine_rumble}
+
+\efecto{ETL: transición de sustentación del helicóptero}
+\subsection{Qué representa y datos}
+Una sacudida en una banda de velocidad asociada a la transición de sustentación. Usa TAS, RPM de rotor, número de palas y contacto con suelo.
+\subsection{Cálculo}
+La magnitud sigue una campana dentro de los límites configurados:
+\[
+M=I_{ETL}\,\mathrm{campana}(TAS;V_{\rm inicio},V_{\rm fin}).
+\]
+La campana implementada es un escalado gaussiano, con máximo alrededor del centro de la banda. No implica que el programa resuelva aerodinámica de rotor completa.
+
+La frecuencia de la ruta es $(RPM/75)N_{\rm palas}$, con otro periódico desplazado 4 Hz. En tierra se suprime según la señal de ruedas y excepciones de ciertos modelos.
+\subsection{Ajustes y comparación}
+Velocidades inicial/final e intensidad; configuración correcta del rotor. Tu yugo no implementa ETL. Su semejanza con un buffet está en la vibración final, pero los datos y la condición de aparición son distintos.
+\fuente{telemffb/sim/base/HelicopterEffectsMixIn.py:ac_calc_etl_effect}
+
+\efecto{Sacudida por exceso de velocidad en helicóptero}
+\subsection{Entrada}
+TAS, estado de tierra y datos de rotor compartidos con la rutina ETL. El disparador es velocidad de avance, no necesariamente exceso de RPM de rotor.
+\subsection{Cálculo}
+Superado el umbral, una curva no lineal hace crecer la intensidad en una banda de 15 m/s, y la salida se limita a $[0,1]$. La frecuencia base es el 75\% de la frecuencia ETL calculada; el segundo eje añade 4 Hz.
+
+Se envían dos efectos periódicos. La sensación busca advertir o representar sacudida a alta velocidad; los umbrales son parámetros del perfil, no límites operativos certificados derivados automáticamente del modelo.
+\subsection{Ajustes y comparación}
+Velocidad de inicio, intensidad y habilitación. Tu firmware no tiene un efecto de overspeed independiente. El aumento de rigidez por presión tampoco es equivalente a generar esta vibración.
+\fuente{telemffb/sim/base/HelicopterEffectsMixIn.py:ac_calc_etl_effect}
+
+\efecto{VRS: estado de anillo de vórtice}
+\subsection{Datos y sensación}
+Vibración de helicóptero durante descenso, baja velocidad y ausencia de contacto con el suelo. Usa \code{VerticalSpeed}, TAS y ruedas; hay ajustes de velocidad en determinadas rutas.
+\subsection{Cálculo}
+Al superar la tasa de descenso de inicio, escala su magnitud hacia la intensidad configurada y la limita. Envía dos vibraciones a 10 y 12 Hz con dirección modulada.
+
+La velocidad de avance actúa como condición de entrada. En la copia analizada, la expresión del factor adicional de velocidad se evalúa a 1 para velocidad no nula, y se fija en 1 si es cero. Por ello, no debe describirse como una atenuación progresiva de intensidad con velocidad: la condición de umbral es la que hace esa selección.
+
+Es una aproximación de sensación basada en condiciones, no un cálculo de la estructura del vórtice del rotor.
+\subsection{Ajustes y comparación}
+Velocidad máxima de activación, descenso de inicio/máximo e intensidad. No está implementado en tu proyecto; ni buffet de pérdida de ala fija ni vibración de suelo son sustitutos directos.
+\fuente{telemffb/sim/base/HelicopterEffectsMixIn.py:ac_update_vrs_effect}
+
+\efecto{Blade slap: interacción pala--vórtice}
+\subsection{Entrada}
+En X-Plane puede utilizar la señal nativa \code{BladeSlap}. En otras rutas la estima mediante velocidad, descenso y carga G. También usa RPM, palas y estado de ruedas.
+\subsection{Cálculo}
+La frecuencia es la de paso de palas:
+\[
+f=\frac{RPM}{60}N_{\rm palas}.
+\]
+La señal nativa o inferida $s\in[0,1]$ se convierte en:
+\[
+M=\sat_{[0,1]}\left[I\,s\,\sat_{[0.6,1]}(2/N_{\rm palas})\right].
+\]
+La estimación combina una banda de velocidad, condiciones de descenso y contribución de maniobra. Suprime el efecto en tierra o con señal/frecuencia insuficientes. Solicita dientes de sierra descendentes en dos ejes, para una sensación de golpe más marcado que un seno.
+\subsection{Ajustes y diferencia}
+Intensidad, uso de señal nativa, banda de velocidad y ponderación de carga. Es distinto del zumbido continuo de rotor. Tu proyecto no tiene esa señal ni ese sintetizador; sería un efecto nuevo y específico de helicóptero.
+\fuente{telemffb/sim/base/HelicopterEffectsMixIn.py:ac_update_blade_slap}
+
+\efecto{Force trim y controles de helicóptero}
+\subsection{Qué hace}
+Permite liberar o desplazar el centro del cíclico, pedales o colectivo mediante botones, trim y lógica específica del helicóptero. Algunos addons publican estados particulares de sistemas de aumento de estabilidad y piloto automático.
+\subsection{Metodología}
+La idea es guardar una referencia $x_0$ y modificarla cuando corresponde. Al mantener liberación puede reducirse la resistencia; al soltar, el centro se fija en una nueva referencia o vuelve gradualmente según modo. El resorte actúa después alrededor de esa referencia.
+
+No existe una ecuación única para todos los helicópteros de la carpeta: hay clases específicas para HPG, FlyInside, CowanSim y otras integraciones. También se coordina la entrada enviada al simulador. Las llamadas comentadas de damper no deben contarse como efectos activos.
+\subsection{Ajustes y comparación}
+Asignación de botones, ganancias, retorno, centro y opciones del addon. Tu resorte actual tiene centro fijo, por lo que implementar force trim exige añadir estado de centro y reglas de actualización. No se logra simplemente variando la rigidez.
+\fuente{telemffb/sim/base/HelicopterEffectsMixIn.py:ac_collective_force_trim_override}
+\fuente{telemffb/sim/base/PedalSpringOverrideMixIn.py}
+\fuente{telemffb/sim/msfs_xp/MsfsXpHeliControlsMixIn.py}
+
+\efecto{Bloqueo de mandos y rueda de trim}
+\subsection{Bloqueo}
+La ruta de controles puede leer un estado de bloqueo y aplicar resorte, detentes o damper para retener los mandos. Un detente es una retención localizada alrededor de una posición; no equivale a un resorte lineal en todo el recorrido. La implementación depende de capacidades del dispositivo y de la configuración del avión.
+\subsection{Rueda de trim}
+La ruta \code{MsfsXpTrimwheelMixIn} coordina la posición de una rueda física con trim y AP. Cambia centro y coeficiente de resorte para seguir una referencia, y puede enviar comandos de trim al simulador. No es una vibración de roll/pitch del yugo.
+
+En ambos casos, el principio es convertir un estado o posición objetivo en condiciones FFB, usando realimentación del dispositivo. No se atribuye una ley eléctrica PWM a estas llamadas.
+\subsection{Ajustes y comparación}
+Fuente de estado de bloqueo, fuerza, calibraciones de trim, ganancia de seguimiento y asignaciones. Tu proyecto no contempla estos dispositivos o modos en su cadena actual. Serían funciones de control nuevas, con estados y referencias adicionales.
+\fuente{telemffb/sim/msfs_xp/MsfsXpFlightControlsMixIn.py}
+\fuente{telemffb/sim/msfs_xp/MsfsXpTrimwheelMixIn.py}
+
+\efecto{Disparo, lanzamiento de cargas y contramedidas}
+\subsection{Entrada}
+Cambios en \code{Gun}, \code{PayloadInfo}, \code{Flares} y \code{Chaff}, o datos específicos de armamento de IL-2. Son eventos de combate; no dependen necesariamente de velocidad del avión.
+\subsection{Cómo genera los golpes}
+El helper común dispara efectos breves al detectar cambios: lanzamiento con onda cuadrada, disparo con diente de sierra ascendente, y contramedidas con periódico de 50 Hz y 80 ms. Dirección e intensidad son configurables.
+
+IL-2 puede usar cadencia de armas y datos específicos para generar una secuencia más ligada al disparo, en vez de un único pulso genérico. No se debe interpretar todo cambio de variable como prueba de que el modelo reproduce el retroceso real en unidades físicas.
+\subsection{Ajustes y comparación}
+Intensidad por evento, dirección y habilitación. Tu yugo no incorpora estas entradas ni efectos. La metodología transferible es detectar una transición y disparar una envolvente temporal, diferenciándola de una vibración continua.
+\fuente{telemffb/sim/base/WeaponsEffectMixIn.py}
+\fuente{telemffb/sim/aircrafts_il2.py:ac_update_cm_weapons}
+
+\efecto{Impactos y daño en IL-2}
+\subsection{Qué representa y datos}
+Avisos táctiles breves cuando la telemetría de IL-2 informa impactos o daño. Se trata de eventos específicos de esa integración; no hay una señal universal común a todos los simuladores.
+\subsection{Cálculo}
+La rutina convierte los eventos en efectos cuadrados de duración breve, con amplitud y frecuencia de sus parámetros, y dirección modulada. Las llamadas de impacto y daño inspeccionadas utilizan 30 ms de duración.
+
+La intensidad representa un aviso configurado: no mide energía de impacto ni calcula deformación del avión. La repetición de eventos puede producir secuencias de sacudidas.
+\subsection{Ajustes y comparación}
+Habilitación e intensidades del perfil de IL-2. Tu proyecto no dispone de equivalentes; intentar deducir daño a partir de un salto grande de aceleración no sería la misma metodología y podría confundir cambios de escena o telemetría defectuosa con un impacto.
+\fuente{telemffb/sim/aircrafts_il2.py:il2_update_damage}
+
+\clearpage
+\section{Procedencia y límites de esta explicación}
+\subsection{Qué proviene de dónde}
+Las fichas describen la copia local solicitada. Las llamadas FFB, mezclas de frecuencias, curvas y umbrales se verificaron en sus módulos Python. Las ecuaciones básicas de resorte, velocidad, inercia o presión sirven para explicar el principio; no demuestran una calibración física de todos los perfiles.
+
+El repositorio público de referencia es \href{https://github.com/walmis/VPforce-TelemFFB}{VPforce-TelemFFB}. Ese enlace identifica el proyecto, pero no garantiza que su contenido actual coincida con esta copia local. Para reproducir los hallazgos deben consultarse los archivos indicados en cada ficha.
+
+\subsection{Qué no debe concluirse}
+\begin{itemize}
+\item Tener un módulo no significa que esté habilitado por defecto ni que sea compatible con todos los simuladores y dispositivos.
+\item Las unidades HID no son PWM, torque o fuerza medidos. La implementación del dispositivo completa la cadena.
+\item La aplicación mezcla estimaciones físicas, datos nativos y efectos sintéticos para percepción. No todos tienen una derivación aerodinámica completa.
+\item Las familias agrupadas incluyen variantes por avión; este documento resume su metodología y no sustituye una auditoría línea por línea de cada addon.
+\end{itemize}
+
+\subsection{Cómo trasladar una idea a tu yugo}
+\begin{enumerate}
+\item Elegir el fenómeno y las variables realmente disponibles en Prepar3D.
+\item Definir una envolvente de intensidad y, si corresponde, una portadora o referencia de centro.
+\item Decidir si se calcula en el puente o en la placa y ampliar el protocolo sólo cuando haga falta.
+\item Convertir a tu escala normalizada, sumar con los efectos existentes y conservar límites e inhabilitación común.
+\item Ajustar con el sensor y mecanismo reales; comparar el efecto aislado y luego combinado.
+\end{enumerate}
+Los primeros candidatos a estudiar por continuidad con lo ya implementado son centro móvil por trim, flujo de hélice en el resorte, vibración de motor y diferenciación entre movimiento de mecanismos y buffet. Son posibles ampliaciones, no cambios realizados por este documento.
+
+\textbf{Verificación documental.} Se revisaron fórmulas seleccionadas, llamadas de salida y estructura del texto. No se modificaron los modelos de TelemFFB ni los de MiYoke. La paginación definitiva requiere una compilación LaTeX satisfactoria; las fichas se mantuvieron breves y separadas para respetar el límite solicitado.
+\end{document}

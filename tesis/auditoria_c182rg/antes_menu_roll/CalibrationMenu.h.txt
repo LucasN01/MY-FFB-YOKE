@@ -1,0 +1,119 @@
+#ifndef YOKE_CALIBRATION_MENU_H
+#define YOKE_CALIBRATION_MENU_H
+#include "GainSettings.h"
+#include <stdio.h>
+#include <string.h>
+
+namespace YokeCalibration {
+enum class Button : uint8_t { Mode, Ok, Back, Plus, Minus };
+enum class Screen : uint8_t { Normal, Browse, Edit };
+class DebouncedButton {
+public:
+    void begin(bool pressed,uint32_t now) { raw=stable=pressed; changed=now; }
+    bool update(bool pressed,uint32_t now) {
+        if(pressed!=raw) { raw=pressed; changed=now; }
+        if(raw!=stable && uint32_t(now-changed)>=YOKE_BUTTON_DEBOUNCE_MS) {
+            stable=raw; return stable; // one event per press, no held-key repeat
+        }
+        return false;
+    }
+private:
+    bool raw=false,stable=false;
+    uint32_t changed=0;
+};
+class Menu {
+public:
+    explicit Menu(YokeGains::Settings& values):settings(values) {}
+    void update(uint32_t now,bool paused) {
+        clock=now; allowed=paused;
+        if(notice!=Notice::None && uint32_t(now-noticeAt)>=2000) notice=Notice::None;
+        if(!allowed && active()) {
+            screen=Screen::Normal; pending=false; error=false;
+            show(Notice::PauseRequired);
+        }
+    }
+    bool displayActive() const { return active() || notice!=Notice::None; }
+    bool active() const { return screen!=Screen::Normal; }
+    Screen currentScreen() const { return screen; }
+    YokeGains::Id selected() const { return YokeGains::Id(index); }
+    uint16_t editValue() const { return draft; }
+    bool savePending() const { return pending; }
+    void press(Button button) {
+        if(pending) return;
+        if(!allowed) {
+            if(button==Button::Mode) show(Notice::PauseRequired);
+            return;
+        }
+        notice=Notice::None;
+        if(screen==Screen::Normal) {
+            if(button==Button::Mode) { screen=Screen::Browse; index=0; }
+            return;
+        }
+        if(button==Button::Back) {
+            screen=screen==Screen::Edit ? Screen::Browse : Screen::Normal;
+            error=false; return;
+        }
+        if(screen==Screen::Browse) {
+            if(button==Button::Plus) index=(index+1)%YokeGains::Count;
+            if(button==Button::Minus) index=(index+YokeGains::Count-1)%YokeGains::Count;
+            if(button==Button::Ok) { draft=settings.raw(selected()); screen=Screen::Edit; error=false; }
+        } else {
+            if(button==Button::Plus) {
+                const uint16_t next=draft+YokeGains::spec(selected()).step;
+                draft=next>10000 ? 10000 : next; error=false;
+            }
+            if(button==Button::Minus) {
+                const uint16_t step=YokeGains::spec(selected()).step;
+                draft=draft<step ? 0 : draft-step; error=false;
+            }
+            if(button==Button::Ok) {
+                if(draft==settings.raw(selected())) { screen=Screen::Browse; error=false; }
+                else pending=true;
+            }
+        }
+    }
+    YokeGains::Settings candidate() const {
+        YokeGains::Settings result=settings;
+        if(pending) result.set(selected(),draft);
+        return result;
+    }
+    void finishSave(bool success) {
+        if(!pending) return;
+        if(success) { settings.set(selected(),draft); screen=Screen::Browse; show(Notice::Saved); }
+        error=!success; pending=false;
+    }
+    void rows(char* top,char* bottom) const {
+        char value[17]={0};
+        if(notice==Notice::PauseRequired) {
+            padded(top,"PAUSE SIMULADOR"); padded(bottom,"PARA CALIBRAR");
+        } else if(notice==Notice::Saved) {
+            padded(top,"GUARDADO"); padded(bottom,YokeGains::spec(selected()).label);
+        } else if(screen==Screen::Browse) {
+            padded(top,"MODO CALIBRACION");
+            snprintf(value,sizeof(value),"* %s",YokeGains::spec(selected()).label);
+            padded(bottom,value);
+        } else if(screen==Screen::Edit) {
+            padded(top,error ? "ERROR GUARDADO" : YokeGains::spec(selected()).label);
+            if(selected()==YokeGains::Total) snprintf(value,sizeof(value),"Valor: %u%%",unsigned(draft/100));
+            else snprintf(value,sizeof(value),"Valor: %u.%03u",unsigned(draft/10000),unsigned((draft%10000)/10));
+            padded(bottom,value);
+        } else { padded(top,""); padded(bottom,""); }
+    }
+private:
+    enum class Notice : uint8_t { None, PauseRequired, Saved };
+    Notice notice=Notice::None;
+    uint32_t clock=0,noticeAt=0;
+    bool allowed=false;
+    void show(Notice value) { notice=value; noticeAt=clock; }
+    static void padded(char* out,const char* text) {
+        memset(out,' ',16); out[16]=0;
+        for(uint8_t i=0;i<16 && text[i];++i) out[i]=text[i];
+    }
+    YokeGains::Settings& settings;
+    Screen screen=Screen::Normal;
+    uint8_t index=0;
+    uint16_t draft=0;
+    bool pending=false,error=false;
+};
+}
+#endif

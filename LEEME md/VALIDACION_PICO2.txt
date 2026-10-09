@@ -1,0 +1,19 @@
+NOTA 30/09/2026: documento historico. La version activa usa solo SimConnect, sin FFB nativo ni amortiguacion local. Ver LEEME_SIMCONNECT.md.
+
+Validacion actualizada: vibracion del tren a 2 Hz (2026-09-29)
+Core Arduino-Pico 6.1.1; rp2040:rp2040:rpipico2:usbstack=tinyusb,arch=arm
+Potenciometros: 93832 bytes flash, 18776 bytes RAM.
+Encoders: 94216 bytes flash, 19060 bytes RAM.
+tests/simconnect_checks.exe: PASS, 20296 comprobaciones.
+tests/ffb_descriptor_checks.py: OK.
+Prueba fisica de esta frecuencia nueva: pendiente.
+El usuario confirmo LCD, FFB nativo y turbulencia con la version anterior.
+Ver REVISION_VIBRACION_TREN.md para analisis y prueba.
+
+Antecedente de migracion: Arduino Micro con potenciometros compilo correctamente
+con 26058 bytes flash y 1498 bytes RAM antes de este ajuste de frecuencia.
+
+build-pico2\MiYoke_PD_V2.1.ino.uf2
+UF2 validado; SHA256: 32d4c9abb2ced0c8b47316b27dd533247b1d5a43479c8f53124550088bcfe980
+build-pico2-encoders\MiYoke_PD_V2.1.ino.uf2
+UF2 validado; SHA256: 0fb143678b3768fc19299580efe0bd8cdf3f550fe890ec1ef06afc3661d27081

@@ -1,0 +1,90 @@
+{
+  "air_records": 125,
+  "cfg_differences": [
+    {
+      "section": "autopilot",
+      "key": "yaw_control_uses_trim",
+      "original": null,
+      "installed": "0.000000"
+    },
+    {
+      "section": "autopilot",
+      "key": "yaw_slip_control_gain",
+      "original": null,
+      "installed": "0.000000"
+    }
+  ],
+  "telemetry": {
+    "sha256": "df9e923aef7e2aced2ca03c0ea53b1214ac937e8a44303db060f37bd93121ed8",
+    "rows": 35189,
+    "discarded_partial_rows": 0,
+    "duration_s": 370.688,
+    "dt_median_ms": 15.0,
+    "dt_max_ms": 11422,
+    "duplicate_timestamps": 16616,
+    "airborne_armed_rows": 19213,
+    "q_saturated_rows": 2248
+  },
+  "selected_fields": {
+    "ias_knots": {
+      "min": 0.0,
+      "max": 256.87,
+      "invalid": 0,
+      "nonzero": 26387
+    },
+    "aoa_deg": {
+      "min": -87.02,
+      "max": 154.42,
+      "invalid": 0,
+      "nonzero": 27877
+    },
+    "stall_alpha_deg": {
+      "min": 16.1,
+      "max": 16.1,
+      "invalid": 0,
+      "nonzero": 35189
+    },
+    "vs0_knots": {
+      "min": 56.01,
+      "max": 56.01,
+      "invalid": 0,
+      "nonzero": 35189
+    },
+    "vs1_knots": {
+      "min": 65.01,
+      "max": 65.01,
+      "invalid": 0,
+      "nonzero": 35189
+    },
+    "stall_amp": {
+      "min": 0.0,
+      "max": 0.499,
+      "invalid": 0,
+      "nonzero": 5362
+    },
+    "spoiler_left": {
+      "min": null,
+      "max": null,
+      "invalid": 35189,
+      "nonzero": 0
+    },
+    "gear_amp": {
+      "min": 0.0,
+      "max": 1.0,
+      "invalid": 0,
+      "nonzero": 1612
+    },
+    "ground_amp": {
+      "min": 0.0,
+      "max": 1.0,
+      "invalid": 0,
+      "nonzero": 6438
+    },
+    "q_pa": {
+      "min": 0.0,
+      "max": 10303.23,
+      "invalid": 0,
+      "nonzero": 26711
+    }
+  }
+}
