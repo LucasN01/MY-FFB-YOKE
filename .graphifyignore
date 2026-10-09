@@ -1,0 +1,7 @@
+tesis/
+tests/
+*.pdf
+*.csv
+*.json
+*.bak
+*.txt
