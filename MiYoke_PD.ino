@@ -95,6 +95,7 @@ void debugPrintMotion(unsigned long now, const float* motorCommands) {
 #endif
 }
 
+// VERSION CON AGENTES CLAUDE Y CODEX
 void setup() {
 #if defined(ARDUINO_ARCH_RP2040)
     analogWriteRange(255);
