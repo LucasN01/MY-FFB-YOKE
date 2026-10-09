@@ -54,9 +54,15 @@ Reglas:
 
 \## Revisión
 
-\- Revisor:
+\- Revisor: Claude (2026-10-09) — fase REVISIÓN del Flujo
 
 \- Hallazgos:
+  1. OK. `git diff master...HEAD --stat`: solo `MiYoke_PD.ino` (+9, -0), `LEEME md/DISENO_usb_id_pico2.md` (diseño) y `HANDOFF.md`. Commits: fadebad (diseño), 4f555c1 (código), a85eae0 (entrega). Opcional de LEEME_PICO2.md no aplicado (aceptable).
+  2. OK. [INO] `MiYoke_PD.ino:103-111`: bloque idéntico al diseño (condición, literales 0x2E8A/0x000F, sangrías, comentarios), entre el `#endif` de analogWrite (102) y `#if DEBUG_MOTION_TELEMETRY...` (112). CRLF conservado.
+  3. OK. Tag anotado `V1.3` -> 4f555c1. `..\MiYoke_PD_VERSIONES\V1_3\ACTUALIZACION_V1_3.txt` existe; CAMBIO y RAMA correctos. Copia `V1_3\MiYoke_PD.ino` idéntica al working tree (sin CR). `graphify-ino/` sincronizado y sin versionar.
+  4. OK. Compilación: `build-pico2/MiYoke_PD.ino.bin` de 17:41 (antes del tag de 17:42), 118.732 bytes vs 118.612 de V2.4 = +120, coincide con lo informado por Codex. No recompilado por el revisor.
+  5. OBSERVACIÓN (no bloquea, no es error de Codex): ACTUALIZACION_V1_3 dice VERSION ANTERIOR V1.2 y lista `D LEEME md/DISENO_prueba_flujo.md` y un cambio de 10 líneas en el .ino. Es porque `nueva-version.ps1:11,33` toma la etiqueta de número más alto (V1.2, que está en otra rama) y no la anterior de esta rama. El cambio real respecto de master es solo +9 líneas (`git diff master V1.3 --stat`). Propuesta para una tarea aparte: usar `git describe --tags --abbrev=0 HEAD^` como versión anterior.
+  6. Integración: al combinar con `mejora/prueba-flujo` no hay solape (comentario arriba de `void setup()` vs bloque en 103-111).
 
-\- Estado: (aprobado / requiere cambios)
+\- Estado: aprobado (pendiente validación del usuario en hardware: subir `build-pico2/MiYoke_PD.ino.uf2` o compilar con TinyUSB; COM con `USB\VID_2E8A&PID_000F&MI_00`; `INICIAR SIMULADOR.cmd` identifica `YOKE17SC8`; fuerzas y LCD sin cambios).
 
