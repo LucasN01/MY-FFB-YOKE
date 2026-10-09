@@ -38,16 +38,19 @@ Reglas:
 
 \## Última entrega
 
-\- Agente: Claude (2026-10-09) — fase DISEÑO del Flujo
+\- Agente: Codex (2026-10-09) — implementación del diseño USB Pico 2.
 
-\- Rama: `mejora/usb-id-pico2` (desde `master` @ 42ae7e3)
+\- Rama: `mejora/usb-id-pico2`.
 
-\- Tarea: fijar el ID USB 2E8A:000F en el firmware (TinyUSB usa 239A:CAFE y el lanzador no encuentra la placa). Diseño: `LEEME md/DISENO_usb_id_pico2.md`. Para Codex: implementar exactamente el bloque de 9 líneas en `MiYoke_PD.ino` entre las líneas 102 y 103, compilar con Build-Pico2.ps1, graphify-sync y crear versión.
+\- Tarea: implementado exactamente `LEEME md/DISENO_usb_id_pico2.md`. [INO] `MiYoke_PD.ino:103`: bloque de 9 líneas que fija USB 2E8A:000F mediante TinyUSBDevice.setID y reconecta si mounted(), antes de Serial.begin.
 
-\- Archivos modificados: `LEEME md/DISENO_usb_id_pico2.md` (nuevo), `HANDOFF.md`. Sin cambios de código; sin versión.
+\- Archivos modificados: `MiYoke_PD.ino` y `HANDOFF.md`. Diff contra master: únicamente 9 líneas agregadas en el .ino, cero eliminadas, CRLF conservado; ningún otro archivo de código cambiado. Sin discrepancias con el diseño.
 
-\- Pendiente / riesgos: implementación (Codex), revisión (Claude), validación en hardware (usuario: COM con VID_2E8A&PID_000F y lanzador OK). `mejora/prueba-flujo` (V1.2) sigue sin integrar a master.
+\- Compilación: `powershell -ExecutionPolicy Bypass -File Build-Pico2.ps1`, FQBN `rp2040:rp2040:rpipico2:usbstack=tinyusb,arch=arm`, completada sin errores ni advertencias. Programa: 99.868 bytes (2%; +120 respecto de la compilación inicial de 99.748). RAM: 18.408 bytes (3%; sin cambio), 505.880 libres. Firmware generado en `build-pico2`; no cargado en la placa.
 
+\- Versionado: commit por nombre `4f555c1`; `graphify-sync.cmd` ejecutado correctamente (incluye `graphify update .`). Versión **V1.3** creada con el mensaje exacto del diseño; salida `Version V1.3 creada` y existencia de `..\MiYoke_PD_VERSIONES\V1_3\ACTUALIZACION_V1_3.txt` verificadas. `graphify-ino/` no se versionó. Esta entrega se registra en un commit posterior de documentación.
+
+\- Pendiente / riesgos: revisión de Claude y validación del usuario en hardware: COM con `USB\VID_2E8A&PID_000F&MI_00`, lanzador identifica `YOKE17SC8`, fuerzas SimConnect y LCD sin cambios. Windows podría asignar otro COM. No integrado a master. `mejora/prueba-flujo` (V1.2) sigue pendiente por separado.
 
 \## Revisión
 
