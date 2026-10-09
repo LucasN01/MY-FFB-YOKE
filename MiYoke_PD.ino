@@ -100,6 +100,15 @@ void setup() {
     analogWriteRange(255);
     analogWriteFreq(MOTOR_PWM_HZ);
 #endif
+#if defined(ARDUINO_ARCH_RP2040) && defined(USE_TINYUSB)
+    // TinyUSB usa 239A:CAFE por defecto; el lanzador busca la Pico 2 como 2E8A:000F.
+    TinyUSBDevice.setID(0x2E8A, 0x000F);
+    if (TinyUSBDevice.mounted()) { // ya enumerada con el ID anterior: re-enumerar
+        TinyUSBDevice.detach();
+        delay(10);
+        TinyUSBDevice.attach();
+    }
+#endif
 #if DEBUG_MOTION_TELEMETRY || SIMCONNECT_ADDITIONS_ENABLED
     Serial.begin(115200); // USB CDC: no esperar la conexion del monitor
 #endif
