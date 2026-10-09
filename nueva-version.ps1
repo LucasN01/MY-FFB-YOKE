@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$Mensaje)
+param([Parameter(Mandatory=$true)][string]$Mensaje, [switch]$Forzar)
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
@@ -8,14 +8,16 @@ if ($sucio) { throw "Hay cambios sin commit. Hace commit por nombre antes de ver
 if (git tag --points-at HEAD) { throw "Este commit ya tiene version: $(git tag --points-at HEAD)" }
 
 # 2. Calcular la version siguiente
-$vers = git tag --list 'V*' | Where-Object { $_ -match '^V(\d+)\.(\d+)$' } |
-  ForEach-Object { [pscustomobject]@{ Tag=$_; Maj=[int]$Matches[1]; Min=[int]$Matches[2] } } |
-  Sort-Object Maj, Min
-if ($vers) {
+$vers = @(git tag --list 'V*' | Where-Object { $_ -match '^V(\d+)\.(\d+)$' } | ForEach-Object { [pscustomobject]@{ Tag=$_; Maj=[int]$Matches[1]; Min=[int]$Matches[2] } } | Sort-Object Maj, Min)
+if ($vers.Count -gt 0) {
   $ult = $vers[-1]; $maj = $ult.Maj; $min = $ult.Min + 1
   if ($min -gt 9) { $maj++; $min = 0 }
   $prev = $ult.Tag
 } else { $maj = 1; $min = 0; $prev = $null }
+if ($prev -and -not $Forzar) {
+  $cod = git -c core.quotepath=off diff --name-only $prev HEAD | Where-Object { $_ -match '\.(h|hpp|c|cpp|ino|ps1|cmd|py|vcxproj)$' }
+  if (-not $cod) { Write-Host "Sin cambios de codigo desde $prev. No se crea version."; exit 0 }
+}
 $tag = "V$maj.$min"; $carpeta = "V${maj}_${min}"
 
 # 3. Etiqueta y copia (solo archivos versionados, sin carpetas ignoradas)
@@ -35,6 +37,7 @@ $txt = @(
   "COMMIT: $(git rev-parse --short HEAD)",
   "VERSION ANTERIOR: $(if ($prev) { $prev } else { 'ninguna' })",
   "",
+  "RAMA: $(git branch --show-current)",
   "CAMBIO: $Mensaje",
   "",
   "ARCHIVOS MODIFICADOS:",
