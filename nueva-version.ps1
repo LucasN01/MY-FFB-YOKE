@@ -30,10 +30,10 @@ Remove-Item $tmp
 # 4. Archivo de actualizacion
 $cambios = if ($prev) { git diff --name-status "$prev" HEAD } else { "Version base." }
 $txt = @(
-  "VERSIÓN: $tag",
+  "VERSION: $tag",
   "FECHA: $(Get-Date -Format 'yyyy-MM-dd HH:mm')",
   "COMMIT: $(git rev-parse --short HEAD)",
-  "VERSIÓN ANTERIOR: $(if ($prev) { $prev } else { 'ninguna' })",
+  "VERSION ANTERIOR: $(if ($prev) { $prev } else { 'ninguna' })",
   "",
   "CAMBIO: $Mensaje",
   "",
