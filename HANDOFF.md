@@ -38,16 +38,15 @@ Reglas:
 
 \## Última entrega
 
-\- Agente:
+\- Agente: Claude (2026-10-09)
 
-\- Rama:
+\- Rama: `mejora/prueba-flujo` (desde `master` @ 42ae7e3)
 
-\- Tarea:
+\- Tarea: DISEÑO de la prueba del flujo entre agentes. Entregable: `LEEME md/DISENO_prueba_flujo.md` (comentario `// VERSION CON AGENTES CLAUDE Y CODEX` arriba de `void setup()`, hoy línea 98 de MiYoke\_PD.ino).
 
-\- Archivos modificados:
+\- Archivos modificados: `LEEME md/DISENO_prueba_flujo.md` (nuevo), `HANDOFF.md`. El .ino NO se modificó. Solo documentación: no se creó versión.
 
-\- Pendiente / riesgos:
-
+\- Pendiente / riesgos: falta implementar según el diseño (una sola línea en el .ino, preservar CRLF), correr graphify-sync.cmd y crear la versión con nueva-version.ps1.
 
 
 \## Revisión
