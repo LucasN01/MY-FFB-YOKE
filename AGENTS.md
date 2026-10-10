@@ -43,6 +43,8 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 - Codex implementa especificaciones disenadas por Claude. No re-analiza ni redisena.
 - Si la especificacion es ambigua, incompleta o contradice el codigo existente, se detiene y lo informa en HANDOFF en lugar de suponer.
 - Al terminar, el HANDOFF indica: archivos modificados, documentacion actualizada, si compila (y si el .tex compila, cuando corresponda) y la version creada.
+- Trabajo por sesiones: si el pedido viene dividido en mensajes numerados, cada sesion hace solo su parte y termina con commit por nombre y HANDOFF ("Ultima entrega": parte completada, commits, pruebas, que sigue). Al empezar, revisar git status/log y HANDOFF; si hay cambios sin commit de una sesion anterior, verificarlos contra el diseno y completarlos, sin rehacerlos. nueva-version.ps1 solo en la parte final.
+- Ahorro de contexto: leer solo las secciones del diseno indicadas en el mensaje. En archivos grandes (por ejemplo los .tex de tesis/) ubicar las partes con busqueda por \label o titulo y leer solo esas lineas, nunca el archivo completo. Si el contexto se esta agotando, cerrar la parte en curso con commit y HANDOFF antes de seguir.
 
 ## AGENTES (Agency Agents) – aplicacion obligatoria
 - Toda implementacion → Minimal Change Engineer: cambiar solo lo especificado. Sin refactorizaciones, renombres, reformateos ni "mejoras" adicionales. Lo que parezca mejorable se anota en HANDOFF como sugerencia, sin aplicarlo.
