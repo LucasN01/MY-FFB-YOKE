@@ -46,31 +46,24 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 
 \## Última entrega
 
-\- Agente: Codex (2026-10-09) — implementación del diseño USB Pico 2.
+\- Agente: Claude (2026-10-10) — fase DISEÑO del Flujo: realismo y fundamentación teórica de los efectos.
 
-\- Rama: `mejora/usb-id-pico2`.
+\- Rama: `mejora/realismo-efectos` (desde `master` @ `650741b`).
 
-\- Tarea: implementado exactamente `LEEME md/DISENO_usb_id_pico2.md`. [INO] `MiYoke_PD.ino:103`: bloque de 9 líneas que fija USB 2E8A:000F mediante TinyUSBDevice.setID y reconecta si mounted(), antes de Serial.begin.
+\- Diseño: `LEEME md/DISENO_realismo_efectos.md`. Especificación cerrada para Codex:
+  - Archivos nuevos: `NarrowbandNoise.h` y `FrictionModel.h`.
+  - Archivos modificados: `mis_defines.h`, `GustModel.h`, `PicoForceModels.h`, `BuffetModel.h`, `SimEffects.h` y `tests/`.
+  - Documentación: los dos `.tex` (idénticos), `CALCULO_PICO_SC8.md`, `MODELO_TURBULENCIA.md` y `CAMBIOS_REALISMO.md`.
+  - Revisado antes de la entrega por Embedded Firmware Engineer y Master Plan Architect; sus hallazgos están incorporados al diseño.
 
-\- Archivos modificados: `MiYoke_PD.ino` y `HANDOFF.md`. Diff contra master: únicamente 9 líneas agregadas en el .ino, cero eliminadas, CRLF conservado; ningún otro archivo de código cambiado. Sin discrepancias con el diseño.
+\- Para Codex:
+  - **Precondición (§0):** árbol limpio. Hay cambios del usuario sin commit (`AGENTS.md`, `CLAUDE.md` y el traslado de 3 `.md` a `LEEME md/`). No incluirlos; si siguen pendientes al versionar, detenerse e informarlo aquí.
+  - Dos commits de código (A sin estado, B con estado) y una sola versión, con el mensaje exacto de §5 ("Mejora basada en incorporar realismo a los efectos y fundamentacion teorica...").
+  - No tocar la conversión ±1→PWM ni el protocolo SC8 (decisión del usuario).
+  - En suelo, roll dominante y textura siempre presente son requisito del usuario.
 
-\- Compilación: `powershell -ExecutionPolicy Bypass -File Build-Pico2.ps1`, FQBN `rp2040:rp2040:rpipico2:usbstack=tinyusb,arch=arm`, completada sin errores ni advertencias. Programa: 99.868 bytes (2%; +120 respecto de la compilación inicial de 99.748). RAM: 18.408 bytes (3%; sin cambio), 505.880 libres. Firmware generado en `build-pico2`; no cargado en la placa.
-
-\- Versionado: commit por nombre `4f555c1`; `graphify-sync.cmd` ejecutado correctamente (incluye `graphify update .`). Versión **V1.3** creada con el mensaje exacto del diseño; salida `Version V1.3 creada` y existencia de `..\MiYoke_PD_VERSIONES\V1_3\ACTUALIZACION_V1_3.txt` verificadas. `graphify-ino/` no se versionó. Esta entrega se registra en un commit posterior de documentación.
-
-\- Pendiente / riesgos: revisión de Claude y validación del usuario en hardware: COM con `USB\VID_2E8A&PID_000F&MI_00`, lanzador identifica `YOKE17SC8`, fuerzas SimConnect y LCD sin cambios. Windows podría asignar otro COM. No integrado a master. `mejora/prueba-flujo` (V1.2) sigue pendiente por separado.
+\- Pendiente: implementación (Codex), revisión (Claude) y validación del usuario en hardware según la sección 4 del diseño.
 
 \## Revisión
 
-\- Revisor: Claude (2026-10-09) — fase REVISIÓN del Flujo
-
-\- Hallazgos:
-  1. OK. `git diff master...HEAD --stat`: solo `MiYoke_PD.ino` (+9, -0), `LEEME md/DISENO_usb_id_pico2.md` (diseño) y `HANDOFF.md`. Commits: fadebad (diseño), 4f555c1 (código), a85eae0 (entrega). Opcional de LEEME_PICO2.md no aplicado (aceptable).
-  2. OK. [INO] `MiYoke_PD.ino:103-111`: bloque idéntico al diseño (condición, literales 0x2E8A/0x000F, sangrías, comentarios), entre el `#endif` de analogWrite (102) y `#if DEBUG_MOTION_TELEMETRY...` (112). CRLF conservado.
-  3. OK. Tag anotado `V1.3` -> 4f555c1. `..\MiYoke_PD_VERSIONES\V1_3\ACTUALIZACION_V1_3.txt` existe; CAMBIO y RAMA correctos. Copia `V1_3\MiYoke_PD.ino` idéntica al working tree (sin CR). `graphify-ino/` sincronizado y sin versionar.
-  4. OK. Compilación: `build-pico2/MiYoke_PD.ino.bin` de 17:41 (antes del tag de 17:42), 118.732 bytes vs 118.612 de V2.4 = +120, coincide con lo informado por Codex. No recompilado por el revisor.
-  5. OBSERVACIÓN (no bloquea, no es error de Codex): ACTUALIZACION_V1_3 dice VERSION ANTERIOR V1.2 y lista `D LEEME md/DISENO_prueba_flujo.md` y un cambio de 10 líneas en el .ino. Es porque `nueva-version.ps1:11,33` toma la etiqueta de número más alto (V1.2, que está en otra rama) y no la anterior de esta rama. El cambio real respecto de master es solo +9 líneas (`git diff master V1.3 --stat`). Propuesta para una tarea aparte: usar `git describe --tags --abbrev=0 HEAD^` como versión anterior.
-  6. Integración: al combinar con `mejora/prueba-flujo` no hay solape (comentario arriba de `void setup()` vs bloque en 103-111).
-
-\- Estado: aprobado (pendiente validación del usuario en hardware: subir `build-pico2/MiYoke_PD.ino.uf2` o compilar con TinyUSB; COM con `USB\VID_2E8A&PID_000F&MI_00`; `INICIAR SIMULADOR.cmd` identifica `YOKE17SC8`; fuerzas y LCD sin cambios).
-
+\- (pendiente)
