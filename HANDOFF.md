@@ -67,4 +67,11 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 
 \## Revisión
 
-\- (pendiente)
+\- Revisor: Claude (2026-10-10) — aclaración del diseño ante el bloqueo de Codex.
+
+\- Resolución: el bloqueo era correcto. Se corrigió el diseño: se especifica el precálculo fuera del lazo y no se acepta costo en el lazo.
+  - §2.2: `Narrowband` recibe `(hz, stepSeconds, zeta, rms, seed)` en el constructor y calcula ahí `a1`, `a2` y `gain`. `next()` no recibe parámetros y solo ejecuta el paso AR(2) y el xorshift. `reset()` conserva los coeficientes.
+  - §2.8.4, §2.8.5 y §2.8.6: los miembros `noise[3]` y `texNoise[2]` se construyen con sus frecuencias (13 / `SIMCONNECT_GEAR_BUFFET_HZ` / 15 y 7 / 11.3 Hz). Como `simEffects` es global (`MiYoke_PD.ino:34`), eso ocurre en la inicialización estática, antes de `setup()`. Las llamadas en `update` son `next()`.
+  - §2.9 y §3.5: pruebas y criterio de costo ajustados a lo anterior.
+
+\- Estado: diseño desbloqueado; continuar la implementación desde el punto 5 del pedido original.

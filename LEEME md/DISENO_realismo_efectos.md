@@ -94,20 +94,22 @@ Generador de ruido de banda estrecha: ruido blanco uniforme filtrado por un reso
 namespace YokeNoise {
 class Narrowband {
 public:
-    explicit Narrowband(uint32_t seed=0x12345678u):initialSeed(seed?seed:1u) { reset(); }
-    void reset() { state=initialSeed; y1=y2=0; }
-    // One step of stepSeconds (fixed nominal loop period). Returns unclipped output.
-    // Coefficients depend only on (hz, stepSeconds, zeta, rms): computed once, not per cycle.
-    float next(float hz, float stepSeconds, float zeta, float rms) {
-        if(!(hz>0) || !(stepSeconds>0) || !(zeta>0 && zeta<1) || !(rms>0)) return 0;
-        if(hz!=cachedHz || stepSeconds!=cachedStep || zeta!=cachedZeta || rms!=cachedRms) {
+    // Coefficients are computed here, once, outside the control loop (static
+    // construction before setup()). next() never calls expf/cosf/sqrtf.
+    Narrowband(float hz, float stepSeconds, float zeta, float rms, uint32_t seed)
+        :initialSeed(seed?seed:1u) {
+        if(hz>0 && stepSeconds>0 && zeta>0 && zeta<1 && rms>0) {
             const float w=6.2831853f*hz;
             const float r=expf(-zeta*w*stepSeconds), theta=w*sqrtf(1-zeta*zeta)*stepSeconds;
             a1=2*r*cosf(theta); a2=-r*r;
             const float unit=(1-a2)/((1+a2)*((1-a2)*(1-a2)-a1*a1)); // var for unit-variance input
             gain=rms/sqrtf(unit/3.0f); // uniform [-1,1] has variance 1/3
-            cachedHz=hz; cachedStep=stepSeconds; cachedZeta=zeta; cachedRms=rms;
-        }
+        } // invalid parameters: a1=a2=gain=0 -> next() always returns 0
+        reset();
+    }
+    void reset() { state=initialSeed; y1=y2=0; } // keeps coefficients
+    // One step of the fixed period given to the constructor. Unclipped output.
+    float next() {
         state^=state<<13; state^=state>>17; state^=state<<5; // xorshift32
         const float x=state*(2.0f/4294967296.0f)-1.0f;
         const float y=a1*y1+a2*y2+gain*x;
@@ -115,13 +117,16 @@ public:
     }
 private:
     uint32_t initialSeed, state=1;
-    float cachedHz=0, cachedStep=0, cachedZeta=0, cachedRms=0, a1=0, a2=0, gain=0, y1=0, y2=0;
+    float a1=0, a2=0, gain=0, y1=0, y2=0;
 };
 }
 #endif
 ```
 
-Uso: el llamador avanza **un paso por ciclo de `Effects::update` con `dt>0`**, siempre con `stepSeconds = CONTROL_LOOP_MS*0.001f` (constante). Con `dt==0` no llama y conserva la última portadora. Así los coeficientes se calculan una sola vez por instancia y el peor ciclo no paga `expf/cosf/sqrtf`. El costo es un error de frecuencia igual al de la diferencia entre el período real y 2 ms (por ejemplo, 2.1 ms da un 5 %, aceptable para una vibración aleatoria).
+Uso:
+- Los coeficientes se calculan **solo en el constructor**. Los objetos `noise[3]` y `texNoise[2]` son miembros de `Effects`, y `simEffects` es un objeto global (`MiYoke_PD.ino:34`): se construyen en la inicialización estática, antes de `setup()` y fuera del lazo de 2 ms. `reset()` conserva los coeficientes. En el lazo, `next()` solo hace el paso AR(2): 3 multiplicaciones y el xorshift.
+- El llamador avanza **un paso por ciclo de `Effects::update` con `dt>0`**. Con `dt==0` no llama y conserva la última portadora.
+- El paso fijo es `CONTROL_LOOP_MS*0.001f`, pasado al constructor. Si el período real difiere de 2 ms, hay un error de frecuencia igual a esa diferencia (por ejemplo, 2.1 ms da un 5 %), aceptable para una vibración aleatoria.
 
 Notas de diseño (para la revisión): la varianza estacionaria de `y=a1·y[-1]+a2·y[-2]+e` es `σe²(1−a2)/((1+a2)((1−a2)²−a1²))` (Box, Jenkins & Reinsel). Verificado por simulación con paso 2 ms y ζ 0.15: RMS 0.449–0.455 para objetivo 0.45 a 10/13/15 Hz, |media|<0.002, cruces por cero/2 ≈ f0, recorte |y|>1 entre 2.5 y 2.8 %.
 
@@ -255,14 +260,14 @@ private:
    `const float stiffness=rest+(1-rest)*(...)` → `const float stiffness=rest+SIMCONNECT_CENTERING_AERO_STIFFNESS*(...)`.
    Actualizar el comentario de la línea 82 si menciona solo envolventes; el filtro de 100 ms se conserva.
 4. Buffets (bucle de las líneas 87–97): cuando `SIMCONNECT_BUFFET_NARROWBAND` y `i<3`, la portadora es
-   `if(dt) carrier[i]=clip(noise[i].next(frequencies[i],CONTROL_LOOP_MS*.001f,SIMCONNECT_BUFFET_DAMPING_RATIO,SIMCONNECT_BUFFET_RMS),-1,1);`
+   `if(dt) carrier[i]=clip(noise[i].next(),-1,1);`
    `wave[i]=amplitude[i]*carrier[i];`
    en lugar de `triangle(phase[i])`. `carrier[3]` es un nuevo miembro `float carrier[3]` que se pone en 0 en cada reinicio. Con `dt==0` se conserva la última portadora. La fase se sigue actualizando (diagnóstico y compatibilidad). `i==3` (suelo SC3–SC6) conserva la triangular. Con el flag en 0, el comportamiento es idéntico al actual.
 5. Textura de pista (líneas 71–72): con `SIMCONNECT_GROUND_NARROWBAND_TEXTURE`, mantener un miembro `float texCarrier[2]`:
    ```cpp
    if(roadLevel>0 && dt) {
-       texCarrier[0]=texNoise[0].next(7,CONTROL_LOOP_MS*.001f,SIMCONNECT_BUFFET_DAMPING_RATIO,.7071f);
-       texCarrier[1]=texNoise[1].next(11.3f,CONTROL_LOOP_MS*.001f,SIMCONNECT_BUFFET_DAMPING_RATIO,.7071f);
+       texCarrier[0]=texNoise[0].next();
+       texCarrier[1]=texNoise[1].next();
    }
    const float texture=roadLevel>0 ? roadLevel*.12f*(.65f*texCarrier[0]+.35f*texCarrier[1]) : 0;
    ```
@@ -270,8 +275,17 @@ private:
    Requisito de usuario: la textura **sigue presente siempre** que el avión rueda a más de 0.5 kt. Con ruido de banda estrecha la amplitud instantánea fluctúa (envolvente aleatoria) alrededor de un nivel medio constante, en lugar de ser periódica. Si el usuario prefiere la sensación periódica, flag en 0.
 6. Miembros privados nuevos:
    ```cpp
-   YokeNoise::Narrowband noise[3]={YokeNoise::Narrowband(0x9E3779B9u),YokeNoise::Narrowband(0x7F4A7C15u),YokeNoise::Narrowband(0x94D049BBu)};
-   YokeNoise::Narrowband texNoise[2]={YokeNoise::Narrowband(0x2545F491u),YokeNoise::Narrowband(0x6C8E9CF5u)};
+   // Coefficients precomputed at construction (global simEffects: before setup()).
+   YokeNoise::Narrowband noise[3]={
+       YokeNoise::Narrowband(13,CONTROL_LOOP_MS*.001f,SIMCONNECT_BUFFET_DAMPING_RATIO,SIMCONNECT_BUFFET_RMS,0x9E3779B9u),
+       YokeNoise::Narrowband(SIMCONNECT_GEAR_BUFFET_HZ,CONTROL_LOOP_MS*.001f,SIMCONNECT_BUFFET_DAMPING_RATIO,SIMCONNECT_BUFFET_RMS,0x7F4A7C15u),
+       YokeNoise::Narrowband(15,CONTROL_LOOP_MS*.001f,SIMCONNECT_BUFFET_DAMPING_RATIO,SIMCONNECT_BUFFET_RMS,0x94D049BBu)};
+   YokeNoise::Narrowband texNoise[2]={
+       YokeNoise::Narrowband(7,CONTROL_LOOP_MS*.001f,SIMCONNECT_BUFFET_DAMPING_RATIO,.7071f,0x2545F491u),
+       YokeNoise::Narrowband(11.3f,CONTROL_LOOP_MS*.001f,SIMCONNECT_BUFFET_DAMPING_RATIO,.7071f,0x6C8E9CF5u)};
+   ```
+   Las frecuencias 13/`SIMCONNECT_GEAR_BUFFET_HZ`/15 deben coincidir con el arreglo `frequencies` de `update` (se conserva para la fase y el modo triangular). Reiniciar con `reset()` no recalcula coeficientes.
+   ```cpp
    float carrier[3]={0,0,0}, texCarrier[2]={0,0};
    mutable YokeFriction::Model friction[2];
    ```
@@ -339,7 +353,8 @@ Casos nuevos:
   - 50 000 pasos de 0.002 s a 13 Hz, ζ 0.15, RMS 0.45 → RMS en [0.405, 0.495], |media|<0.02, cruces por cero/2/T en [10.4, 15.6] Hz.
   - Autocorrelación normalizada con desfase de 1/f0 (≈38 pasos) **< 0.8**; la triangular da **> 0.99**.
   - `reset()` reproduce la misma secuencia.
-  - `hz=0`, `zeta=0` o `zeta≥1` → 0.
+  - Construido con `hz=0`, `zeta=0` o `zeta≥1` → `next()` devuelve siempre 0.
+  - `reset()` no cambia los coeficientes: misma secuencia antes y después de reiniciar.
 - `FrictionModel` (Fc 0.03, zmax 0.02):
   - El primer llamado da 0.
   - x 0→0.01 da −0.015; x 0.05 da −0.03 (el ancla queda en 0.03).
@@ -361,7 +376,7 @@ Casos nuevos:
 2. `Build-Pico2.ps1` (potenciómetros, por defecto) compila sin errores ni advertencias nuevas. Informar programa y RAM frente a 99 868 / 18 408 bytes. Compilar además con `-Encoders` para verificar la ruta con `YOKE_USE_SIMULATION!=1`.
 3. Suite `simconnect_checks` en 0 fallas, informando el número total de comprobaciones.
 4. Ningún cambio en los archivos de la sección 0 "No se toca" (`git diff master...HEAD --stat`).
-5. Costo: `Narrowband::next` calcula `expf/cosf/sqrtf` una sola vez por instancia (paso fijo). Por ciclo se agregan a lo sumo 5 pasos de AR(2) y 2 llamadas a `FrictionModel::update`. Informar `us=` de `pico.log` si el usuario prueba en placa.
+5. Costo: `expf/cosf/sqrtf` solo en el constructor de `Narrowband` (inicialización estática, fuera del lazo); `next()` y `reset()` no los usan. Por ciclo se agregan a lo sumo 5 pasos de AR(2) y 2 llamadas a `FrictionModel::update`. Informar `us=` de `pico.log` si el usuario prueba en placa.
 
 ## 4. Validación del usuario en hardware (después de la revisión)
 
