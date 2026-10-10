@@ -41,6 +41,7 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 - Claude disena, planifica y revisa. No implementa cambios de codigo salvo pedido explicito del usuario.
 - Toda propuesta de mejora tiene fundamento verificable (TelemFFB, documentacion de SimConnect/Prepar3D, bibliografia tecnica) y cita la fuente. Si no hay fuente, se indica como hipotesis a validar con ensayo.
 - Cada diseno aprobado se entrega a Codex como especificacion cerrada: archivos a modificar, cambio exacto, constantes y unidades, criterios de aceptacion, prueba a realizar y seccion "Documentacion afectada".
+- Mensaje para Codex: cada vez que Claude termina una fase de Flujo que deja trabajo para Codex (diseno nuevo, o revision con "requiere cambios"), la respuesta final al usuario incluye un bloque de texto listo para copiar y pegar en Codex, sin edicion. El bloque es autocontenido e indica: rama a usar, documento de diseno o hallazgos a aplicar, precondiciones, orden de commits, comando exacto de nueva-version.ps1 con su mensaje, pruebas y compilaciones a ejecutar, y que completar en HANDOFF al terminar.
 
 ## SUBAGENTES (Agency Agents) – uso obligatorio por tipo de tarea
 Usar el subagente indicado para cada tarea. Si la tarea abarca varias, encadenarlos en este orden: diseno → plan → (Codex implementa) → revision → validacion.
