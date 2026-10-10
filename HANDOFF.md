@@ -46,23 +46,24 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 
 \## Última entrega
 
-\- Agente: Claude (2026-10-10) — fase DISEÑO del Flujo: realismo y fundamentación teórica de los efectos.
+\- Agente: Codex (2026-10-10) — fase IMPLEMENTACIÓN del Flujo: realismo y fundamentación teórica de los efectos. **Detenida antes de modificar código por contradicción en la especificación cerrada.**
 
-\- Rama: `mejora/realismo-efectos` (desde `master` @ `650741b`).
+\- Rama: `mejora/realismo-efectos`, base de esta entrega `24b8865`. Precondición (§0) cumplida: árbol limpio salvo `graphify-ino/`, permitido por el pedido. No se modificó `master`.
 
-\- Diseño: `LEEME md/DISENO_realismo_efectos.md`. Especificación cerrada para Codex:
-  - Archivos nuevos: `NarrowbandNoise.h` y `FrictionModel.h`.
-  - Archivos modificados: `mis_defines.h`, `GustModel.h`, `PicoForceModels.h`, `BuffetModel.h`, `SimEffects.h` y `tests/`.
-  - Documentación: los dos `.tex` (idénticos), `CALCULO_PICO_SC8.md`, `MODELO_TURBULENCIA.md` y `CAMBIOS_REALISMO.md`.
-  - Revisado antes de la entrega por Embedded Firmware Engineer y Master Plan Architect; sus hallazgos están incorporados al diseño.
+\- Bloqueo que debe aclarar el autor del diseño:
+  - [Diseño] `LEEME md/DISENO_realismo_efectos.md:103-118` (§2.2): los valores de caché comienzan en cero y `next()` calcula `expf`, `cosf` y `sqrtf` en la primera llamada. Sin embargo, la línea 124 afirma que el peor ciclo no paga ese costo.
+  - [Diseño] `LEEME md/DISENO_realismo_efectos.md:258` y `:264` (§2.8): las llamadas a `next()` están dentro de `Effects::update()`; [INO] `MiYoke_PD.ino:130` y `:167` sitúan la actualización en el lazo de control de 2 ms. No se especifica precálculo fuera de ese lazo.
+  - Se requiere aclarar si se acepta el costo de la primera llamada en el lazo o especificar el precálculo fuera del lazo. No se eligió ni implementó una solución, conforme a AGENTS.md y al punto 3 del pedido.
 
-\- Para Codex:
-  - **Precondición (§0):** árbol limpio. Hay cambios del usuario sin commit (`AGENTS.md`, `CLAUDE.md` y el traslado de 3 `.md` a `LEEME md/`). No incluirlos; si siguen pendientes al versionar, detenerse e informarlo aquí.
-  - Dos commits de código (A sin estado, B con estado) y una sola versión, con el mensaje exacto de §5 ("Mejora basada en incorporar realismo a los efectos y fundamentacion teorica...").
-  - No tocar la conversión ±1→PWM ni el protocolo SC8 (decisión del usuario).
-  - En suelo, roll dominante y textura siempre presente son requisito del usuario.
+\- Commits: A (sin estado), B (con estado) y documentación funcional pendientes. Esta entrega contiene únicamente el commit de `HANDOFF.md` que registra el bloqueo.
 
-\- Pendiente: implementación (Codex), revisión (Claude) y validación del usuario en hardware según la sección 4 del diseño.
+\- Archivos modificados: solo `HANDOFF.md`, sección "Última entrega". Ningún archivo de código modificado. Documentación funcional y diseño sin cambios.
+
+\- Validación: suite `tests/simconnect_checks.vcxproj` (Win32) no ejecutada; número total de comprobaciones no medido. Compilaciones Pico2 con potenciómetros y con `-Encoders` no ejecutadas; tamaños de programa y RAM no medidos frente a la referencia de 99 868 / 18 408 bytes. `.tex` sin cambios y compilación con `pdflatex` no ejecutada.
+
+\- Versión: no creada; esta entrega modifica solo documentación y no activa el versionado de código.
+
+\- Desvíos respecto del diseño: ninguno implementado. Sugerencias no aplicadas: ninguna adicional. Pendiente: aclaración del bloqueo por el autor del diseño, implementación, pruebas, documentación, versionado, revisión y validación en hardware.
 
 \## Revisión
 
