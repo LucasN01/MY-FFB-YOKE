@@ -36,3 +36,22 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 - Diseno (Claude, modo Flujo): el documento de diseno incluye la seccion "Documentacion afectada" con archivo, seccion/ecuacion y que debe decir; o indica explicitamente "No afecta documentacion".
 - Implementacion (Codex): actualiza esos documentos y los incluye por nombre en el mismo commit que el codigo, antes de ejecutar nueva-version.ps1, para que la copia de la version quede coherente. Si edita un .tex, anotar en HANDOFF si compila.
 - Revision (Claude): verifica que la documentacion coincida con el codigo nuevo (formulas, constantes, unidades, nombres) y que no haya cambios innecesarios. Documentacion faltante o desactualizada = "requiere cambios".
+
+## ROL DE CLAUDE EN EL FLUJO (regla del usuario)
+- Claude disena, planifica y revisa. No implementa cambios de codigo salvo pedido explicito del usuario.
+- Toda propuesta de mejora tiene fundamento verificable (TelemFFB, documentacion de SimConnect/Prepar3D, bibliografia tecnica) y cita la fuente. Si no hay fuente, se indica como hipotesis a validar con ensayo.
+- Cada diseno aprobado se entrega a Codex como especificacion cerrada: archivos a modificar, cambio exacto, constantes y unidades, criterios de aceptacion, prueba a realizar y seccion "Documentacion afectada".
+
+## SUBAGENTES (Agency Agents) – uso obligatorio por tipo de tarea
+Usar el subagente indicado para cada tarea. Si la tarea abarca varias, encadenarlos en este orden: diseno → plan → (Codex implementa) → revision → validacion.
+- Diseno o revision de firmware (lazo de 2 ms, ISR, HID/PID, filtros, PWM, temporizacion) → Embedded Firmware Engineer.
+- Critica del plan de una mejora antes de pasarlo a Codex → Master Plan Architect. Su salida es el documento de diseno del modo Flujo, con la seccion "Documentacion afectada".
+- Revision del codigo implementado por Codex → Code Reviewer. Resultado: "aprobado" o "requiere cambios" con lista concreta. No edita codigo ni crea versiones.
+- Desglose en tareas, hitos y cronograma del proyecto → Senior Project Manager; seguimiento del avance → Project Shepherd.
+- Diseno y registro de ensayos (hipotesis, condiciones, variables medidas, resultado) → Experiment Tracker.
+- Analisis de logs del Serial, telemetria SimConnect o mediciones → Test Results Analyzer.
+- Decidir si una mejora cumple su objetivo con evidencia → Reality Checker. Sin evidencia medida no se declara "resuelto".
+- Redaccion de documentacion tecnica y de la tesis → Technical Writer, en registro formal y tecnico, respetando la regla DOCUMENTACION RELACIONADA (solo partes afectadas, sin reescribir por las dudas).
+
+## PRIORIDAD DE REGLAS
+Las reglas de este archivo prevalecen sobre las convenciones propias de cualquier subagente o skill instalado (estilo de commits, ramas, formato de documentos, alcance de cambios). Ante conflicto, se aplica este archivo.

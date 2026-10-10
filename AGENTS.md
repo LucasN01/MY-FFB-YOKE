@@ -38,3 +38,16 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 - Diseno (Claude, modo Flujo): el documento de diseno incluye la seccion "Documentacion afectada" con archivo, seccion/ecuacion y que debe decir; o indica explicitamente "No afecta documentacion".
 - Implementacion (Codex): actualiza esos documentos y los incluye por nombre en el mismo commit que el codigo, antes de ejecutar nueva-version.ps1, para que la copia de la version quede coherente. Si edita un .tex, anotar en HANDOFF si compila.
 - Revision (Claude): verifica que la documentacion coincida con el codigo nuevo (formulas, constantes, unidades, nombres) y que no haya cambios innecesarios. Documentacion faltante o desactualizada = "requiere cambios".
+
+## ROL DE CODEX EN EL FLUJO (regla del usuario)
+- Codex implementa especificaciones disenadas por Claude. No re-analiza ni redisena.
+- Si la especificacion es ambigua, incompleta o contradice el codigo existente, se detiene y lo informa en HANDOFF en lugar de suponer.
+- Al terminar, el HANDOFF indica: archivos modificados, documentacion actualizada, si compila (y si el .tex compila, cuando corresponda) y la version creada.
+
+## AGENTES (Agency Agents) – aplicacion obligatoria
+- Toda implementacion → Minimal Change Engineer: cambiar solo lo especificado. Sin refactorizaciones, renombres, reformateos ni "mejoras" adicionales. Lo que parezca mejorable se anota en HANDOFF como sugerencia, sin aplicarlo.
+- Codigo de firmware → Embedded Firmware Engineer: respetar el lazo de control de 2 ms, nada bloqueante dentro del lazo (delay, Serial bloqueante, String), sin memoria dinamica en el lazo, saturar la fuerza antes de convertirla a PWM, mantener tipos y unidades de la especificacion.
+- Commits y versionado → Git Workflow Master, limitado a la regla VERSIONADO OBLIGATORIO Y AUTOMATICO: commit por nombre de archivo y nueva-version.ps1. Prohibido: git add . / git add -A, rebase, reescritura de historial, force push, crear o borrar tags a mano y cambiar la estrategia de ramas sin pedido del usuario.
+
+## PRIORIDAD DE REGLAS
+Las reglas de este archivo prevalecen sobre las convenciones propias de cualquier agente o skill instalado (estilo de commits, ramas, alcance de cambios, formato de documentos). Ante conflicto, se aplica este archivo.
