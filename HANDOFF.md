@@ -46,62 +46,30 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 
 \## Plan para Codex
 
-Sin tareas pendientes para Codex (2026-10-11). Sigue la validación del usuario en hardware.
+Tarea: umbral de inicio para el buffet de tren (100 kt) y de spoiler (80 kt). Rama `mejora/realismo-efectos`. Diseño: `LEEME md/DISENO_umbral_buffet_tren_spoiler.md`. Tarea simple, **sin partes**. Modelo recomendado: el de código, con esfuerzo medium.
+
+1. Al empezar: `git status` y `git log -3`. El árbol debe estar limpio (salvo `graphify-ino/`).
+2. Leé el diseño completo (es corto). Código: solo `BuffetModel.h` (§3.1). Pruebas: §3.2. Si otro caso falla, detenete y registralo aquí.
+3. Suite `tests/simconnect_checks.vcxproj` (Release Win32) con 0 fallas; informá el total de comprobaciones. Compilá `Build-Pico2.ps1` sin advertencias nuevas.
+4. Commit 1 por nombre (`BuffetModel.h` y pruebas): "Buffet tren y spoiler: umbral de inicio 100/80 kt con crecimiento por presion dinamica".
+5. Documentación (§4): solo `tesis/explicacion_efectos_proyecto_ffb_yoke.tex`. No lo leas completo: ubicá cada parte con `grep -n`. Después copialo sobre `tesis/main.tex` y verificá con `diff`. pdflatex, dos pasadas. Commit 2: "Tesis: umbral de inicio de buffet de tren y spoiler".
+6. Versión, con el árbol limpio:
+   `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Buffet de tren y spoiler: umbral de inicio 100 y 80 kt con crecimiento por presion dinamica"`
+   Verificar "Version Vx.y creada" y que exista `..\MiYoke_PD_VERSIONES\Vx_y\ACTUALIZACION_Vx_y.txt`.
+7. "Última entrega": commits, archivos, total de comprobaciones, tamaño de compilación, si el .tex compila, versión creada y desvíos. Commit de HANDOFF.md por nombre.
 
 \## Última entrega
 
-- Agente: Codex (2026-10-11) — **Plan para Codex completado**, corrección de notas de documentación tras la revisión de V1.4, sin partes.
+\- Agente: Claude (2026-10-11) — fase DISEÑO del Flujo: umbral de inicio del buffet de tren y de spoiler.
 
-- Rama: `mejora/realismo-efectos`. Commit de los dos `.tex`: `5612d0a` — "Tesis: notas de actualizacion especificas (que cambio y por que)". Este cierre de HANDOFF.md se registra en un commit posterior por nombre. No se integró a master.
+\- Origen: validación del usuario en hardware de V1.4. Todos los efectos funcionan bien, salvo el buffet de tren, que se siente desde baja velocidad (por ejemplo, 60 kt tras el despegue).
 
-- Archivos modificados: `tesis/explicacion_efectos_proyecto_ffb_yoke.tex`, copia idéntica `tesis/main.tex` y este HANDOFF.md. Sin cambios de código ni pruebas.
+\- Diseño: `LEEME md/DISENO_umbral_buffet_tren_spoiler.md`.
+  - Ley: `sat[(V²−V_on²)/(V_full²−V_on²)]`, con tren 100/150 kt (umbral elegido por el usuario) y spoiler 80/140 kt (umbrales de TelemFFB).
+  - Revisado por el Master Plan Architect; sus hallazgos están incorporados (partes adicionales del `.tex`, tablas de picos y aclaración de atribución).
 
-- Notas, por cada `.tex`: **12 eliminadas** dentro de `sec:realismo` y **102 reescritas**, de 114 originales a 102 notas específicas. Cada nota externa indica antes → ahora, motivo, referencia corta tomada de la tabla "Cambios y fundamentos" y remisión a `sec:realismo`; los ejemplos señalan la ley con la que se recalcularon. No quedan notas genéricas ni autorreferencias dentro de la sección de realismo.
-
-- Marcadores, por cada `.tex`: **34 eliminados**; 22 ya estaban sueltos (el plan estimaba unos 19) y 12 quedaron sin contenido al quitar las notas internas. Se conservaron los marcadores que preceden contenido modificado.
-
-- Validación de alcance: comparación automática contra HEAD anterior, excluyendo sólo notas y marcadores, confirma que el resto de líneas no cambió: texto, fórmulas, tablas y números intactos. `git diff --check` sin errores. Copia a `tesis/main.tex` verificada con `git diff --no-index` (salida 0) y comparación byte a byte.
-
-- LaTeX: **compila**, `pdflatex -interaction=nonstopmode -halt-on-error`, todas las pasadas con salida 0. Se hicieron las dos pasadas pedidas y una tercera para estabilizar el índice y la paginación; la última no tiene referencias indefinidas ni aviso de recompilar. PDF final de **102 páginas**. Persisten avisos de cajas y de babel/hyperref preexistentes; ninguna nota nueva tiene Overfull. Se inspeccionaron visualmente páginas 22, 35, 48, 66, 88 y 96 (centrado, turbulencia, textura, pérdida, damper y fricción), con notas legibles y referencias resueltas. PDF, logs, métricas y renders en `tmp/notas-realismo-tex/`, fuera de los commits.
-
-- Versión: **no se creó una nueva**, conforme al plan y a la excepción de documentación; continúa V1.4. No corresponde `graphify-sync.cmd` ni actualización AST manual al no modificar código. El hook de commit lanza su reconstrucción habitual; `graphify-ino/` permanece sin seguimiento y fuera de los commits.
-
-- Sin ambigüedades ni cambios fuera de alcance. Sigue revisión de Claude de esta corrección documental y validación del usuario en hardware antes de integrar a master.
+\- Historial de V1.4 (implementación, revisión y corrección de notas): commits hasta `915ade4`.
 
 \## Revisión
 
-\- Revisor: Claude (2026-10-10) — aclaración del diseño ante el bloqueo de Codex.
-
-\- Resolución: el bloqueo era correcto. Se corrigió el diseño: se especifica el precálculo fuera del lazo y no se acepta costo en el lazo.
-  - §2.2: `Narrowband` recibe `(hz, stepSeconds, zeta, rms, seed)` en el constructor y calcula ahí `a1`, `a2` y `gain`. `next()` no recibe parámetros y solo ejecuta el paso AR(2) y el xorshift. `reset()` conserva los coeficientes.
-  - §2.8.4, §2.8.5 y §2.8.6: los miembros `noise[3]` y `texNoise[2]` se construyen con sus frecuencias (13 / `SIMCONNECT_GEAR_BUFFET_HZ` / 15 y 7 / 11.3 Hz). Como `simEffects` es global (`MiYoke_PD.ino:34`), eso ocurre en la inicialización estática, antes de `setup()`. Las llamadas en `update` son `next()`.
-  - §2.9 y §3.5: pruebas y criterio de costo ajustados a lo anterior.
-
-\- Estado: diseño desbloqueado; continuar la implementación desde el punto 5 del pedido original.
-
-\- Aclaración 2: Claude (2026-10-11), ante el bloqueo de la parte 2 (`8da61f6`). El bloqueo era correcto: el ruido de la textura podía superar el pico de las senoides que exige `tests/raw_checks.h:25`. Esa prueba es correcta: el pico ±0.12·E es la textura "suave" requerida por el usuario. Resolución en el diseño (§2.8.5): recortar la textura a ±0.12·roadLevel antes de sumarla, conservando RMS 0.7071. Simulado con las semillas del diseño (1000 pasos, E=1): se recorta el 2.5 %, extremos ±12.4 PWM. Cumple también `low*255<-10 && high*255>10`. No se autoriza modificar esa prueba.
-
-\- Aclaración 3: Claude (2026-10-11), ante el bloqueo `5cccbd5`. El bloqueo era correcto: `tests/calibration_checks.h:375` comprueba que activar Friccion en el menú produce fuerza, usando velocidad con posición constante; con el modelo por posición esa llamada solo fija el ancla. Se mantiene la intención (el interruptor del menú habilita la fricción) y se autoriza el patrón ancla + desplazamiento para esa y cualquier otra prueba de fricción del mismo tipo (ver Plan, parte 2). Revisadas también `simconnect_checks.cpp:264-270`: por saturación del centrado y dominio del damper, deberían seguir pasando sin cambios.
-
-\- Revisión final de V1.4: Claude (2026-10-11), con el Code Reviewer para código y pruebas.
-  - **Código y pruebas: APROBADO.** Suite recompilada y ejecutada de forma independiente (Release Win32): PASS, 140 908 comprobaciones, 0 fallas, sin advertencias.
-    - Conforme con §2.1–§2.8 del diseño: fórmulas, constantes, flags, condiciones de la escala del damper, fricción por posición solo con sensor local, techo conjunto 0.4, coeficientes AR(2) en el constructor, textura con recorte ±0.12·√E y `GroundModel.h` sin cambios.
-    - Sin cambios en los archivos prohibidos de §0.
-    - Pruebas modificadas solo en los casos autorizados; los casos nuevos de §2.9 están presentes. `legacy_effects_checks.cpp` verifica bit a bit los flags en 0 (§3.1).
-  - **Versión: OK.** Tag `V1.4` → `9861ae0`. `ACTUALIZACION_V1_4.txt` con el mensaje pedido. La copia coincide con el tag (salvo los finales de línea CRLF). Los `.tex` son idénticos entre sí y el `.tex` compila.
-  - **Documentación (`.md`): OK.** `CALCULO_PICO_SC8.md`, `CAMBIOS_REALISMO.md` y `MODELO_TURBULENCIA.md` coinciden con el código.
-  - **Documentación (`.tex`): REQUIERE CAMBIOS (menor).**
-    - Contenido técnico correcto. Se recalculó el ejemplo de pérdida: 10.584°, R 0.3207, E 0.4188, 14/7 PWM, pico 23/12; coincide.
-    - Las 114 notas visibles usan solo 3 textos genéricos y no dicen qué cambió ni por qué, como pide §6 del diseño y el usuario.
-    - Hay notas dentro de `sec:realismo` que remiten a sí misma, y ~19 marcadores `% [V-realismo]` sueltos.
-    - Corrección: ver "Plan para Codex".
-  - **Sugerencias de código diferidas** (cosméticas, sin efecto en el comportamiento; no se aplican ahora para no generar una versión solo por comentarios):
-    1. `SimEffects.h:182-188`: indentar `noise[3]`, `texNoise[2]` y su comentario como el resto de `private:`.
-    2. `SimEffects.h:71-73`: actualizar el comentario a "Narrow-band 7/11.3 Hz texture (or fixed sines with flag 0); amplitude sqrt(E) of the 0.5..40 kt ramp (ISO 8608)."
-  - **Estado:** requiere cambios menores de documentación. Después: validación del usuario en hardware (sección 4 del diseño) y recién entonces integrar a master.
-
-\- Revisión de la corrección de notas: Claude (2026-10-11). **APROBADO.**
-  - Commit `5612d0a`: 102 notas específicas (antes → ahora; motivo; referencia), ninguna duplicada ni genérica, ninguna dentro de `sec:realismo`. 0 marcadores sueltos.
-  - El diff, excluyendo notas y marcadores, no tiene otras líneas cambiadas. `main.tex` es idéntico. Compila (informado por Codex: 102 páginas).
-  - Observación: la copia `..\MiYoke_PD_VERSIONES\V1_4` conserva el `.tex` anterior a esta corrección, porque los cambios solo de documentación no generan versión. El `.tex` vigente es el de la rama.
-- **Estado final de la tarea: aprobado.** Pendiente: validación del usuario en hardware (sección 4 del diseño). Después, integración a master por pedido del usuario.
+\- (pendiente)
