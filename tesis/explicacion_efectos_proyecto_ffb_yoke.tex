@@ -67,10 +67,7 @@ En las fórmulas siguientes, los subíndices $\mathrm{rx}$ identifican la entrad
 % [V-realismo]
 El análisis de fundamento teórico del 10 de octubre de 2026 motivó esta actualización. Se conserva el mapeo de comando $\pm1$ a PWM y el protocolo SC8. Roll dominante y textura siempre presente durante rodaje habilitado son requisitos del usuario. Las ganancias siguen expresadas en comandos, sin calibración a newtons.
 
-% [V-realismo]
 
-% [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
 
 \subsection{Cambios y fundamentos}
 % [V-realismo]
@@ -90,16 +87,10 @@ Suelo, textura&$0.12E(0.65\sin7t'+0.35\sin11.3t')$&$0.12\sqrt E(0.65N_7+0.35N_{1
 % [V-realismo]
 En textura, $t'=2\pi t$. El techo de suma baches más textura pasa de $\pm E$ a $\pm\sqrt E$. Flags en cero conservan leyes anteriores de portadora, escala de damper, fricción y textura sinusoidal; las envolventes nuevas permanecen.
 
-% [V-realismo]
 
-% [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
 
 \subsection{Derivaciones}
-% [V-realismo]
 
-% [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ráfaga y constante de plunge}
 % [V-realismo]
@@ -117,10 +108,7 @@ Perfil C182RG: $W=3100$ lbf, $S=174$ ft$^2$, $b=36$ ft, $AR=b^2/S=7.4483$. Helmb
 \begin{center}\begin{tabular}{rrrr}\toprule EAS (kt)&$V_e$ (m/s)&$\tau_H$ (s)&$S_V$ (ref.120 kt)\\\midrule
 60&30.8667&0.95572&0.50000\\80&41.1556&0.71679&0.66667\\120&61.7333&0.47786&1.00000\\140&72.0222&0.40960&1.16667\\\bottomrule\end{tabular}\end{center}
 
-% [V-realismo]
 
-% [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Inicio de pérdida}
 % [V-realismo]
@@ -130,19 +118,13 @@ En vuelo nivelado $L=W=\tfrac12\rho V^2SC_L$ y, suponiendo $C_L\propto\alpha$, $
 % [V-realismo]
 Con $V_s=60$ kt, $\alpha_s=15^\circ$ y $\alpha_{0L}=-3.5^\circ$, da $10.09184^\circ$, frente a $11.02041^\circ$ si $\alpha_{0L}=0$. El código conserva la aproximación cero. Con flaps y VS0 menor, el inicio ahora se adelanta, en lugar de retrasarse.
 
-% [V-realismo]
 
-% [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Damper}
 % [V-realismo]
 De $\zeta=b/(2\sqrt{kJ})$ y $J$ fijo, mantener $\zeta$ exige $b\propto\sqrt k$. El firmware normaliza por rigidez a $Q=1$, usa $k_f$ filtrada y limita el factor a 0.5--2. Se busca mantener sensación relativa, sin identificación de inercia ni torque.
 
-% [V-realismo]
 
-% [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Textura sintética de suelo}
 % [V-realismo]
@@ -152,19 +134,13 @@ ISO 8608 caracteriza $G_d(n)=G_d(n_0)(n/n_0)^{-2}$. Con $f=nV$, $G_z(f)=G_d(f/V)
 % [V-realismo]
 Es blanco y proporcional a $V$; un resonador fijo responde con RMS $\propto\sqrt V$. Sólo se aplica a textura sintética: las aceleraciones P3D ya incluyen dependencia de velocidad, por lo que los baches conservan rampa lineal. $\sqrt E$ adapta arranque a 0.5 kt y saturación a 40 kt; no mide rugosidad.
 
-% [V-realismo]
 
-% [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Tren y spoiler}
 % [V-realismo]
 La excitación por flujo separado escala como $qSC_p'$, aproximadamente IAS$^2$ si IAS$\approx$EAS. Las intensidades plenas 150/140 kt son calibración del yugo, no Vle ni límites de spoiler.
 
-% [V-realismo]
 
-% [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
 
 \subsection{Generador de banda estrecha}
 % [V-realismo]
@@ -182,9 +158,7 @@ La varianza estacionaria es $g^2U/3$. Coeficientes sólo en constructor global a
 % [V-realismo]
 Para buffet, $\sigma=0.45$ frente a triangular $1/\sqrt3=0.57735$: $20\log_{10}(0.45/0.57735)=-2.17$ dB. Es compromiso para reducir recorte; ganancia de menú permite ensayo. Tres resonadores 13/10/15 Hz usan $\zeta=0.15$ y recorte $\pm1$. Para textura 7/11.3 Hz se usa RMS de senoide 0.7071 y recorte de mezcla a pico $\pm0.12\sqrt E$. La referencia del diseño recorta cerca de 2.5\% en 1000 pasos a nivel pleno. La suite de 50\,000 pasos verifica RMS 0.405--0.495, media menor que 0.02, frecuencia por cruces 10.4--15.6 Hz para el resonador de 13 Hz y secuencia idéntica tras reset; son criterios de prueba, no mediciones del mecanismo.
 
-% [V-realismo]
 
-% [V-realismo]
 % [V-realismo]
 Medición de las clases C++ actuales, compiladas con MSBuild Win32 y toolset v141: 50\,000 pasos de 2 ms por buffet (100 s, transitorio inicial incluido), semillas de producción. RMS y media se calculan antes del recorte; cruces por cero divididos por dos y por duración; recorte indica fracción con $|y|>1$.
 % [V-realismo]
@@ -197,8 +171,6 @@ Medición de las clases C++ actuales, compiladas con MSBuild Win32 y toolset v14
 % [V-realismo]
 La mezcla de textura $0.65N_7+0.35N_{11.3}$ con semillas de producción, 1000 pasos (2 s) y nivel pleno, se recorta el 2.500\% al superar $\pm1$, equivalente al pico $\pm0.12\sqrt E$. Son medidas computacionales de secuencias finitas, no ensayos de fuerza del mecanismo.
 
-% [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
 
 \subsection{Fricción de Hayward--Armstrong}
 % [V-realismo]
@@ -207,10 +179,7 @@ Con ancla $w$, deformación $z=x-w$ se recorta a $\pm z_{\max}$ y se actualiza $
 % [V-realismo]
 Con ganancias de fábrica, en tierra el resorte pitch antes de $G$ es $0.8\times0.15x=0.12x$, frente a $F_c=0.03$: adherencia posible hasta $|x|\approx0.25$; en roll la misma proporción. A $Q=1$, resorte pitch $0.8x$: zona $|x|\approx0.0375$, aproximadamente 4\%. Al comparar fuerzas se cancela el mismo factor $G$ en ambas ramas. El techo de damper más fricción es $0.4H_a$ después de suma algebraica.
 
-% [V-realismo]
 
-% [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
 
 \subsection{Hipótesis a validar con ensayo}
 % [V-realismo]
@@ -235,10 +204,7 @@ Con ganancias de fábrica, en tierra el resorte pitch antes de $G$ es $0.8\times
 % [V-realismo]
 No se cargó firmware ni se midió el tiempo del lazo de 2 ms en hardware; el registro us informa sólo Effects::update.
 
-% [V-realismo]
 
-% [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
 
 \subsection{Referencias teóricas incorporadas}
 % [V-realismo]
@@ -260,8 +226,6 @@ No se cargó firmware ni se midió el tiempo del lazo de 2 ms en hardware; el re
 \item Cessna R182, POH local del usuario: \path{tesis/auditoria_c182rg/fuentes/R182_1978_POH.pdf}; peso y carga alar en ii y 1-5, dimensiones y área en Figura 1-1, página 1-2.
 \end{enumerate}
 
-% [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
 
 \section{CENTRADO DINÁMICO (RESORTE)}
 
@@ -440,7 +404,7 @@ Una consecuencia poco evidente:
 Subir ``Centro reposo'' endurece igual en todo $Q$: el aporte mecánico y el crecimiento aerodinámico están separados.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $k=r+(1-r)Q$ $\rightarrow$ $k=r+0.85Q$; separa rigidez mecánica y aerodinámica (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Filtro de primer orden}
 El código suaviza la rigidez, guardándola en una variable llamada \code{centerPressure}:
@@ -588,7 +552,7 @@ Escala $\times255$, redondeo simétrico y techo 220 & Implementación vigente de
 La atribución es una comparación de fuentes y comentarios, no una reconstrucción de autoría mediante historial Git: la carpeta principal inspeccionada no es un repositorio Git.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ley local $r+(1-r)Q$ $\rightarrow$ $r+0.85Q$; se explicita la suma de rigideces y su adaptación local (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Qué ganancias y calibraciones se pueden ajustar}
 \subsubsection{Ajustes disponibles en el menú}
@@ -605,7 +569,7 @@ Estos cuatro ajustes admiten valores de 0 a 1; los botones avanzan 0.05, es deci
 Las ganancias se guardan en memoria persistente y se cargan al arrancar. Cambiar un \code{define} no garantiza que se use el nuevo valor si hay ajustes guardados válidos. \code{YOKE_SETTINGS_VERSION} permite invalidar el registro de ganancias; el registro de potenciómetros tiene formato y versión separados. Hay que registrar los valores efectivamente cargados al comparar ensayos.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ajuste de reposo que alteraba la pendiente $\rightarrow$ ajuste sólo de la base $r$; separa los aportes mecánico y aerodinámico (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ajustes en el puente y en el firmware}
 \begin{itemize}
@@ -625,7 +589,7 @@ g_a\le\frac{L}{G\,[r+k_aQ_{\max}]\,|x_{\max}|}.
 Con $G=0.90$, $r=0.15$, $Q_{\max}=4$ y $|x_{\max}|=1$, se necesita $g_a\lesssim0.270$. Las ganancias iniciales 0.40 y 0.80 superan ese valor; por eso se recorta el recorrido a alta presión. Esto no obliga a usar 0.270: muestra la relación entre la dureza elegida y el margen antes de saturar. Si se necesita margen para otros efectos, el límite asignado al resorte debe ser menor que $L$.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): cota de ganancias con $r+(1-r)Q$ $\rightarrow$ cota con $r+0.85Q$; margen recalculado para rigideces separadas (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Procedimiento práctico para pulir el centrado}
 \subsubsection{Primero, referencia mecánica y posición}
@@ -666,7 +630,7 @@ La mejora más directa es capturar un centro físico independiente de los extrem
 La separación quedó implementada: $k=r+k_aQ$, con \code{SIMCONNECT_CENTERING_AERO_STIFFNESS}=0.85. El ajuste de reposo no modifica la pendiente aerodinámica ni ablanda a presión alta.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): separación de rigideces propuesta $\rightarrow$ implementada con $k_a=0.85$; el reposo ya no cambia la pendiente aerodinámica (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Medición física y comportamiento cerca del centro}
 Conviene medir fuerza frente a PWM para varios sentidos y posiciones, y considerar una regulación de corriente si se requiere control de torque. La forma del resorte en comando puede ser lineal y la fuerza real no serlo. No hay compensación PWM mínima en \code{setCommand}; órdenes pequeñas pueden no vencer la fricción mecánica, aunque el cálculo sea correcto.
@@ -716,7 +680,7 @@ El proyecto convierte las \textbf{variaciones del viento del simulador} en empuj
 Una forma sencilla de entenderlo es: \emph{``detectar cuánto cambió el viento respecto de su valor reciente y transformar ese cambio en un empuje del mando''}. No hay una tabla de posiciones a las que deba ir el yugo. El resultado es una orden de fuerza normalizada, no una posición objetivo.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ponderación por $\min(Q,1)$ $\rightarrow$ por $\sqrt Q\le2$; la carga de ráfaga crece como $\rho Vw$ (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Diferencia con el centrado}
 El centrado necesita el desplazamiento del mando para calcular su fuerza. La turbulencia aislada no multiplica por posición ni velocidad del yugo: puede actuar con el mando centrado y quieto. Potenciómetros, encoders y posición de SimConnect no determinan su amplitud en la fórmula. En la integración general sí se validan datos y pueden coexistir cargas de otros efectos; eso no convierte la turbulencia en un resorte.
@@ -784,7 +748,7 @@ $u_R,u_P$ & Comandos de turbulencia tras zona muerta y ganancias.\\
 Se usan nombres distintos para evitar confundir la ganancia previa $\gamma$, las ganancias por eje $c_a$ y la ganancia general $G$. Actúan en puntos distintos de la cadena y no siempre producen resultados intercambiables.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $Q_T$ y $\tau_H=1$ s $\rightarrow$ $S_V=\sqrt Q\le2$ y $\tau_H$ variable; carga lineal en velocidad y decaimiento por plunge (Pratt--Walker; Hoblit); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 1: extraer las variaciones del viento}
 \subsubsection{Promedio temporal y resta}
@@ -801,7 +765,7 @@ $m$ sigue al viento con cierta lentitud. Al restarlo del viento actual, queda la
 Con $\Delta t=0.02$ s y $V_e=120$ kt ($\tau_H=0.47786$ s), $a=e^{-0.02/0.47786}\simeq0.959011$ y $1-a\simeq0.040989$. En cada muestra la media avanza aproximadamente el 4.10\% de la diferencia con el viento recibido. Una ráfaga brusca no es absorbida inmediatamente por esa media y aparece en $h$.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\tau_H=1$ s $\rightarrow$ $\tau_H=\sat_{[0.25,1.5]}(29.5/V_e)$ s; adapta el decaimiento por plunge a la velocidad (Hoblit); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{De dónde sale el filtro}
 El seguimiento de media responde a la ecuación de primer orden
@@ -822,7 +786,7 @@ La primera muestra activa después de un reinicio hace $m_i=w_i$ y devuelve cero
 Si se parte de viento cero estabilizado y el vertical salta a 5 kt, en la primera muestra de 20 ms se obtiene $m_Y\simeq0.204946$ kt y $h_Y\simeq4.795054$ kt (a 120 kt EAS). Si permanece en 5 kt, ese $h_Y$ va decayendo. Si posteriormente el viento baja, puede aparecer una perturbación de signo contrario: también se detecta la salida de la ráfaga. El filtro de salida puede demorar el cambio de signo efectivo del comando.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ejemplo con $\tau_H=1$ s $\rightarrow$ ejemplo recalculado a 120 kt EAS con $\tau_H=29.5/V_e$; decaimiento por plunge (Hoblit); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 2: mezclar viento hacia roll y pitch}
 Antes de aplicar presión y ganancia, se calculan las siguientes señales:
@@ -858,7 +822,7 @@ S_V&=\sat_{[0,2]}(\sqrt Q).
 La Pico conserva $Q\le4$ y la turbulencia usa $S_V\le2$. Con referencia 120 kt, $q_{\rm ref}\simeq2334.24$ Pa y $Q=2$ da $S_V=\sqrt2$. La ponderación lineal en velocidad equivalente procede de $q\Delta\alpha$ con $\Delta\alpha=w/V$; la referencia sigue siendo un ajuste háptico, no una Vne certificada.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $Q_T=\min(Q,1)$ $\rightarrow$ $S_V=\sqrt Q\le2$; la carga de ráfaga es $\propto\rho Vw$ (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ganancia previa al límite}
 La señal bruta es
@@ -873,7 +837,7 @@ v_P&=\gamma S_V\,\frac{h_Y+k_Zh_Z}{5}.
 Si $S_V$ o $\gamma$ se vuelven cero, el objetivo bruto es cero. \textbf{Una salida previa no desaparece necesariamente en ese instante}: decae por el filtro de 80 ms mientras el modelo continúe activo. La pausa, el suelo o un reinicio sí limpian directamente el estado del modelo.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ganancia previa $\gamma Q_T$ $\rightarrow$ $\gamma S_V$; ponderación lineal en velocidad equivalente de la carga de ráfaga (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 4: limitar conjuntamente los dos ejes}
 \subsubsection{Norma del vector y recorte radial}
@@ -900,7 +864,7 @@ Antes del suavizado, el objetivo no se recorta si
 Con $S_V=\gamma=1$, una variación exclusivamente lateral alcanza el límite alrededor de $|h_X|=7.143$ kt; una exclusivamente vertical, a 5 kt; una exclusivamente longitudinal con $k_Z=0.25$, a 20 kt. Son umbrales de \emph{variaciones filtradas}, no del viento meteorológico absoluto. Con viento mixto se puede saturar antes.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): condición de saturación con $Q_T$ $\rightarrow$ con $S_V=\sqrt Q$; umbrales coherentes con la carga $\propto\rho Vw$ (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 5: suavizar el objetivo}
 \subsubsection{Filtro de salida de 80 ms}
@@ -926,7 +890,7 @@ La referencia continua del pasaaltos tiene corte aproximado $f_H=1/(2\pi\tau_H)$
 Subir $\tau_H$ hace que el viento sostenido tarde más en ser absorbido por la media y prolonga el transitorio; baja la frecuencia de corte del pasaaltos. Subir $\tau_L$ suaviza más y retrasa la respuesta de salida. Los cortes son orientativos para la cadena lineal; muestreo, saturación y zona muerta modifican la respuesta completa.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): corte pasaaltos fijo $\rightarrow$ corte dependiente de $\tau_H=29.5/V_e$ limitado; duración de ráfaga ligada al plunge (Hoblit); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 6: datos USB y ejecución en la placa}
 La trama SC8 lleva viento X/Y/Z y presión en sus unidades originales, además de los parámetros de configuración. La Pico calcula $(o_R,o_P)$ en \code{GustModel.h}; el comando usa directamente esos flotantes como $z_R,z_P$, sin cuantización intermedia a enteros.
@@ -1000,7 +964,7 @@ Supuestos: vuelo, viento cero ya inicializado, $\Delta t=20$ ms, $Q=0.5$, refere
 \end{enumerate}
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ejemplo con pasaaltos de 1 s $\rightarrow$ ejemplo recalculado con $\tau_H=0.47786$ s a 120 kt EAS; decaimiento por plunge (Hoblit); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Qué ocurre si ese viento de 5 kt permanece constante}
 % [V-realismo]
@@ -1020,7 +984,7 @@ Mismos supuestos: $V_e=84.853$ kt, $\tau_H=0.675799$ s, $S_V=0.707107$, viento v
 La media absorbe el viento constante; presión fija y ejes fijos son supuestos del ejemplo.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): tabla de viento constante con $\tau_H=1$ s $\rightarrow$ tabla recalculada con $29.5/V_e$ a 120 kt EAS; decaimiento por plunge (Hoblit); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ráfaga mixta: el límite vectorial sí interviene}
 % [V-realismo]
@@ -1034,7 +998,7 @@ v_R&=0.6713076,&v_P&=0.9590108,\\
 Tras zona muerta y ganancias: $u_R\simeq0.0343286$ y $u_P\simeq0.1036286$. Se aplican aproximadamente \textbf{9 PWM roll y 26 PWM pitch}. No salen dos valores iguales ni una relación 1:2: intervinieron la mezcla lateral 0.70, el reparto vectorial y la zona muerta.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ejemplo de ráfaga mixta con filtro fijo $\rightarrow$ ejemplo recalculado con $\tau_H=29.5/V_e$; transitorio de plunge previo al recorte vectorial (Hoblit); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Conversión rápida de señal recibida a PWM}
 Esta tabla parte de $z$ ya recibido, por lo que no especifica una ráfaga única capaz de producirlo. Cada eje se evalúa por separado, con sus ganancias iniciales y polaridad positiva:
@@ -1092,7 +1056,7 @@ TelemFFB utiliza pesos vertical 1, longitudinal 0.25 y lateral 0.70. Para roll a
 También hay límite conjunto de pitch/roll y suavizado exponencial en la referencia. TelemFFB ajusta sensibilidad mediante un divisor entre 10 y 1 y una intensidad posterior al límite de magnitud. MiYoke usa 5 kt, presión normalizada y ganancia \emph{antes} del límite unitario. Por tanto, \code{--gust-gain} no equivale exactamente al parámetro de intensidad de TelemFFB.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): pasaaltos fijo de la adaptación anterior $\rightarrow$ $29.5/V_e$ limitado; se distingue el decaimiento por plunge del antecedente TelemFFB (Hoblit); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{La entrada de viento no es la misma}
 \code{SimConnectManager.py} de TelemFFB define \code{RelWind} con \code{RELATIVE WIND VELOCITY BODY X/Y/Z} en m/s. Este proyecto usa \code{AIRCRAFT WIND X/Y/Z} en kt. No son nombres intercambiables: cambiar de familia de variables modifica el significado de la entrada, y cambiar a m/s exige revisar la escala de 5 kt.
@@ -1121,7 +1085,7 @@ Redondeo, escala 255 y techo 220 & Ruta eléctrica de MiYoke; no calibración de
 \code{SimConnectBridge/GustGain.h} contiene \code{scaleGust}, pero no está incluido ni llamado por el puente actual: aparece en pruebas. No se agregó su fórmula como una etapa extra, porque hacerlo duplicaría un cálculo que no está en la ruta de ejecución analizada.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\min(Q,1)$ y 1 s $\rightarrow$ $\sqrt Q\le2$ y $29.5/V_e$ limitado; se documentan carga de ráfaga y plunge (Pratt--Walker; Hoblit); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Qué puede ajustarse y cómo cambia la sensación}
 \subsubsection{Ganancias disponibles en la placa}
@@ -1147,7 +1111,7 @@ El rango es $0\ldots1$ y el paso de botones 0.05. Las ganancias se guardan en me
 Subir referencia de 120 a 150 kt multiplica $Q$ sin recortar por 0.64 y $S_V$ por 0.8. El pasaaltos usa la presión física para $V_e$, por lo que su constante temporal no depende de esa referencia. El recorte superior de $Q$ puede alterar estas proporciones.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): cambiar referencia escalaba por $Q_T$ $\rightarrow$ escala por $S_V=\sqrt Q$; la carga es lineal en velocidad y el plunge usa $V_e$ físico (Pratt--Walker; Hoblit); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Cambios que requieren editar y recompilar}
 % [V-realismo]
@@ -1156,7 +1120,7 @@ La escala 5 kt, el peso lateral 0.70 y los 80 ms están en \code{GustModel.h}; $
 Las polaridades de motor y límites PWM requieren revisar \code{mis_defines.h}. Invertir la polaridad de un motor invierte todos sus efectos, incluido el centrado. No conviene usar ese ajuste para corregir exclusivamente el signo de una turbulencia cuando el resorte ya restaura correctamente: en ese caso hay que revisar el mapeo del viento del modelo.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): constante pasaaltos fija $\rightarrow$ cálculo $29.5/V_e$ en firmware; parámetros de decaimiento por plunge requieren recompilación (Hoblit); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Umbral efectivo por cuantización PWM}
 Superar $d=0.02$ genera un comando matemático, pero puede seguir redondeando a cero. Para un eje aislado con $M=255$ y $Gc_a>0$, la primera cuenta aparece aproximadamente cuando
@@ -1207,7 +1171,7 @@ El diagnóstico local \code{f=} muestra la suma de comandos multiplicada por 100
 Una ampliación útil sería registrar $h_X,h_Y,h_Z$, $S_V$, $\ell$, señal antes/después del límite, $o_a$, $z_a$ y aporte aislado de turbulencia. Así se distinguiría una ráfaga eliminada por el filtro de una señal recortada, una zona muerta o un techo de la suma. Este análisis no añadió esas variables al firmware ni al puente.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): diagnóstico referido a $Q_T$ $\rightarrow$ propuesta de registro de $S_V$; permitiría distinguir la ponderación de carga $\propto\rho Vw$ del recorte (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Mejoras posibles, todavía no implementadas}
 \subsubsection{Separar causas atmosféricas y maniobras}
@@ -1273,7 +1237,7 @@ Con suelo 0.450 y total 0.90, el techo aislado es $12.393\sqrt E$ PWM roll y $1.
 \code{gr/gp} conserva los baches previos a textura; R/P incluyen la suma. Los 800 casos de suelo y 96\,764 comprobaciones correspondían a la revisión de senoides. Los ejemplos siguientes de aceleraciones excluyen textura salvo indicación expresa.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): textura sinusoidal proporcional a $E$ $\rightarrow$ banda estrecha 7/11.3 Hz proporcional a $\sqrt E$; RMS del perfil crece con raíz de velocidad (ISO 8608; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Qué hace el efecto en la versión SC8}
 El efecto responde a las \textbf{variaciones de aceleración lateral y vertical que entrega Prepar3D mientras el avión rueda}. La velocidad respecto del terreno conserva exactamente la progresión solicitada: hasta 0.5 kt no hay aporte; entre 0.5 y 40 kt aumenta el multiplicador de intensidad; desde 40 kt ese multiplicador vale uno.
@@ -1287,7 +1251,7 @@ En SC3--SC6 la placa sintetizaba una triangular de 8 Hz y suavizaba su amplitud 
 A igual velocidad, dos recorridos pueden producir comandos distintos si cambian las aceleraciones. El algoritmo no consulta un mapa de baches, no distingue cada rueda ni lee tipo de superficie: responde al movimiento que el simulador efectivamente publica. Puede responder también a maniobras bruscas en suelo. No hay un efecto separado de touchdown, ni reproducción mecánica calibrada de la transmisión del tren al yugo.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): textura SC8 sinusoidal $\rightarrow$ ruido de banda estrecha con senoides en flag 0; excitación irregular sin cambiar la ruta de baches (ISO 8608; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Recorrido completo desde SimConnect hasta los motores}
 \begin{center}
@@ -1403,7 +1367,7 @@ La rampa se aplica una sola vez dentro del modelo. El modelo de aceleraciones se
 El receptor valida CRC, secuencia, banderas, datos y avance de marca. Exige trama armada con menos de 300 ms y DTR. El puente desarma por pausa, simulación detenida, slew o pérdida de datos; exige datos de menos de 250 ms para armar. Permanecen rutas históricas para SC1--SC7, pero el puente actual sólo emite SC8.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): techo de baches más textura $\pm E$ $\rightarrow$ $\pm\sqrt E$; permite la nueva escala RMS de textura (ISO 8608); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 6: ganancias, límites y suma con otros efectos}
 La etapa de suelo en \code{Effects::command} aplica:
@@ -1527,7 +1491,7 @@ Quedan como mejoras futuras una fuente válida de compresión por rueda, un efec
 \newpage
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): textura aleatoria pendiente $\rightarrow$ banda estrecha implementada con senoides en flag 0; excitación irregular de pista sin eventos por distancia (ISO 8608; Newland); ver Sección~\ref{sec:realismo}.}
 
 \section{BUFFET POR TREN DE ATERRIZAJE}
 \label{sec:buffet-tren}
@@ -1539,7 +1503,7 @@ Genera una vibración irregular de banda estrecha de roll y pitch cuando el avi�
 La idea sencilla es: \emph{``representar una vibración aerodinámica asociada al tren expuesto al flujo de aire''}. El simulador no envía esa vibración instantánea: informa posición de tren y velocidad; la Pico calcula tanto la amplitud como la oscilación.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): umbral de tren a 100 kt y triangular $\rightarrow$ carga cuadrática sin umbral y banda estrecha de 10 Hz; flujo separado y respuesta irregular (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Qué no está incluido}
 No representa impactos de ruedas, rodaje, ruido del motor de extensión, vibración del actuador ni golpe de enclavado. Tampoco calcula fuerza de arrastre ni torque de bisagra. El buffet puede continuar con el tren inmóvil y extendido: no necesita que el tren esté moviéndose.
@@ -1556,7 +1520,7 @@ IAS y extensión de tren $\rightarrow$ verificar vuelo y tren retráctil $\right
 \end{center}
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): rampa lineal de IAS y triangular $\rightarrow$ $\min[(IAS/150)^2,1]$ y AR(2); cadena acorde con carga de flujo separado (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Variables que forman o habilitan el efecto}
 \begin{longtable}{p{0.32\linewidth}p{0.18\linewidth}p{0.42\linewidth}}
@@ -1585,7 +1549,7 @@ E_g&=d\,R_g(V).
 $V$ es IAS en kt y $d$ la extensión fraccionaria. No hay umbral de 100 kt: a 80 kt, $R_g=0.284444$; a 125 kt, 0.694444; desde 150 kt, uno. Con media extensión a 125 kt, $E_g=0.347222$.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $d\sat[(V-100)/50]$ $\rightarrow$ $d\min[(V/150)^2,1]$; carga de flujo separado proporcional a IAS$^2$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 % [V-realismo]
 \subsubsection{Procedencia y límites de la calibración}
@@ -1593,7 +1557,7 @@ $V$ es IAS en kt y $d$ la extensión fraccionaria. No hay umbral de 100 kt: a 80
 El flujo separado aporta $qSC_p'$, aproximadamente proporcional a IAS$^2$ a baja altura. 150 kt es calibración de intensidad plena; no es Vle/Vlo ni dato certificado del tren. No existe umbral adicional de despliegue del 10\%.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): umbral 100 kt y rampa lineal $\rightarrow$ escala IAS$^2$ hasta 150 kt; el flujo separado motiva la ley y la intensidad plena es calibración local (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Validación específica}
 El modelo acepta IAS finita entre 0 y 1000 kt. Fuera de ese rango devuelve cero para los tres buffets. Tren requiere $d$ finito en $[0,1]$ y retráctil exactamente igual a 1. Un despliegue 1.2 no se interpreta como totalmente desplegado: deshabilita este objetivo. La ausencia o invalidez de datos de pérdida o spoiler puede anular esos efectos sin anular un tren válido.
@@ -1613,7 +1577,7 @@ $A_g$ es la amplitud suavizada. Con 2 ms, $\beta=2/102$. Es una discretización 
 El número 100 se comparte con otras envolventes y el centrado dentro de \code{Effects::update}. Modificarlo directamente cambia más de un efecto. No es un tiempo físico medido del tren.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): amplitud objetivo de rampa lineal $\rightarrow$ objetivo cuadrático de IAS con el mismo filtro de 100 ms; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
 
 % [V-realismo]
 \subsubsection{Portadora de banda estrecha y modo triangular}
@@ -1628,7 +1592,7 @@ Los coeficientes se precalculan antes de setup; cada update de tiempo positivo e
 Con \code{SIMCONNECT_BUFFET_NARROWBAND=0} se conserva $T(\phi)=0.004\phi-1$ para $\phi<500$ y $3-0.004\phi$ en el resto; $\phi=(\phi+10\Delta t_{\rm ms})\bmod1000$, inicio 250. Sólo ese modo usa fase triangular periódica. Al reiniciar amplitudes y portadoras se limpian ambos modos.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): triangular de 10 Hz $\rightarrow$ AR(2) de 10 Hz, $\zeta=0.15$, RMS 0.45 y recorte $\pm1$; respuesta irregular de banda estrecha (Mabey; Newland; Box); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Cola al retirar el tren o tocar tierra}
 Cuando llega $E_g=0$, el filtro mantiene inicialmente parte de $A_g$ y la reduce suavemente. Con ciclo de 2 ms y sin reinicio, $A_{g,n}=A_{g,0}(100/102)^n$. No existe para los buffets la rama de corte instantáneo que sí tiene vibración de suelo.
@@ -1648,7 +1612,7 @@ Pitch recibe toda la amplitud y roll la mitad, con la misma fase. La relación 1
 No se utiliza el desplazamiento del yugo y tampoco la zona muerta de 0.02 de turbulencias. Las señales pequeñas de buffet llegan a la conversión PWM y pueden desaparecer por redondeo. Damper y fricción pueden sumarse al resultado, pero no multiplican la portadora de tren.
 
 % [V-realismo]
-\textit{Actualización (realismo): fundamento y modelo vigente incorporados; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): comando con triangular $\rightarrow$ comando con ruido de banda estrecha y la misma relación 1:2; excitación irregular de buffet (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 5: de comando normalizado a PWM}
 \subsubsection{Conversión completa}
@@ -1671,7 +1635,7 @@ PWM positivo deja LEFT en cero y activa RIGHT; negativo hace lo contrario. En Pi
 En vuelo, $d=1$: $E_g=(125/150)^2=0.694444$. En régimen, para portadora recortada $T=0.8$ ($T$ representa ahora ruido), $w_g=0.555556$; $u_P=0.080000$, $u_R=0.040000$, PWM 20/10 pitch/roll. Con $T=-0.8$ cambia el signo; media extensión reduce la amplitud a la mitad.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ejemplo de tren con rampa lineal $\rightarrow$ ejemplo recalculado con $(125/150)^2$ y muestra de ruido; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Tabla de picos ideales a extensión completa}
 % [V-realismo]
@@ -1691,7 +1655,7 @@ Filtro estabilizado, portadora recortada en $|T|=1$, ganancias de fábrica. Son 
 La portadora aleatoria puede llegar al recorte unitario. Con flag 0, pasos exactos de 2 ms y fase 250, la triangular de 10 Hz sólo llega a 0.96; a amplitud uno redondea 18/35 roll/pitch.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): picos de tren con rampa lineal $\rightarrow$ picos recalculados con $\min[(V/150)^2,1]$; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Arranque con objetivo 0.5}
 % [V-realismo]
@@ -1703,7 +1667,7 @@ Sólo con \code{SIMCONNECT_BUFFET_NARROWBAND=0}: desde $A_g=0$, fase 250 y pasos
 La última fila no significa que no haya buffet: la muestra cae en cruce por cero aunque la amplitud ya sea alta.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): arranque triangular como modo general $\rightarrow$ ejemplo sólo con flag 0; el modo predeterminado es irregular de banda estrecha (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Habilitación y diagnóstico}
 \subsubsection{Banderas y estados}
@@ -1718,7 +1682,7 @@ Registrar IAS, extensión de tren, condición retráctil, estado de suelo y arma
 La pantalla se actualiza cada 100 ms. Sólo con flag 0 coincide con el período de la triangular de 10 Hz: sincronizadas pueden mostrar siempre la misma fase, incluso cero, como documentaban las pruebas de ese modo. La portadora aleatoria no se repite cada 100 ms, pero la pantalla tampoco reconstruye su banda. \textbf{No debe bajarse la frecuencia del efecto sólo para hacerlo visible en el LCD}: conviene mejorar el diagnóstico o registrar máximos/RMS en una ventana.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): aliasing de triangular atribuido al modo general $\rightarrow$ caso restringido al flag 0; AR(2) no repite fase cada 100 ms (Newland; Box); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Procedencia y comparación con las referencias}
 \subsubsection{TelemFFB}
@@ -1731,14 +1695,14 @@ En la ley anterior de MiYoke se eligieron explícitamente kt; ahora sólo se con
 Referencia de localización: \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/base/MotionEffectsMixIn.py}{TelemFFB, MotionEffectsMixIn.py}. La comparación se hizo contra la copia incluida en el proyecto.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): rampa de tren basada en umbral TelemFFB $\rightarrow$ escala IAS$^2$ sin umbral; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Original alemán y decisiones locales}
 % [V-realismo]
 No se identificó en las fuentes del original local una cadena SimConnect que produzca este buffet con esta rampa. El esquema de dos PWM tiene un antecedente en \code{AxisCalibration.cpp::MoveMotor}, pero la envolvente, transporte, renderizado de portadora, ganancia 0.16, factor roll 0.5 y filtro de 100 ms son de la ruta actual. No se atribuyen a una ley aerodinámica ni a una calibración física medida.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): envolvente lineal local $\rightarrow$ cuadrática con portadora AR(2); se distingue la fundamentación de flujo separado de la atribución al original (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Ajustes, calibración y mejoras posibles}
 \subsubsection{Qué se puede ajustar ahora}
@@ -1748,7 +1712,7 @@ No se identificó en las fuentes del original local una cadena SimConnect que pr
 La referencia de intensidad plena de 150 kt se edita en \code{BuffetModel.h} y requiere recompilar; ya no existe umbral de 100 kt. Cambiar frecuencia altera el carácter y la respuesta mecánica, no la envolvente de velocidad. Cambiar el centro de potenciómetro no ajusta este efecto.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ajuste de umbral 100 kt y rampa $\rightarrow$ referencia de intensidad plena 150 kt para IAS$^2$; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Cómo elegir una ganancia}
 En régimen sin saturar, un pico pitch deseado $P$ conduce a $c_g\simeq P/(255GE_g)$ para $E_g>0$. Buscar 10 PWM pitch con $E_g=0.5$ y $G=0.90$ da $c_g\simeq0.08715$, aproximable a 0.09 desde el menú. Es una cota ideal de pico; muestreo y transmisión mecánica pueden reducir la sensación.
@@ -1775,7 +1739,7 @@ Genera una vibración de roll y pitch al aumentar el ángulo de ataque dentro de
 La idea sencilla es: \emph{``cuanto más se aproxima el ángulo de ataque al umbral del modelo, aumentar el temblor, ponderándolo por el flujo que estima la velocidad''}. La vibración puede comenzar antes de alcanzar \code{STALL ALPHA}; no es un interruptor que espere a que la pérdida ya se haya producido.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): inicio $\alpha_s(0.5+0.2f)$ y triangular $\rightarrow$ margen de aviso y banda estrecha de 13 Hz; hipótesis de aviso y excitación irregular (antigua §23.207; Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Qué no calcula}
 No calcula caída de ala, movimiento de morro, pérdida de sustentación, un empuje de recuperación ni un stick shaker certificado. No utiliza el estado de la bocina de pérdida. No reconstruye esfuerzo de bisagra o vibración estructural en unidades físicas y no demuestra que una aeronave real comience a vibrar a la fracción de AoA elegida.
@@ -1791,7 +1755,7 @@ AoA, ángulo de pérdida, flaps, VS0/VS1 e IAS $\rightarrow$ validar datos y vue
 \end{center}
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): cadena con inicio lineal en flaps y triangular $\rightarrow$ inicio por $[V_s/(V_s+\Delta)]^2$ y AR(2); hipótesis de aviso e irregularidad (antigua §23.207; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Variables, unidades y validez}
 \subsubsection{Entradas directas}
@@ -1850,7 +1814,7 @@ $\alpha_s$ es el ángulo recibido y $V_{\rm ref}=(1-f)V_{s1}+fV_{s0}$. La relaci
 Con $\alpha_s=15^\circ$, VS1=60 y VS0=45 kt: inicios 11.020408$^\circ$, 10.584$^\circ$ y 10.041322$^\circ$ para $f=0,0.5,1$. Con flaps, ahora se adelanta; antes se retrasaba.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\alpha_s(0.5+0.2f)$ $\rightarrow$ $\alpha_s[V_s/(V_s+\Delta)]^2$; margen máximo de aviso como hipótesis de buffet (antigua §23.207); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Rampa normalizada de ángulo}
 \begin{equation}
@@ -1863,7 +1827,7 @@ El numerador indica cuánto se avanzó desde el comienzo; el denominador es el a
 Los rangos garantizan $\alpha_s>0$, $V_{\rm ref}>0$ y $\Delta>0$; por tanto, $0<\alpha_0<\alpha_s$ y el denominador es positivo. No hay división por cero con entradas aceptadas.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): rampa de AoA desde $\alpha_s(0.5+0.2f)$ $\rightarrow$ desde el inicio por margen de velocidad; hipótesis de aviso (antigua §23.207); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 3: referencia de velocidad y factor de flujo}
 \subsubsection{Interpolación de VS0 y VS1}
@@ -1888,7 +1852,7 @@ La relación cuadrática está motivada por $q=\rho V^2/2$, cuyo fundamento gene
 Si VS0 es menor que VS1, aumentar $f$ baja $V_{\rm ref}$: adelanta el inicio y aumenta $B$ a IAS fija. Ambas tendencias refuerzan el buffet en este estimador; no constituyen una ley universal del avión.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): flaps retrasaban el inicio $\rightarrow$ lo adelantan al reducir $V_s$; hipótesis de margen máximo de aviso (antigua §23.207); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 4: envolvente final de la Pico}
 \begin{equation}
@@ -1906,7 +1870,7 @@ Con $B=1.5$, la amplitud llega a uno cuando $R_\alpha\ge2/3$. Por tanto, puede s
 Con $\alpha_s=15^\circ$, flaps cero y flujo limitado a 1.5, da $\alpha_{\rm sat}=13.673469^\circ$. Si $B<1$, ni siquiera con $R_\alpha=1$ se llega a envolvente uno: el máximo es $B$. El modelo no afirma que a $13.673469^\circ$ el avión ya esté en pérdida; únicamente saturó su señal háptica.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): saturación calculada desde el inicio anterior $\rightarrow$ recalculada desde $\alpha_s[V_s/(V_s+\Delta)]^2$; hipótesis de aviso (antigua §23.207); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Qué ocurre después de la banda}
 Con $\alpha\ge\alpha_s$, $R_\alpha$ permanece en uno. El buffet no desaparece ni se debilita por entrar más profundamente en pérdida, salvo cambios de velocidad o datos. Su frecuencia sigue fija. No representa por sí solo la evolución completa de una pérdida profunda.
@@ -1925,17 +1889,16 @@ Es un filtro de primer orden que suaviza entrada y salida de la condición. Con 
 
 Si el objetivo pasa a cero pero la comunicación sigue armada, queda cola: $A_{s,n}=A_{s,0}(100/102)^n$ con esos intervalos. Si el avión vuelve al suelo, el objetivo es cero, pero esa cola puede coexistir brevemente con rodaje. El desarme general sí anula el efecto y reinicia el estado.
 
-% [V-realismo]
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): objetivo de pérdida con inicio lineal en flaps $\rightarrow$ inicio por margen de velocidad con el mismo filtro; hipótesis de aviso (antigua §23.207); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Portadora de banda estrecha de 13 Hz}
 % [V-realismo]
 Se usa $w_s=A_sT_s$, con $T_s=\sat_{[-1,1]}(N_{13})$, RMS 0.45 antes del recorte y $\zeta=0.15$; ver Sección~\ref{sec:realismo}. Con \code{SIMCONNECT_BUFFET_NARROWBAND=0}, $T_s$ vuelve a la triangular de pico uno, $\phi=(\phi+13\Delta t_{\rm ms})\bmod1000$, inicio 250; ramas $0.004\phi-1$ y $3-0.004\phi$. Ambos ejes comparten portadora y relación 1:2, sin variar frecuencia con profundidad.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): triangular de 13 Hz $\rightarrow$ AR(2) de 13 Hz, RMS 0.45 y recorte $\pm1$; respuesta irregular de banda estrecha (Mabey; Newland; Box); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 6: ganancias, roll/pitch y PWM}
 \subsubsection{Comando por eje}
@@ -1948,7 +1911,7 @@ u_{R,s}&=0.5Gc_sw_s=0.108 A_sT_s.
 El signo depende de la portadora, no del signo de posición del yugo. Ambos ejes comparten portadora; roll tiene la mitad del comando. El efecto puede vibrar con el mando centrado. No aplica la zona muerta de turbulencias y no usa el factor 10 de suelo.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): portadora triangular compartida $\rightarrow$ ruido de banda estrecha compartido, manteniendo 1:2; excitación irregular de pérdida (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Conversión eléctrica}
 Se suma con los demás efectos, se limita a $L=220/255$, se aplica polaridad de motor, se limita a $[-1,1]$, se multiplica por \code{PWM_MAX}=255, se redondea simétricamente y se impone el techo duro de 220:
@@ -1974,7 +1937,7 @@ Vuelo válido, $\alpha_s=15^\circ$, VS0=45, VS1=60 kt, $f=0.5$, $\alpha=12^\circ
 Con portadora en pico, máximos 23/12 PWM pitch/roll. Son evaluaciones del estimador, no un vuelo medido.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ejemplo con inicio lineal en flaps $\rightarrow$ ejemplo recalculado con $\alpha_s[V_s/(V_s+\Delta)]^2$; hipótesis de margen de aviso (antigua §23.207); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Comparación de ángulo, flaps y velocidad}
 % [V-realismo]
@@ -1996,7 +1959,7 @@ $\alpha_s=15^\circ$, VS0=45 y VS1=60 kt; régimen con portadora recortada en pic
 Las envolventes son flotantes; no enteros USB. Los casos son combinaciones ilustrativas de entradas.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): tabla con inicio $\alpha_s(0.5+0.2f)$ $\rightarrow$ tabla recalculada con inicio por margen de velocidad; hipótesis de aviso (antigua §23.207); ver Sección~\ref{sec:realismo}.}
 
 % [V-realismo]
 \subsubsection{Arranque con objetivo de prueba 0.6530 (sólo flag 0)}
@@ -2016,7 +1979,7 @@ Desde amplitud cero y fase 250, con pasos de 2 ms:
 La intensidad de una muestra depende de amplitud y fase a la vez. Una envolvente creciente no implica que cada muestra PWM sea mayor que la anterior.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): arranque triangular como modo general $\rightarrow$ tabla restringida al flag 0; AR(2) produce excitación irregular (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Procedencia: TelemFFB, física y adaptación propia}
 \subsubsection{Fórmulas reconocibles de TelemFFB}
@@ -2035,7 +1998,7 @@ Referencia pública de localización: \href{https://github.com/walmis/VPforce-Te
 Para ver el tercer punto, si $R_\alpha B=1.5$ y una intensidad de referencia fuese 0.24, multiplicar antes de saturar produciría 0.36; MiYoke limita primero a 1 en la Pico y aplica después 0.24, antes de la ganancia general. Por eso no debe describirse como copia numérica completa de TelemFFB.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): inicio heredado de TelemFFB y triangular $\rightarrow$ inicio por margen de aviso y AR(2); hipótesis reglamentaria e irregularidad (antigua §23.207; Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Original alemán y constantes locales}
 No se identificó en las fuentes originales locales la cadena con AoA, flaps, VS0/VS1 y SimConnect de esta sección. El esquema genérico de motor y efectos FFB es un antecedente de arquitectura, no el origen de este estimador. El filtro de 100 ms, protocolo, reparto por eje, ganancia local 0.24 y conversión PWM pertenecen a la implementación modificada.
@@ -2088,7 +2051,7 @@ Genera una vibración en ambos ejes cuando el avión está en vuelo, los spoiler
 La idea sencilla es: \emph{``cuanto más spoiler expuesto y mayor velocidad dentro de la banda, más vibración''}. Se trata de una señal háptica aproximada, no del cálculo del arrastre, la sustentación perdida o la fuerza real transmitida desde las superficies al yugo.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): umbral de spoiler a 80 kt y triangular $\rightarrow$ carga cuadrática sin umbral y banda estrecha de 15 Hz; flujo separado y respuesta irregular (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Qué se entiende por spoiler en esta implementación}
 Se leen las posiciones izquierda y derecha publicadas por el simulador. No se lee solamente la palanca de aerofrenos ni la bandera de armado. Si el avión utiliza esas superficies para ayudar al alabeo y lo publica en las variables estándar, ese despliegue puede alimentar el efecto.
@@ -2105,7 +2068,7 @@ Spoiler izquierdo/derecho e IAS $\rightarrow$ comprobar vuelo y datos $\rightarr
 \end{center}
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): rampa lineal y triangular $\rightarrow$ $\min[(IAS/140)^2,1]$ y AR(2); cadena acorde con carga de flujo separado (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Variables de SimConnect}
 \begin{longtable}{p{0.37\linewidth}p{0.18\linewidth}p{0.37\linewidth}}
@@ -2135,7 +2098,7 @@ Se obtiene 0 con ambos retraídos y 1 con ambos completos. Un spoiler al máximo
 Por tanto, el roll resultante no es una fuerza dirigida al lado del spoiler. Es la misma vibración del otro eje con menor ganancia. El signo alternante lo determina la portadora, no por $s_L-s_R$.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): promedio de despliegue excitando triangular $\rightarrow$ el mismo promedio excitando AR(2); respuesta irregular sin dirección por asimetría (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Rampa con velocidad indicada}
 \begin{align}
@@ -2147,21 +2110,21 @@ E_{sp}&=\bar s R_{sp}(V).
 No hay umbral de 80 kt: a 80 kt el factor es 0.326531, a 110 kt 0.617347 y desde 140 kt uno. La carga de flujo separado es aproximadamente proporcional a IAS$^2$; 140 kt calibra intensidad plena, sin relación automática con límites del avión. \code{--reference-knots} no ajusta este efecto; 15 Hz es la frecuencia central fija.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\bar s\sat[(V-80)/60]$ $\rightarrow$ $\bar s\min[(V/140)^2,1]$; carga de flujo separado proporcional a IAS$^2$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Umbral de despliegue y continuidad}
 % [V-realismo]
 MiYoke permite despliegue continuo desde cero, sin condición $\bar s>0.1$. Con IAS 140 kt y ambos spoilers 0.05, $E_{sp}=0.05$. La condición de TelemFFB no se copió.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): factor nulo bajo 80 kt $\rightarrow$ factor cuadrático para IAS positiva, conservando despliegue continuo; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 2: cálculo en el microcontrolador}
 % [V-realismo]
 SC8 transmite posiciones de spoilers, IAS y estados, como flotantes. \code{PicoForceModels.h} calcula $E_{sp}$ y lo guarda en \code{buffet[2]}. $E_{sp,\rm rx}=E_{sp}$ salvo precisión de flotantes. La entrada se renueva por muestra aceptada; la portadora de banda estrecha de 15 Hz (triangular con flag 0) y el filtro se calculan localmente en ciclos nominales de 2 ms. No hay entero de envolvente ni resolución USB de 0.0001.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): Pico con rampa lineal y triangular $\rightarrow$ envolvente cuadrática y AR(2) de 15 Hz; carga de flujo separado y excitación irregular (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 3: filtro, frecuencia y cola}
 \subsubsection{Amplitud suavizada}
@@ -2171,10 +2134,9 @@ A_{sp,n}=A_{sp,n-1}+\frac{\Delta t_{\rm ms}}{100+\Delta t_{\rm ms}}
 \end{equation}
 La variable $A_{sp}$ sigue al objetivo con un filtro de primer orden de constante 100 ms. Con un ciclo de 2 ms se corrige aproximadamente el 1.96\% de la diferencia pendiente; partiendo de cero, llega al 62.85\% a 100 ms y al 94.87\% a 300 ms. El origen de la ecuación es $\tau\dot A+A=E$, discretizada, no un modelo medido del actuador.
 
-% [V-realismo]
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): objetivo de spoiler con rampa lineal $\rightarrow$ objetivo cuadrático con el mismo filtro de 100 ms; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Portadora de banda estrecha y modo triangular}
 % [V-realismo]
@@ -2188,7 +2150,7 @@ Los coeficientes se precalculan antes de setup; cada update de tiempo positivo e
 Con \code{SIMCONNECT_BUFFET_NARROWBAND=0} se conserva $T(\phi)=0.004\phi-1$ para $\phi<500$ y $3-0.004\phi$ en el resto; $\phi=(\phi+15\Delta t_{\rm ms})\bmod1000$, inicio 250. Sólo ese modo usa fase triangular periódica. Al reiniciar amplitudes y portadoras se limpian ambos modos.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): triangular de 15 Hz $\rightarrow$ AR(2) de 15 Hz, $\zeta=0.15$, RMS 0.45 y recorte $\pm1$; respuesta irregular de banda estrecha (Mabey; Newland; Box); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Retirada de spoilers y contacto con suelo}
 % [V-realismo]
@@ -2197,7 +2159,7 @@ Al retraer, llegar a IAS cero o quedar en suelo, la Pico lleva $E_{sp}$ a cero. 
 Pausa, desarme, DTR perdido, timeout de telemetría o reinicio por intervalo local mayor que 50 ms sí retiran o reinician la salida general. Por ello un touchdown puede dejar una breve cola de este buffet mientras comienza el efecto de suelo; no significa que la Pico siga calculando un objetivo de spoiler en tierra.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): cola de amplitud con triangular $\rightarrow$ cola con AR(2), conservando el filtro; excitación irregular de buffet (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 4: ganancias y conversión a PWM}
 \subsubsection{Roll y pitch}
@@ -2210,7 +2172,7 @@ u_{R,sp}&=0.5Gc_{sp}A_{sp}T=0.072A_{sp}T.
 Ambos ejes comparten portadora (fase en el modo triangular). La relación de comando roll/pitch es 1:2 antes de redondear y de aplicar polaridades. No depende del desplazamiento del yugo ni usa la zona muerta 0.02 de turbulencias. La ganancia de centrado o la de suelo tampoco se aplica a este aporte.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): triangular común a ambos ejes $\rightarrow$ ruido de banda estrecha común, manteniendo 1:2; respuesta irregular (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Saturación y driver}
 En modo aislado se limita el comando a $\pm220/255$, se aplica signo de motor $s_a$, se limita a $[-1,1]$ y se convierte mediante
@@ -2228,7 +2190,7 @@ Con PWM positivo se activa RIGHT y LEFT queda en cero; negativo activa LEFT y an
 Vuelo válido, filtro estabilizado y ganancias de fábrica. $\bar s=(0.8+0.4)/2=0.6$, $R_{sp}=(110/140)^2=0.617347$ y $E_{sp}=0.370408$. Con portadora recortada $T=0.8$, $w_{sp}=0.296327$, $u_P=0.042671$, $u_R=0.021336$: PWM 11/5 pitch/roll. Signo opuesto de portadora invierte las salidas. En pico unitario, máximos 14/7. La asimetría de spoilers no impone signo de roll.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ejemplo de spoiler con rampa lineal $\rightarrow$ ejemplo recalculado con $(110/140)^2$ y muestra de ruido; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Tabla de picos ideales}
 % [V-realismo]
@@ -2249,7 +2211,7 @@ Régimen estabilizado, portadora recortada en $|T|=1$, ganancias de fábrica.
 La saturación de envolvente desde 140 kt no es saturación del driver.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): tabla de picos con rampa lineal $\rightarrow$ picos recalculados con $\min[(V/140)^2,1]$; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
 
 % [V-realismo]
 \subsubsection{Arranque con objetivo de prueba 0.3 (sólo flag 0)}
@@ -2263,7 +2225,7 @@ Desde amplitud cero, fase 250 y ciclos exactos de 2 ms:
 La amplitud crece aunque las muestras elegidas a 100 y 300 ms den cero. La fase determina cuándo se ve el pico, no sólo la extensión del spoiler.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): arranque triangular como modo general $\rightarrow$ tabla sólo con flag 0; AR(2) sustituye la periodicidad por excitación irregular (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Procedencia y diferencias con TelemFFB}
 \subsubsection{Promedio y umbrales}
@@ -2273,7 +2235,7 @@ La ley anterior de MiYoke correspondía a esas referencias en kt; ahora sólo co
 La velocidad de esa ruta de TelemFFB es IAS si está disponible y TAS como alternativa. MiYoke exige IAS válida. También se omite la condición de despliegue $>0.1$ de la referencia, por decisión local de permitir una entrada continua desde cero.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): rampa de spoiler basada en umbral TelemFFB $\rightarrow$ escala IAS$^2$ sin umbral de 80 kt; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Generación de la vibración}
 % [V-realismo]
@@ -2283,7 +2245,7 @@ TelemFFB combina senoides de 15 y 16 Hz en una dirección, y de 14 y 18 Hz en ot
 La triangular del flag 0 da sensación periódica y contenido armónico distinto; la portadora nueva reproduce excitación irregular alrededor de 15 Hz. Que una frecuencia coincida no significa que las señales ni el RMS sean iguales. No se ha calibrado una equivalencia perceptual automática entre ambos equipos.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): triangular periódica $\rightarrow$ AR(2) alrededor de 15 Hz; reproduce excitación irregular de banda estrecha (Mabey; Newland; Box); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Original alemán y decisiones propias}
 En las fuentes originales locales no se identificó esta cadena SimConnect de despliegue e IAS. El accionamiento por dos PWM conserva un antecedente del original; el estimador simplificado y su integración corresponden al proyecto modificado. Las ganancias 0.16, factor roll 0.5, filtro, protocolo y límites del driver son decisiones locales, no coeficientes aerodinámicos medidos.
@@ -2303,7 +2265,7 @@ Registrar IAS, spoilers izquierdo/derecho, estado de suelo y armado. Las columna
 La pantalla de 10 Hz no reconstruye una señal de 15 Hz. Sólo con flag 0, fase inicial 250 y muestreo exacto cada 100 ms, la fase observada alterna entre 250 y 750, ambos cruces por cero: puede mostrar siempre cero en un caso ideal sincronizado. En otras sincronizaciones puede parecer una oscilación más lenta. El diagnóstico debe usar una tasa adecuada o medidas de pico/RMS; una única lectura no evalúa la vibración.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): cruces de cero sincronizados como caso general $\rightarrow$ caso sólo con flag 0; AR(2) no tiene la repetición de fase triangular (Newland; Box); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Ajustes, calibraciones y mejoras}
 \subsubsection{Controles existentes}
@@ -2318,7 +2280,7 @@ La referencia de intensidad plena de 140 kt está en \code{BuffetModel.h}: ajust
 Si la rampa ya saturó por velocidad, subir IAS no aumenta la señal. Si la suma está saturada por otros efectos, subir ganancia puede no aumentar el pico final. Son dos saturaciones distintas. Antes de cambiar parámetros hay que identificar cuál está actuando.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): umbral 80 kt y rampa lineal $\rightarrow$ referencia 140 kt de intensidad plena cuadrática; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ejemplo de ajuste de ganancia}
 En régimen y antes de recorte, $P_P\simeq255Gc_{sp}E_{sp}$ es el pico pitch ideal. Despejando, $c_{sp}\simeq P_P/(255GE_{sp})$. Para $E_{sp}=0.3$, $G=0.9$ y pico deseado de 8 cuentas, da aproximadamente 0.11619; el menú permite 0.12 como aproximación.
@@ -2340,7 +2302,6 @@ En \code{SimEffects.h}, antes de la ganancia general, la vibración común es
 v_b=c_sA_sT_s+c_gA_gT_g+c_{sp}A_{sp}T_{sp}.
 \end{equation}
 % [V-realismo]
-% [V-realismo]
 Cada $T_j=\sat_{[-1,1]}(N_j)$ es la portadora aleatoria recortada correspondiente. Sólo con flag 0, $T_j=T(\phi_j)$.
 
 Pitch recibe $Gv_b$ y roll $0.5Gv_b$. Las frecuencias vigentes son respectivamente 13, 10 y 15 Hz. Las portadoras son aleatorias por defecto; con flag 0 sus fases arrancan en 250 y avanzan a ritmos diferentes. Por eso pueden reforzarse o cancelarse en algunos instantes; no se suman siempre sus valores absolutos.
@@ -2348,7 +2309,7 @@ Pitch recibe $Gv_b$ y roll $0.5Gv_b$. Las frecuencias vigentes son respectivamen
 No hay un limitador vectorial conjunto como en turbulencia. Después se suman centrado, turbulencia y cargas de movimiento según la ruta del código; el total por eje se recorta a $\pm220/255$. El suelo tiene su propio límite antes de agregarse. Los tres buffets no reciben el techo de 40 de suelo.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): suma de tres triangulares $\rightarrow$ suma de tres portadoras AR(2), con triangulares en flag 0; excitación irregular de buffet (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Cota de los tres juntos}
 Con amplitudes no mayores que uno y ganancias iniciales, una cota del comando de los tres buffets es
@@ -2418,7 +2379,7 @@ Las fórmulas siguientes corresponden a \code{SimEffects.h::motionAdjustedForce}
 El puente del PC \textbf{no transmite una fuerza de damper ni una velocidad de yugo}: cuando corresponde, transmite posiciones. La placa calcula la velocidad para damper y fricción racional, y usa posición con ancla para fricción local. El ciclo de control tiene un mínimo configurado de 2 ms; el cálculo emplea el intervalo real, no supone que todas las iteraciones duren exactamente 2 ms.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): velocidad para damper y fricción $\rightarrow$ velocidad para damper y posición con ancla para fricción local; adherencia sin derivada (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Variables de SimConnect y condiciones de habilitación}
 \label{sec:damper_simvars}
@@ -2600,7 +2561,7 @@ $B$ es la ganancia efectiva de damper, $L$ limita la resistencia previa a la gan
 Para $v>0$ el resultado es negativo; para $v<0$ es positivo. En $v=0$, $m=0$ y el resultado es cero independientemente de cómo se implemente el signo. No depende de $x$ directamente: a igual velocidad y factor $s_B$, dos posiciones distintas generan el mismo damper mientras la medición no esté recortada.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $Bm$ $\rightarrow$ $Bs_Bm$, con $s_B=\sat_{[0.5,2]}\sqrt{k_f/(r+0.85)}$; amortiguamiento relativo constante con inercia fija (Ogata); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Límite compartido con fricción}
 Con ambos habilitados, el código realmente ejecuta:
@@ -2615,7 +2576,6 @@ con $F_c=0.030$ y $v_0=0.200$ para modo 0 o posición simulada. Con sensor local
 % [V-realismo]
 \begin{align}
 % [V-realismo]
-% [V-realismo]
 f_{d,a}&=-\operatorname{sgn}(v_a)\min(Bs_Bm_a,L),\\
 % [V-realismo]
 u_{\rm mov,a}&=H_a% [V-realismo]
@@ -2629,7 +2589,7 @@ La suma algebraica permite signos distintos al invertir el movimiento, por la me
 El máximo de esta rama con las ganancias generales actuales es 0.36 en pitch y 0.18 en roll: aproximadamente 92 y 46 cuentas PWM si actúa sola. No es el máximo de todos los efectos juntos, que sigue siendo 220. Con $s_B=1$, el damper aislado alcanza el límite a $|v|=0.02+0.4/0.12\simeq3.3533$. La fricción hace alcanzar antes el límite conjunto.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): suma con fricción racional $\rightarrow$ suma algebraica con fricción local de ancla y damper escalado; presliding y amortiguamiento relativo constante (Hayward--Armstrong; Ogata); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Procedencia de los valores}
 La dependencia proporcional a velocidad es el modelo viscoso. La diferencia discreta sale de la definición de derivada; el filtro es una aproximación de primer orden. Los números 0.12, 0.02, 40 ms, 10 y 0.40 son \textbf{parámetros del proyecto}, no constantes universales ni valores identificados para un avión concreto. La relación fija roll/pitch también es una elección local. Su presencia se verifica en \code{mis_defines.h}, \code{GainSettings.h} y \code{SimEffects.h}; la comparación histórica se detalla más adelante.
@@ -2709,7 +2669,7 @@ Atraviesa $x=0$ con $v\ne0$ & Es cero en ese instante. & Sigue oponiéndose al m
 Con $Q=1$, rigidez estabilizada $k_f=1$, pitch $x=0.20$ y $v=+1$, el resorte da $-0.144$ y el damper $-0.10584$: total $-0.24984$, PWM $-64$. Si el mismo mando regresa con $v=-1$, total $-0.03816$, PWM $-10$. El damper está reduciendo la rapidez del retorno, no cambiando el centro del resorte.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): damper independiente de rigidez $\rightarrow$ damper multiplicado por $s_B$; conserva amortiguamiento relativo al variar el resorte (Ogata); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Presión y amortiguación: dependencia indirecta}
 % [V-realismo]
@@ -2719,7 +2679,7 @@ Al aumentar $Q$, el damper ahora escala con $\sqrt{k_f}$, limitado a 0.5--2 y s�
 $B$ y $k_f$ son adimensionales; faltan transmisión, inercia física y relación comando--torque para calcular un amortiguamiento físico calibrado.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): presión sin escala directa del damper $\rightarrow$ escala por $\sqrt{k_f}$ cuando el centrado está disponible; amortiguamiento relativo constante (Ogata); ver Sección~\ref{sec:realismo}.}
 
 % [V-realismo]
 \subsubsection{Interacción con turbulencias, buffets y suelo}
@@ -2729,10 +2689,9 @@ El damper se suma; no multiplica las ondas por un factor de velocidad ni necesit
 % [V-realismo]
 El código tampoco distingue si el movimiento lo produjo la mano, el resorte o una perturbación del motor: responde a la misma velocidad. La suma final puede saturar y recortar ondas. Aumentar mucho el damper puede hacer menos perceptibles los otros efectos, por oposición mecánica o por saturación compartida, aun cuando sus ganancias no cambien.
 
-% [V-realismo]
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): fricción por velocidad en la suma $\rightarrow$ fricción local con memoria de posición junto al damper escalado; presliding y amortiguamiento relativo (Hayward--Armstrong; Ogata); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Qué demuestra la oposición al movimiento}
 % [V-realismo]
@@ -2742,7 +2701,7 @@ Para ganancias no negativas, en damper y en la rama de fricción por velocidad (
 La fricción local con ancla no garantiza ese signo instantáneo después de invertir: conserva deformación y puede devolver energía de presliding antes de acomodar el ancla.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): oposición instantánea por ley de velocidad $\rightarrow$ fricción local capaz de devolver energía al invertir; memoria elástica de presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Procedencia: proyecto actual, original alemán y referencias}
 \label{sec:origen_damper_friccion}
@@ -2811,7 +2770,7 @@ Se podrían incorporar ganancias separadas por eje, captura real del centro del 
 \newpage
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): escala del damper por rigidez propuesta $\rightarrow$ implementada con $s_B\propto\sqrt{k_f}$; amortiguamiento relativo constante a validar en hardware (Ogata); ver Sección~\ref{sec:realismo}.}
 
 \section{FRICCION}
 \label{sec:friccion}
@@ -2821,14 +2780,14 @@ Se podrían incorporar ganancias separadas por eje, captura real del centro del 
 Con \code{YOKE_FRICTION_MODEL=1} y sensor local (potenciómetros o encoders), la fricción de Hayward--Armstrong conserva una deformación de presliding calculada con posición. El damper sigue usando velocidad. El flag 0 o \code{YOKE_USE_SIMULATION=1} conserva la ley racional de velocidad.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ley racional por velocidad $\rightarrow$ modelo Hayward--Armstrong por posición con sensor local; adherencia y presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Lo que sucede cuando el mando queda quieto}
 % [V-realismo]
 En modelo 1 puede persistir resistencia hasta $F_c$ aun sin velocidad: hay adherencia y memoria del ancla. Puede sostener una posición contra el resorte. La ley racional del modo 0 se anula al detenerse. No se modelan temperatura, desgaste ni Stribeck.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): fricción nula al detenerse $\rightarrow$ resistencia persistente hasta $F_c$ con ancla local; adherencia estática (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Entradas y recorrido desde la posición hasta PWM}
 \subsubsection{Variables de simulación utilizadas}
@@ -2839,7 +2798,7 @@ Sólo la variante racional usa la misma velocidad estimada que el damper. En pos
 En modo 2 recibe la posición normalizada del potenciómetro; en modo 0, las cuentas normalizadas del encoder. Las ecuaciones de adquisición, calibraciones, tiempos de muestra y filtros están desarrolladas en las subsecciones \ref{sec:adquisicion_movimiento} y \ref{sec:velocidad_comun}. La fricción local usa esa posición calibrada directamente, sin derivarla; conserva un ancla independiente por eje y no necesita un filtro de velocidad propio.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): velocidad derivada como entrada de fricción $\rightarrow$ posición local calibrada y ancla por eje; presliding sin derivada ruidosa (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Cadena de cálculo y habilitación}
 \begin{center}
@@ -2851,13 +2810,12 @@ Posición local $x\in[-1,1]$ $\rightarrow$ ancla $w$ $\rightarrow$ deformación 
 Se requiere la misma telemetría armada, reciente y conexión USB que para damper. Puede actuar en tierra y en vuelo; no necesita tren extendido, pérdida, spoilers ni centrado activado. Durante pausa/desarmado o menú activo, la salida común se anula. Su coeficiente no cambia directamente con presión dinámica, IAS, AoA o configuración del avión.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): cadena de velocidad y ley racional $\rightarrow$ cadena de posición, ancla y deformación local; adherencia y presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Fórmula exacta explicada parte por parte}
-% [V-realismo]
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ley racional como fórmula predeterminada $\rightarrow$ ancla local como modelo 1 y ley anterior en modo 0 o SimConnect; adherencia (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Hayward--Armstrong: ancla y presliding}
 % [V-realismo]
@@ -2875,32 +2833,29 @@ Si $|z^*|\le z_{\max}$ el ancla no se mueve; si lo supera, sigue la posición co
 % [V-realismo]
 $H_R=0.45$, $H_P=0.90$. Con damper el recorte se aplica a la suma algebraica, ecuación~\ref{eq:movimiento_conjunto}.
 
-% [V-realismo]
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $-\mathrm{sgn}(v)F_cm/(0.2+m)$ $\rightarrow$ $-F_cz/z_{\max}$ con ancla local; adherencia y presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ley racional conservada: flag 0 o posición simulada}
 % [V-realismo]
 En esas variantes, $m=\max(|v|-0.02,0)$ y $u_f=-\operatorname{sgn}(v)H_aF_cm/(0.20+m)$, antes del techo conjunto. Media magnitud aparece a $|v|=0.22$. Con $|v|\le10$ el máximo es $0.0294106$ antes de ganancias. Esta rama no produce adherencia y \code{YOKE_FRICTION_SPEED} sólo la afecta.
 
-% [V-realismo]
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ley racional en todos los modos $\rightarrow$ conservada sólo con flag 0 o posición simulada; el sensor local permite adherencia por ancla (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ajuste de transición local}
 % [V-realismo]
 $z_{\max}$ determina el desplazamiento hasta deslizar: mayor valor reduce rigidez de presliding; menor valor endurece la transición. El ensayo de reposo debe comprobar ausencia de vibración y rebote, sin derivada ruidosa en esta rama.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): transición racional fijada por $v_0$ $\rightarrow$ transición local por $z_{\max}$; controla la rigidez de presliding $F_c/z_{\max}$ (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Ejemplos completos para roll y pitch}
-% [V-realismo]
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ejemplos por velocidad $\rightarrow$ ejemplos por deformación del ancla local; fuerza con memoria de presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Fricción aislada frente al desplazamiento}
 % [V-realismo]
@@ -2918,7 +2873,7 @@ Ancla inicial $w=0$, avance positivo sin invertir, $F_c=0.03$, $z_{\max}=0.02$ y
 En la última fila el ancla se desplaza a 0.03. Detener allí conserva $f=-0.03$; repetir la llamada no agrega desplazamiento. No se infiere fuerza a partir de velocidad sola.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): tabla de fricción frente a velocidad $\rightarrow$ tabla recalculada frente a desplazamiento del ancla; presliding y adherencia (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Desde muestras nuevas hasta fricción y damper conjuntos}
 % [V-realismo]
@@ -2928,30 +2883,29 @@ Ancla en $x=0.10$; avanzar a 0.12 en 20 ms, con velocidad filtrada previa cero, 
 Si permanece en 0.12, el damper se extingue, pero la fricción persiste hasta que un desplazamiento cambia la deformación del ancla.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): fricción conjunta obtenida de velocidad $\rightarrow$ ejemplo recalculado con posición y ancla junto al damper; adherencia persistente (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Conversión eléctrica y límites}
 Después de sumar los otros efectos se limita $u$ a $\pm220/255$, se aplica la dirección del motor y se calcula el PWM con factor 255 y redondeo simétrico. Son los mismos pasos descritos en DAMPER. El signo selecciona una de las dos ramas del puente H y la magnitud determina su ciclo de trabajo. Por ejemplo, 6 cuentas equivalen a aproximadamente $2.35\%$ de PWM; no aseguran que el motor venza el rozamiento mecánico real. La resistencia física resultante depende de la instalación.
 
 \subsection{Relación con damper, centrado y perturbaciones}
-% [V-realismo]
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): composición de dos cargas por velocidad $\rightarrow$ damper por velocidad y fricción por deformación local; memoria de presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Cómo se reparten damper y fricción}
 % [V-realismo]
 En sensor local, no existe un cruce determinado únicamente por velocidad: el damper depende de $m$ y $s_B$, y la fricción de $z$. Cuando desliza con $|f|=F_c$, ambas magnitudes coinciden en $m=F_c/(Bs_B)$ (0.25 para defaults y $s_B=1$). Al invertir, sus signos pueden diferir hasta desplazar el ancla; se suman algebraicamente.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): cruce damper--fricción determinado por velocidad $\rightarrow$ comparación que depende además de $z$ y $s_B$; presliding y escala de amortiguamiento (Hayward--Armstrong; Ogata); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Techo compartido y pérdida de sensibilidad a ajustes}
 % [V-realismo]
 El techo es $|u_{\rm mov,a}|\le0.4H_a$. Deslizamiento con signos coincidentes lo alcanza cuando $Bs_Bm+F_c=0.4$: con $s_B=1$ y defaults, $m=3.083333$ y $|v|=3.103333$. Con signos opuestos cambia esa condición; el damper se recorta primero a 0.4 antes de sumar la fricción firmada. En ley racional permanece $Bs_Bm+F_cm/(v_0+m)=0.4$; para $s_B=1$ da $|v|\simeq3.1185$.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): umbral conjunto de ley racional $\rightarrow$ umbral recalculado con fricción de ancla y $s_B$, manteniendo techo 0.4; presliding y amortiguamiento relativo (Hayward--Armstrong; Ogata); ver Sección~\ref{sec:realismo}.}
 
 % [V-realismo]
 \subsubsection{Relación con el centrado y adherencia}
@@ -2962,7 +2916,7 @@ La fórmula del resorte no cambia por fricción; su equilibrio puede quedar sost
 Ejemplo de deslizamiento estabilizado, pitch $Q=1$, $x=0.20$, $v=+1$, $s_B=1$: resorte $-0.144$, damper $-0.10584$ y fricción $-0.027$: total $-0.27684$, PWM $-71$. Regreso con $v=-1$ y ancla ya acomodada al deslizamiento negativo da total $-0.01116$, PWM $-3$. En roll, $-35$/$-1$. Al parar, damper desaparece y fricción puede persistir. En modo racional no hay ese rango de adherencia.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): fricción sin sostén en reposo $\rightarrow$ fricción de ancla que puede equilibrar el resorte; ejemplos recalculados con adherencia (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Efectos periódicos, turbulencias y movimiento provocado por el motor}
 % [V-realismo]
@@ -2972,7 +2926,7 @@ La fricción puede reducir físicamente la oscilación causada por buffets, suel
 El cálculo no distingue una velocidad causada por la mano de una causada por el motor. Si el sensor detecta desplazamiento, responde; en sensor local conserva además el ancla al detenerse. En modo SimConnect esa relación física puede ser menos directa; una posición virtual fija no produce resistencia aunque el mecanismo se mueva sin reflejarse en esa variable. Asimismo, una posición virtual que cambia puede producir resistencia calculada sin que la mano se haya movido de igual manera.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): respuesta por velocidad sola $\rightarrow$ respuesta local por desplazamiento con memoria al detenerse; adherencia y presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Procedencia de la fórmula y de sus parámetros}
 \subsubsection{Qué está demostrado por el código}
@@ -2982,7 +2936,7 @@ El modelo local predeterminado ahora usa el ancla de Hayward--Armstrong (2000). 
 La comparación completa y los enlaces están en \ref{sec:origen_damper_friccion}. El original alemán utiliza \code{ConditionForceCalculator} para el efecto HID de fricción, mientras TelemFFB configura un efecto del dispositivo mediante \code{friction(force,force)}. Esas evidencias no permiten atribuirles esta fracción racional concreta. OpenFFBoard es una referencia para separación y composición de efectos, no una fuente demostrada de esta ecuación exacta.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): fracción racional local como modelo general $\rightarrow$ ancla local predeterminada con fuente identificada; fundamenta adherencia y presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Interpretación física y límite de la simplificación}
 % [V-realismo]
@@ -2991,7 +2945,7 @@ El principio de oposición al deslizamiento motiva el signo; la aproximación a 
 El coeficiente se expresa en comando normalizado antes de ganancias, no en newtons. Si se quisiera representar un rozamiento físico constante en ambos ejes, habría que convertir el esfuerzo lineal o torque deseado a la escala del motor y considerar la transmisión. La relación fija 1:2 de comandos no demuestra una relación 1:2 de fuerzas reales.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): aproximación racional de Coulomb $\rightarrow$ modelo háptico de ancla y presliding; permite adherencia con memoria (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Qué se puede pulir al implementarlo}
 \subsubsection{Ganancia de menú y sensibilidad del ajuste}
@@ -3001,7 +2955,7 @@ El coeficiente se expresa en comando normalizado antes de ganancias, no en newto
 Subir $F_c$ aumenta el roce local y la adherencia para una deformación dada (en modo racional, en todo el rango de velocidades útiles), hasta que interviene un límite. Ajustar la ganancia general cambia también resorte y perturbaciones, por lo que no permite identificar por separado la causa de una sensación distinta. No existen coeficientes independientes de fricción para roll y pitch en el menú actual.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $F_c$ escalaba la ley por velocidad $\rightarrow$ escala resistencia y adherencia para una deformación local dada; presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Calibraciones que cambian la fricción aunque su ganancia sea igual}
 % [V-realismo]
@@ -3010,7 +2964,7 @@ Un cambio en los extremos normaliza de otra manera la misma velocidad física. S
 Con potenciómetros, revisar rango ADC, centro y ruido. Demasiada histéresis puede esconder movimientos pequeños; muy poca puede producir pequeñas inversiones de signo. Con encoders, medir cuentas reales por recorrido y observar el tiempo entre pasos lentos. Con SimConnect, verificar curvas y zonas muertas del eje y la cadencia real de paquetes; corregir sólo la ganancia no elimina el retardo de esa ruta.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): calibración afectaba velocidad de fricción $\rightarrow$ afecta deformación normalizada y llegada a $z_{\max}$; rigidez de presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Parámetros de código que afectan la sensación de roce}
 \begin{longtable}{p{0.26\linewidth}p{0.23\linewidth}p{0.42\linewidth}}
@@ -3030,7 +2984,7 @@ Factor roll 0.5 & Escala ambos efectos de movimiento. & Comparar esfuerzos físi
 Excepto las ganancias del menú, esos ajustes requieren edición y recompilación. Cambiar los parámetros comunes para mejorar fricción modifica también el damper, por lo que deben volver a evaluarse juntos.
 
 % [V-realismo]
-\textit{Actualización (realismo): fórmulas y ejemplos ajustados al modelo implementado y su fundamento; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $v_0$ como transición general $\rightarrow$ $z_{\max}$ para sensor local y $v_0$ sólo en modo racional; parametriza presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ensayo propuesto para distinguir roce de amortiguación}
 \begin{enumerate}
@@ -3044,7 +2998,7 @@ Excepto las ganancias del menú, esos ajustes requieren edición y recompilació
 Este ensayo separa las contribuciones del software, pero no mide por sí solo la fuerza transmitida a la mano. Con los defaults, la fricción aislada utiliza pocas cuentas PWM: la zona de funcionamiento real del motor y el rozamiento mecánico pueden dominar lo percibido.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ensayo de fricción por velocidad $\rightarrow$ ensayo de resistencia local con desplazamiento y reposo; distingue adherencia del damper (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Mejoras posibles y qué datos hacen falta}
 % [V-realismo]
@@ -3053,7 +3007,7 @@ El modelo 1 local ya incorpora adherencia estática mediante el ancla y la regla
 Otras mejoras posibles son coeficientes separados por eje, pasos finos de menú, estimación de velocidad mejor adaptada al sensor y medición de torque/fuerza frente a velocidad. Deben definirse con datos de la instalación; no hay un valor universal correcto de fricción para todos los yugos. Tampoco se ha demostrado que aumentar fricción mejore automáticamente la estabilidad de cualquier montaje.
 
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): adherencia como mejora pendiente $\rightarrow$ incorporada en modelo 1 local; ancla de presliding conserva resistencia en reposo (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Mapa de archivos para revisar o modificar ambos efectos}
 \begin{longtable}{p{0.38\linewidth}p{0.53\linewidth}}
@@ -3079,5 +3033,5 @@ Archivo / función & Responsabilidad comprobada\\
 \end{longtable}
 \textbf{Alcance del análisis:} se documentaron las ecuaciones implementadas, su procedencia verificable, las tres fuentes de posición y su relación con los demás efectos. Las propuestas de mejora están diferenciadas del comportamiento actual. No se modificó firmware, no se cargó la placa y no se realizó una identificación experimental del esfuerzo mecánico.
 % [V-realismo]
-\textit{Actualización (realismo): contenido ajustado al modelo implementado; ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): mapa de ley racional por velocidad $\rightarrow$ mapa que incorpora modelo de ancla local y sus parámetros; trazabilidad de adherencia y presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
 \end{document}
