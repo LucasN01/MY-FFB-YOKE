@@ -9,6 +9,7 @@
 #include "SimConnect.h"
 #include "SimTelemetry.h"
 #include "RawTelemetry.h"
+#include "SerialLink.h"
 
 FILE* logFile=nullptr;
 void Log(const char* format, ...) {
@@ -28,6 +29,25 @@ FILE* csv=nullptr;
 FILE* picoLog=nullptr;
 YokeRaw::Sample latest;
 bool pending=false;
+YokeLink::LinkMonitor link;
+YokeLink::Reconnector reconnect;
+YokeLink::BootLineScanner bootScanner;
+std::string com;
+void Stamp(char out[16]) {
+    SYSTEMTIME t; GetLocalTime(&t);
+    sprintf_s(out,16,"%02u:%02u:%02u",t.wHour,t.wMinute,t.wSecond);
+}
+void ClosePort() {
+    if(port!=INVALID_HANDLE_VALUE) { CloseHandle(port); port=INVALID_HANDLE_VALUE; }
+}
+void LinkLost(const char* motivo, unsigned long codigo, unsigned long escritos) {
+    DWORD errores=0; COMSTAT estado{};
+    if(port!=INVALID_HANDLE_VALUE) ClearCommError(port,&errores,&estado);
+    char t[16]; Stamp(t);
+    Log("[%s] ERROR enlace USB con la Pico: %s (codigo Windows %lu, bytes %lu/%u, cola salida %lu, errores 0x%lX). Sin tramas validas el firmware desarma por watchdog. Reconectando %s...\n",
+        t,motivo,codigo,escritos,unsigned(YokeRaw::packetSize),estado.cbOutQue,errores,com.c_str());
+    ClosePort(); reconnect.onLost(GetTickCount64());
+}
 BOOL WINAPI Stop(DWORD) { quit=true; return TRUE; }
 bool Check(HRESULT hr, const char* op) {
     if(SUCCEEDED(hr)) return true;
@@ -44,6 +64,7 @@ void Record(bool sent,bool armed) {
     if(sent) std::fflush(csv);
 }
 void Send(bool armed) {
+    if(port==INVALID_HANDLE_VALUE || !reconnect.armAllowed(GetTickCount64())) armed=false;
     const bool confirmedPause=opened && pauseKnown && paused && !failed && !quit;
     YokeRaw::Sample payload=latest;
     payload.referenceKnots=float(referenceKnots); payload.gustGain=float(gustGain);
@@ -56,14 +77,18 @@ void Send(bool armed) {
     YokeSC::put16(frame+4,++sequence);
     YokeRaw::encodePayload(frame,payload);
     YokeSC::put16(frame+111,YokeSC::crc(frame,111));
+    bool wrote=false;
     if(port!=INVALID_HANDLE_VALUE) {
         DWORD written=0;
-        if(!WriteFile(port,frame,sizeof(frame),&written,nullptr)||written!=sizeof(frame)) {
-            Log("ERROR serial write; watchdog del firmware retirara fuerzas.\n"); failed=quit=true;
-        }
+        const BOOL ok=WriteFile(port,frame,sizeof(frame),&written,nullptr);
+        const DWORD error=ok?0:GetLastError();
+        const auto outcome=YokeLink::classifyWrite(ok!=FALSE,written,sizeof(frame),error);
+        wrote=outcome==YokeLink::WriteOutcome::Ok;
+        if(link.onWrite(outcome,GetTickCount64()))
+            LinkLost(outcome==YokeLink::WriteOutcome::Timeout?"escritura vencida":"error de dispositivo",error,written);
     }
     lastSend=GetTickCount64();
-    Record(port!=INVALID_HANDLE_VALUE && !failed,armed);
+    Record(wrote,wrote&&armed);
 }
 void CALLBACK Receive(SIMCONNECT_RECV* data,DWORD bytes,void*) {
     switch(data->dwID) {
@@ -120,33 +145,33 @@ void CALLBACK Receive(SIMCONNECT_RECV* data,DWORD bytes,void*) {
     case SIMCONNECT_RECV_ID_QUIT: quit=true; Send(false); break;
     }
 }
-bool OpenPort(const std::string& name) {
+bool OpenPort(const std::string& name, unsigned handshakeMs) {
     if(name.size()<4||name.substr(0,3)!="COM"||name.find_first_not_of("0123456789",3)!=std::string::npos) return false;
     port=CreateFileA(("\\\\.\\"+name).c_str(),GENERIC_READ|GENERIC_WRITE,0,nullptr,OPEN_EXISTING,0,nullptr);
     if(port==INVALID_HANDLE_VALUE) return false;
     DCB dcb{}; dcb.DCBlength=sizeof(dcb);
-    if(!GetCommState(port,&dcb)) return false;
+    if(!GetCommState(port,&dcb)) { ClosePort(); return false; }
     dcb.BaudRate=115200; dcb.ByteSize=8; dcb.Parity=NOPARITY; dcb.StopBits=ONESTOPBIT;
     dcb.fBinary=TRUE; dcb.fParity=FALSE; dcb.fDtrControl=DTR_CONTROL_ENABLE;
     dcb.fOutxCtsFlow=FALSE; dcb.fOutxDsrFlow=FALSE; dcb.fOutX=FALSE; dcb.fInX=FALSE;
-    if(!SetCommState(port,&dcb)) return false;
+    if(!SetCommState(port,&dcb)) { ClosePort(); return false; }
     COMMTIMEOUTS timeouts{}; timeouts.ReadIntervalTimeout=MAXDWORD; timeouts.WriteTotalTimeoutConstant=10;
-    if(!SetCommTimeouts(port,&timeouts)) return false;
+    if(!SetCommTimeouts(port,&timeouts)) { ClosePort(); return false; }
     PurgeComm(port,PURGE_RXCLEAR|PURGE_TXCLEAR);
     std::string response;
     const ULONGLONG start=GetTickCount64(); ULONGLONG query=0;
-    while(GetTickCount64()-start<3000) {
-        if(GetTickCount64()-query>200) { DWORD n=0; if(!WriteFile(port,"?",1,&n,nullptr)) return false; query=GetTickCount64(); }
-        char b[256]; DWORD n=0; if(!ReadFile(port,b,sizeof(b),&n,nullptr)) return false;
+    while(!quit && GetTickCount64()-start<handshakeMs) {
+        if(GetTickCount64()-query>200) { DWORD n=0; if(!WriteFile(port,"?",1,&n,nullptr)) { ClosePort(); return false; } query=GetTickCount64(); }
+        char b[256]; DWORD n=0; if(!ReadFile(port,b,sizeof(b),&n,nullptr)) { ClosePort(); return false; }
         response.append(b,n);
         if(response.find("YOKE17SC8\n")!=std::string::npos) return true;
         if(response.size()>1024) response.erase(0,response.size()-128);
         Sleep(10);
     }
-    return false;
+    ClosePort(); return false;
 }
 int main(int argc,char** argv) {
-    std::string com; double duration=20; bool durationSpecified=false; // Double click: 20-second monitor, no motor commands.
+    double duration=20; bool durationSpecified=false; // Double click: 20-second monitor, no motor commands.
     for(int i=1;i<argc;++i) {
         const std::string arg=argv[i];
         if(arg=="--enable") enable=true;
@@ -174,6 +199,21 @@ int main(int argc,char** argv) {
     if(!com.empty()&&!durationSpecified) duration=0;
     if(!std::isfinite(referenceKnots)||referenceKnots<40||referenceKnots>250||!std::isfinite(duration)||duration<0|| (enable&&com.empty())) return 2;
     char file[MAX_PATH]; GetModuleFileNameA(nullptr,file,MAX_PATH); char* tail=std::strrchr(file,'\\');
+    if(tail) {
+        strcpy_s(tail+1,MAX_PATH-(tail+1-file),"pico.log");
+        WIN32_FILE_ATTRIBUTE_DATA attributes{};
+        if(GetFileAttributesExA(file,GetFileExInfoStandard,&attributes) &&
+           (attributes.nFileSizeHigh || attributes.nFileSizeLow)) {
+            const char* current[]={"bridge.log","telemetry.csv","pico.log"};
+            const char* previous[]={"bridge.anterior.log","telemetry.anterior.csv","pico.anterior.log"};
+            for(unsigned i=0;i<3;++i) {
+                strcpy_s(tail+1,MAX_PATH-(tail+1-file),current[i]);
+                char destination[MAX_PATH]; strcpy_s(destination,file);
+                strcpy_s(destination+(tail+1-file),MAX_PATH-(tail+1-file),previous[i]);
+                MoveFileExA(file,destination,MOVEFILE_REPLACE_EXISTING);
+            }
+        }
+    }
     if(tail) { strcpy_s(tail+1,MAX_PATH-(tail+1-file),"bridge.log"); fopen_s(&logFile,file,"w"); }
     if(tail) { strcpy_s(tail+1,MAX_PATH-(tail+1-file),"telemetry.csv"); fopen_s(&csv,file,"w"); }
     if(tail) { strcpy_s(tail+1,MAX_PATH-(tail+1-file),"pico.log"); fopen_s(&picoLog,file,"w"); }
@@ -181,7 +221,7 @@ int main(int argc,char** argv) {
     Log("Yoke SimConnect SC8: transporte de telemetria; todos los modelos en Pico 2 | %s\n",enable?"HABILITADO":"SOLO MONITOR");
     Log("Ajustes enviados: referencia %.1f kt, gustGain %.2f, longitudinal %.2f, gusts=%d buffets=%d\n",
         referenceKnots,gustGain,gustLongitudinal,gusts,buffets);
-    if(!com.empty()&&!OpenPort(com)) { Log("No se identifico firmware YOKE17SC8 en %s. No se enviaron fuerzas.\n",com.c_str()); if(port!=INVALID_HANDLE_VALUE)CloseHandle(port); if(csv)std::fclose(csv); return 3; }
+    if(!com.empty()&&!OpenPort(com,3000)) { Log("No se identifico firmware YOKE17SC8 en %s. No se enviaron fuerzas.\n",com.c_str()); ClosePort(); if(csv)std::fclose(csv); if(logFile)std::fclose(logFile); if(picoLog)std::fclose(picoLog); return 3; }
     SetConsoleCtrlHandler(Stop,TRUE);
     const ULONGLONG start=GetTickCount64();
     if(Check(SimConnect_Open(&sim,"Yoke SC8 raw telemetry",nullptr,0,nullptr,SIMCONNECT_OPEN_CONFIGINDEX_LOCAL),"Open")) {
@@ -199,19 +239,31 @@ int main(int argc,char** argv) {
             if(!opened&&now-start>15000) { failed=true; break; }
             if(duration>0&&now-start>=duration*1000) break;
             if(port!=INVALID_HANDLE_VALUE) {
-                char b[256]; DWORD n;
-                if(!ReadFile(port,b,sizeof(b),&n,nullptr)){ failed=true; break; }
-                if(n && picoLog) { std::fwrite(b,1,n,picoLog); std::fflush(picoLog); }
+                char b[256]; DWORD n=0;
+                if(!ReadFile(port,b,sizeof(b),&n,nullptr)) LinkLost("error de lectura",GetLastError(),0);
+                else if(n) {
+                    if(picoLog) { std::fwrite(b,1,n,picoLog); std::fflush(picoLog); }
+                    bootScanner.feed(b,n,[](const char* l){ char t[16]; Stamp(t); Log("[%s] Pico: %s\n",t,l); });
+                }
+            }
+            if(!com.empty() && port==INVALID_HANDLE_VALUE && reconnect.shouldAttempt(now)) {
+                if(reconnect.shouldLogRetry(now)) { char t[16]; Stamp(t); Log("[%s] Reintentando %s...\n",t,com.c_str()); }
+                if(OpenPort(com,YokeLink::kReconnectHandshakeMs)) {
+                    const ULONGLONG t=GetTickCount64(); char s[16]; Stamp(s);
+                    Log("[%s] Enlace USB recuperado en %s tras %.1f s; armado diferido %llu ms.\n",
+                        s,com.c_str(),(t-reconnect.lostAtMs)/1000.0,(unsigned long long)YokeLink::kRearmHoldoffMs);
+                    reconnect.onReopened(t); link.reset(); bootScanner=YokeLink::BootLineScanner{};
+                } else reconnect.onAttemptFailed(GetTickCount64());
             }
             Sleep(5);
         }
         opened=false; Send(false); SimConnect_Close(sim);
     }
-    if(port!=INVALID_HANDLE_VALUE) CloseHandle(port);
+    ClosePort();
     if(csv) std::fclose(csv);
     if(picoLog) std::fclose(picoLog);
-    Log("Fin: muestras=%u error=%d\n",samples,failed);
-    return failed||samples==0?1:0;
+    Log("Fin: muestras=%u error=%d reconexiones=%u\n",samples,failed,reconnect.reconnections);
+    return reconnect.lost ? 4 : (failed||samples==0 ? 1 : 0);
 }
 
 

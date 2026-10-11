@@ -90,7 +90,23 @@ Codex por parte), porque toca puente, firmware con estado y documentación (con 
 
 \## Última entrega
 
-\- Pendiente (Parte 1 de la tarea de recuperación del enlace USB).
+- Parte 1 completada (2026-10-11) en `mejora/recuperacion-enlace-usb`.
+- Archivos modificados: `SimConnectBridge/SerialLink.h` (nuevo, codigo inline literal de §3.1), `SimConnectBridge/main.cpp` (puntos 1 a 11 de §3.2), `tests/link_checks.h` (nuevo, casos de §5 Parte 1), `tests/simconnect_checks.cpp` (inclusion y ejecucion de linkChecks), `HANDOFF.md`.
+- Implementado: clasificacion y tolerancia de vencimientos de escritura, reconexion automatica al mismo COM, armado diferido, diagnostico del enlace y lineas BOOT con hora, cierre del puerto en fallos de apertura, cierre de registros en fallo de identificacion, rotacion condicionada a pico.log no vacio y salida 4 si el enlace sigue perdido.
+- Documentacion actualizada: esta entrega en `HANDOFF.md`. Los reemplazos de documentos de usuario y tesis corresponden a la Parte 2 (§6); no se editaron .tex.
+- Pruebas: `powershell -ExecutionPolicy Bypass -File probar.ps1 -Bridge`:
+
+```text
+OK suite simconnect_checks - PASS: 141002 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
+OK puente SimConnect
+```
+
+- `git diff --check`: sin errores. `graphify update .`: ejecutado, grafo actualizado (887 nodos, 1111 aristas). graphify-ino/ sigue sin versionar.
+- Commit de esta entrega, por los cinco archivos nombrados en el plan: `Puente: reconexion USB automatica, diagnostico de enlace y rotacion de registros`.
+- Version: no creada en esta parte, segun la instruccion expresa del plan; nueva-version.ps1 corresponde a la Parte 2 final.
+- Desvios: ninguno de alcance. Se agrego hora al mensaje de reintento para cumplir §3.2 punto 2; se mantiene el periodo de 5 s indicado.
+- Sigue: Parte 2 (firmware, pruebas de supervision, reemplazos exactos de documentacion y tesis, compilaciones y version). Despues, revision de Claude y pruebas A a E del usuario; no integrar a master.
 
 \## Revisión
 
