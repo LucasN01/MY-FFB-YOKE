@@ -176,11 +176,31 @@ static_assert(MOTOR_PWM_HARD_LIMIT >= 0 && MOTOR_PWM_HARD_LIMIT <= 220, "Techo P
 #ifndef YOKE_FRICTION_ENABLED
 #define YOKE_FRICTION_ENABLED 1
 #endif
+// Damper: B escala con sqrt(rigidez/rigidez a Q=1) para mantener la razon de
+// amortiguamiento zeta=b/(2*sqrt(kJ)). 0 = B constante (comportamiento anterior).
+#ifndef YOKE_DAMPER_STIFFNESS_SCALING
+#define YOKE_DAMPER_STIFFNESS_SCALING 1
+#endif
+#define YOKE_DAMPER_SCALE_MIN 0.50f
+#define YOKE_DAMPER_SCALE_MAX 2.00f
+
+// Friccion: 0 = Coulomb regularizada por velocidad (anterior);
+// 1 = Hayward-Armstrong (adherencia + presliding, solo posicion).
+#ifndef YOKE_FRICTION_MODEL
+#define YOKE_FRICTION_MODEL 1
+#endif
+#define YOKE_FRICTION_PRESLIDE 0.020f // desplazamiento normalizado hasta deslizar
+
 #define YOKE_DAMPER_GAIN 0.120f // fuerza adicional por unidad de velocidad
 #define YOKE_FRICTION_GAIN 0.030f // correccion suave casi constante al moverse
 #define YOKE_FRICTION_SPEED 0.200f // velocidad para alcanzar media correccion
 #define YOKE_MOTION_CORRECTION_LIMIT 0.400f
 #define YOKE_MOTION_FORCE_BLEND 0.100f // legado: ya no interviene en amortiguacion/friccion
+static_assert((YOKE_DAMPER_STIFFNESS_SCALING == 0 || YOKE_DAMPER_STIFFNESS_SCALING == 1) &&
+              (YOKE_FRICTION_MODEL == 0 || YOKE_FRICTION_MODEL == 1), "Banderas damper/friccion 0 o 1");
+static_assert(YOKE_DAMPER_SCALE_MIN > 0 && YOKE_DAMPER_SCALE_MIN <= 1 &&
+              YOKE_DAMPER_SCALE_MAX >= 1 && YOKE_DAMPER_SCALE_MAX <= 4 &&
+              YOKE_FRICTION_PRESLIDE > 0 && YOKE_FRICTION_PRESLIDE <= .2f, "Ajustes damper/friccion invalidos");
 static_assert((YOKE_DAMPER_ENABLED == 0 || YOKE_DAMPER_ENABLED == 1) &&
               (YOKE_FRICTION_ENABLED == 0 || YOKE_FRICTION_ENABLED == 1), "Banderas movimiento 0 o 1");
 static_assert(YOKE_MOTION_FILTER_TAU_S >= 0 && YOKE_MOTION_MAX_SPEED > 0 &&
@@ -231,6 +251,8 @@ static_assert(SIMCONNECT_TOTAL_GAIN >= 0 && SIMCONNECT_TOTAL_GAIN <= 100,
 // 0.85 = 1 - 0.15 conserva identica la curva de fabrica (k=0.15+0.85Q).
 #define SIMCONNECT_CENTERING_AERO_STIFFNESS 0.85f
 
+static_assert(SIMCONNECT_CENTERING_AERO_STIFFNESS > 0 && SIMCONNECT_CENTERING_AERO_STIFFNESS <= 4,
+              "Rigidez aerodinamica fuera de rango");
 static_assert(SIMCONNECT_CENTERING_MIN_STIFFNESS >= 0 && SIMCONNECT_CENTERING_MIN_STIFFNESS <= 1,
               "Rigidez minima fuera de 0..1");
 #define SIMCONNECT_CENTERING_ROLL_GAIN (SIMCONNECT_CENTERING_PITCH_GAIN * 0.5f)
@@ -260,6 +282,16 @@ static_assert(SIMCONNECT_CENTERING_PITCH_GAIN >= 0 && SIMCONNECT_CENTERING_PITCH
 #ifndef SIMCONNECT_SPOILER_BUFFET_ENABLED
 #define SIMCONNECT_SPOILER_BUFFET_ENABLED 1
 #endif
+// Buffets: 1 = ruido de banda estrecha; 0 = triangular periodica (anterior).
+#ifndef SIMCONNECT_BUFFET_NARROWBAND
+#define SIMCONNECT_BUFFET_NARROWBAND 1
+#endif
+#define SIMCONNECT_BUFFET_DAMPING_RATIO 0.15f // ancho de banda ~2*zeta*f
+#define SIMCONNECT_BUFFET_RMS 0.45f           // RMS de la portadora antes de recortar a +-1
+// Textura de pista: 1 = ruido de banda estrecha 7/11.3 Hz; 0 = senoides (anterior).
+#ifndef SIMCONNECT_GROUND_NARROWBAND_TEXTURE
+#define SIMCONNECT_GROUND_NARROWBAND_TEXTURE 1
+#endif
 // Maximos de cada vibracion (pitch; roll usa la mitad), antes de ganancia total.
 #define SIMCONNECT_STALL_BUFFET_GAIN   0.240f
 #define SIMCONNECT_GEAR_BUFFET_GAIN    0.160f
@@ -272,6 +304,11 @@ static_assert(SIMCONNECT_GEAR_BUFFET_HZ >= 1 && SIMCONNECT_GEAR_BUFFET_HZ <= 20 
               "Frecuencia del tren: entero entre 1 y 20 Hz");
 #define SIMCONNECT_SPOILER_BUFFET_GAIN 0.160f
 #define SIMCONNECT_EXTRA_LIMIT        (220.0f / 255.0f) // suma de TODOS los aportes, por eje
+static_assert((SIMCONNECT_BUFFET_NARROWBAND == 0 || SIMCONNECT_BUFFET_NARROWBAND == 1) &&
+              (SIMCONNECT_GROUND_NARROWBAND_TEXTURE == 0 || SIMCONNECT_GROUND_NARROWBAND_TEXTURE == 1),
+              "Banderas ruido 0 o 1");
+static_assert(SIMCONNECT_BUFFET_DAMPING_RATIO > 0 && SIMCONNECT_BUFFET_DAMPING_RATIO < 1 &&
+              SIMCONNECT_BUFFET_RMS > 0 && SIMCONNECT_BUFFET_RMS <= 1, "Ajustes ruido invalidos");
 static_assert((SIMCONNECT_TURBULENCE_ENABLED == 0 || SIMCONNECT_TURBULENCE_ENABLED == 1) &&
               (SIMCONNECT_STALL_BUFFET_ENABLED == 0 || SIMCONNECT_STALL_BUFFET_ENABLED == 1) &&
               (SIMCONNECT_GEAR_BUFFET_ENABLED == 0 || SIMCONNECT_GEAR_BUFFET_ENABLED == 1) &&

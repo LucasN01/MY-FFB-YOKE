@@ -51,9 +51,13 @@ static void feed4(YokeSC::Receiver& rx, const uint8_t* f, uint32_t time) {
 #include "calibration_checks.h"
 #include "ground_checks.h"
 #include "raw_checks.h"
+#include "realism_checks.h"
+int legacyEffectsChecks();
+int simPositionFrictionChecks();
 int main(int argc,char** argv) {
     rawChecks(); if(argc>1) replayRaw(argv[1]);
     groundChecks();
+    realismChecks(); checks+=legacyEffectsChecks()+simPositionFrictionChecks();
     CHECK(validPotCalibration(100, 1900, 3800));
     CHECK(validPotCalibration(3800, 1900, 100));
     CHECK(!validPotCalibration(0, 0, 4095));
@@ -106,7 +110,16 @@ int main(int argc,char** argv) {
     CHECK(aboveReference<atReference*1.9f); // 180 vs 120 EAS: no early stiffness plateau
     CHECK(std::fabs(aboveReference)<SIMCONNECT_EXTRA_LIMIT);
     CHECK(extendedFx.command(extended,1,1,YokeSC::Damper,0,1)<0);
+#if YOKE_FRICTION_POSITION_MODEL
+    extendedFx.command(extended,1,1,YokeSC::Friction,0,0);
+    CHECK(extendedFx.command(extended,1,1,YokeSC::Friction,-.05f,0)>0);
+#else
     CHECK(extendedFx.command(extended,1,1,YokeSC::Friction,0,-1)>0);
+#endif
+#if YOKE_FRICTION_POSITION_MODEL
+    // Start the rest check without presliding displacement from the preceding case.
+    extendedFx.command(extended,1,1,YokeSC::Damper,0,0);
+#endif
     CHECK(extendedFx.command(extended,1,1,YokeSC::Damper|YokeSC::Friction,0,0)==0);
     for(int version=5;version<=6;++version) {
         frame4(extendedFrame,202,version==5?10001:40001,0,0);

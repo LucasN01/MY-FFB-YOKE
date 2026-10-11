@@ -5,6 +5,9 @@
 #include "YokeMotion.h"
 #include "GainSettings.h"
 #include "PicoForceModels.h"
+#include "NarrowbandNoise.h"
+#include "FrictionModel.h"
+#define YOKE_FRICTION_POSITION_MODEL (YOKE_FRICTION_MODEL==1 && YOKE_USE_SIMULATION!=1)
 
 namespace YokeSC {
 enum EffectMask { Turbulence=1, Stall=2, Gear=4, Spoiler=8, Ground=16, Centering=32, Damper=64, Friction=128 };
@@ -22,17 +25,19 @@ static const uint8_t configuredEffects =
 inline float triangle(uint16_t phase) {
     return phase<500 ? phase*.004f-1.0f : 3.0f-phase*.004f;
 }
-// Independent passive loads: viscous damping plus regularized Coulomb friction.
-// F_d=-B*v; F_f=-Fc*v/(v0+abs(v)). Normalized commands, not calibrated N.
-// Rational regularization retained from the original firmware; see CAMBIOS_REALISMO.md.
+// Passive loads: stiffness-scaled viscous damping and Hayward-Armstrong local friction.
+// Simulated position uses velocity-regularized Coulomb friction. Commands are not calibrated N.
+// See the realism update section in tesis/explicacion_efectos_proyecto_ffb_yoke.tex.
 inline float motionAdjustedForce(float base, float velocity, float gain,
                                 bool damper=YOKE_DAMPER_ENABLED,
                                 bool friction=YOKE_FRICTION_ENABLED,
-                                const YokeGains::Settings& settings=YokeGains::defaults()) {
+                                const YokeGains::Settings& settings=YokeGains::defaults(),
+                                float damperScale=1.0f) {
     if(!isfinite(base) || !isfinite(velocity) || !isfinite(gain) || gain<0) return 0;
+    if(!isfinite(damperScale) || damperScale<0) return base;
     const float speed=fabsf(clip(velocity,-YOKE_MOTION_MAX_SPEED,YOKE_MOTION_MAX_SPEED));
     const float moving=speed>YOKE_MOTION_DEAD_SPEED ? speed-YOKE_MOTION_DEAD_SPEED : 0;
-    float resistance=(damper ? settings.effective(YokeGains::Damper)*moving : 0) +
+    float resistance=(damper ? settings.effective(YokeGains::Damper)*damperScale*moving : 0) +
         (friction ? settings.effective(YokeGains::Friction)*moving/(YOKE_FRICTION_SPEED+moving) : 0);
     resistance=clip(resistance,0,YOKE_MOTION_CORRECTION_LIMIT)*clip(gain,0,1);
     return base-(velocity<0 ? -resistance : resistance);
@@ -44,7 +49,8 @@ public:
         models.reset(); modelReady=false;
         enabled=started=false; roadTime=0; centerPressure=0; groundSignal[0]=groundSignal[1]=0;
         for(uint8_t i=0;i<4;++i) { amplitude[i]=wave[i]=0; phase[i]=250; }
-        for(uint8_t i=0;i<2;++i) simMotion[i].reset();
+        for(uint8_t i=0;i<3;++i) { noise[i].reset(); carrier[i]=0; }
+        for(uint8_t i=0;i<2;++i) { simMotion[i].reset(); texNoise[i].reset(); texCarrier[i]=0; friction[i].reset(); }
     }
     void update(const Receiver& rx, uint32_t now, bool connected,
                 uint8_t mask=configuredEffects) {
@@ -55,7 +61,8 @@ public:
             models.reset(); modelReady=false;
             for(uint8_t i=0;i<4;++i) { amplitude[i]=0; phase[i]=250; wave[i]=0; }
             roadTime=0; centerPressure=0; groundSignal[0]=groundSignal[1]=0;
-            for(uint8_t i=0;i<2;++i) simMotion[i].reset();
+            for(uint8_t i=0;i<3;++i) { noise[i].reset(); carrier[i]=0; }
+            for(uint8_t i=0;i<2;++i) { simMotion[i].reset(); texNoise[i].reset(); texCarrier[i]=0; friction[i].reset(); }
             started=enabled;
             return;
         }
@@ -67,9 +74,20 @@ public:
         // keep the speed law exclusively in the amplitude (0.5..40 kt).
         const float roadLevel=rx.rawAvailable ? models.groundEnvelope : 0;
         roadTime=roadLevel>0 ? uint32_t((roadTime+dt)%10000) : 0;
+#if SIMCONNECT_GROUND_NARROWBAND_TEXTURE
+        if(roadLevel>0 && dt) {
+            texCarrier[0]=texNoise[0].next(); texCarrier[1]=texNoise[1].next();
+        } else if(roadLevel==0) {
+            for(uint8_t i=0;i<2;++i) { texNoise[i].reset(); texCarrier[i]=0; }
+        }
+        // Keep the former sine peak so the runway texture stays soft.
+        const float texture=roadLevel>0 ? clip(roadLevel*.12f*(.65f*texCarrier[0]+.35f*texCarrier[1]),
+                                               -.12f*roadLevel,.12f*roadLevel) : 0;
+#else
         const float t=roadTime*.001f;
         const float texture=roadLevel*.12f*(.65f*sinf(6.2831853f*7*t)+
             .35f*sinf(6.2831853f*11.3f*t));
+#endif
         for(uint8_t i=0;i<2;++i) {
             groundSignal[i]=(mask & Ground) ? (rx.rawAvailable ? models.ground[i] :
                 (rx.groundForceAvailable ? rx.groundForce[i] : 0)) : 0;
@@ -93,7 +111,13 @@ public:
             if(i==3 && target==0) { amplitude[i]=0; wave[i]=0; phase[i]=250; continue; }
             amplitude[i]+=blend*(target-amplitude[i]);
             phase[i]=uint16_t((phase[i]+dt*frequencies[i])%1000);
-            wave[i]=amplitude[i]*triangle(phase[i]);
+#if SIMCONNECT_BUFFET_NARROWBAND
+            if(i<3) {
+                if(dt) carrier[i]=clip(noise[i].next(),-1,1);
+                wave[i]=amplitude[i]*carrier[i];
+            } else
+#endif
+                wave[i]=amplitude[i]*triangle(phase[i]);
         }
     }
     // Firmware entry point: never fall back to unconnected sensors if sim position is missing.
@@ -122,8 +146,28 @@ public:
         // TelemFFB aerodynamic spring principle: restoring force proportional to q and deflection.
         if(mask & Centering) extra-=clip(position,-1,1)*centerPressure*
             settings.effective(axis==0 ? YokeGains::CenterRoll : YokeGains::CenterPitch)*clip(gain,0,1);
-        extra=motionAdjustedForce(extra,velocity,gain*(axis==0 ? 0.5f : 1.0f),
-                                  (mask & Damper)!=0,(mask & Friction)!=0,settings);
+        const float axisGain=gain*(axis==0 ? 0.5f : 1.0f);
+        float damperScale=1;
+#if YOKE_DAMPER_STIFFNESS_SCALING
+        // Constant zeta=b/(2*sqrt(kJ)): b scales with sqrt(k) when the spring exists.
+        if((mask & Centering) && rx.centeringAvailable) {
+            const float reference=settings.effective(YokeGains::CenterRest)+SIMCONNECT_CENTERING_AERO_STIFFNESS;
+            damperScale=clip(sqrtf(fmaxf(centerPressure,0)/reference),YOKE_DAMPER_SCALE_MIN,YOKE_DAMPER_SCALE_MAX);
+        }
+#endif
+#if YOKE_FRICTION_POSITION_MODEL
+        const float damping=motionAdjustedForce(0,velocity,axisGain,(mask & Damper)!=0,false,settings,damperScale);
+        float stick=0;
+        const float fc=settings.effective(YokeGains::Friction);
+        // Idempotent for the same position: command may be called repeatedly per cycle.
+        if((mask & Friction) && fc>0)
+            stick=friction[axis].update(clip(position,-1,1),fc,YOKE_FRICTION_PRESLIDE)*clip(axisGain,0,1);
+        else friction[axis].reset();
+        const float ceiling=YOKE_MOTION_CORRECTION_LIMIT*clip(axisGain,0,1);
+        extra+=clip(damping+stick,-ceiling,ceiling);
+#else
+        extra=motionAdjustedForce(extra,velocity,axisGain,(mask & Damper)!=0,(mask & Friction)!=0,settings,damperScale);
+#endif
         // Taxi vibration has its own roll-dominant ratio and PWM ceiling.
         // Independent sum: velocity loads do not rescale the vibration carriers.
         if(mask & Ground) {
@@ -135,6 +179,16 @@ public:
         return clip(extra,-SIMCONNECT_EXTRA_LIMIT,SIMCONNECT_EXTRA_LIMIT);
     }
 private:
+// Coefficients precomputed at construction (global simEffects: before setup()).
+YokeNoise::Narrowband noise[3]={
+    YokeNoise::Narrowband(13,CONTROL_LOOP_MS*.001f,SIMCONNECT_BUFFET_DAMPING_RATIO,SIMCONNECT_BUFFET_RMS,0x9E3779B9u),
+    YokeNoise::Narrowband(SIMCONNECT_GEAR_BUFFET_HZ,CONTROL_LOOP_MS*.001f,SIMCONNECT_BUFFET_DAMPING_RATIO,SIMCONNECT_BUFFET_RMS,0x7F4A7C15u),
+    YokeNoise::Narrowband(15,CONTROL_LOOP_MS*.001f,SIMCONNECT_BUFFET_DAMPING_RATIO,SIMCONNECT_BUFFET_RMS,0x94D049BBu)};
+YokeNoise::Narrowband texNoise[2]={
+    YokeNoise::Narrowband(7,CONTROL_LOOP_MS*.001f,SIMCONNECT_BUFFET_DAMPING_RATIO,.7071f,0x2545F491u),
+    YokeNoise::Narrowband(11.3f,CONTROL_LOOP_MS*.001f,SIMCONNECT_BUFFET_DAMPING_RATIO,.7071f,0x6C8E9CF5u)};
+    float carrier[3]={0,0,0}, texCarrier[2]={0,0};
+    mutable YokeFriction::Model friction[2];
     const YokeGains::Settings& settings;
     uint32_t last=0;
     bool started=false, enabled=false;

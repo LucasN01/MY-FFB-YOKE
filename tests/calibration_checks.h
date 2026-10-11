@@ -372,7 +372,13 @@ static void calibrationChecks() {
     live.setEnabled(Damper,false); live.setEnabled(Friction,false);
     CHECK(fx.command(rx,1,1,YokeSC::Damper|YokeSC::Friction,0,2)==0);
     live.setEnabled(Damper,true); CHECK(fx.command(rx,1,1,YokeSC::Damper,0,2)<0);
-    live.setEnabled(Friction,true); CHECK(fx.command(rx,1,1,YokeSC::Friction,0,-2)>0);
+    live.setEnabled(Friction,true);
+#if YOKE_FRICTION_POSITION_MODEL
+    fx.command(rx,1,1,YokeSC::Friction,0,0);
+    CHECK(fx.command(rx,1,1,YokeSC::Friction,-.05f,0)>0);
+#else
+    CHECK(fx.command(rx,1,1,YokeSC::Friction,0,-2)>0);
+#endif
     live.set(CenterRest,1500); live.setEnabled(CenterRest,false);
     CHECK(live.effective(CenterRest)==0 && live.raw(CenterRest)==1500);
     fx.reset(); CHECK(fx.command(rx,1,1,YokeSC::Centering,1)==0);

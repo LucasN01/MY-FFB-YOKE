@@ -9,6 +9,6 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup><OutDir>$(MSBuildProjectDirectory)\bin\</OutDir><IntDir>$(MSBuildProjectDirectory)\obj\</IntDir></PropertyGroup>
   <ItemDefinitionGroup><ClCompile><LanguageStandard>stdcpp17</LanguageStandard><RuntimeLibrary>MultiThreaded</RuntimeLibrary></ClCompile></ItemDefinitionGroup>
-  <ItemGroup><ClCompile Include="simconnect_checks.cpp" /></ItemGroup>
+  <ItemGroup><ClCompile Include="simconnect_checks.cpp" /><ClCompile Include="legacy_effects_checks.cpp" /><ClCompile Include="sim_position_friction_checks.cpp" /></ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
