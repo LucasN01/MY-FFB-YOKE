@@ -46,44 +46,23 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 
 \## Plan para Codex
 
-Tarea: realismo y fundamentación teórica de los efectos. Rama `mejora/realismo-efectos`. Diseño: `LEEME md/DISENO_realismo_efectos.md`. Modelo recomendado: el de código, con esfuerzo medium.
+Tarea: corrección de documentación tras la revisión de V1.4 (realismo). Rama `mejora/realismo-efectos`. Tarea simple, **sin partes**. Modelo recomendado: el de código, con esfuerzo medium. **Solo documentación:** no tocar código ni pruebas, y no crear versión (los cambios de `.tex` no generan versión).
 
-Hacé **solo la parte que te pidan**, cada una en una sesión nueva. Al empezar, revisá `git status`, `git log -5` y "Última entrega". Si quedaron cambios sin commit de una sesión anterior, verificalos contra el diseño y completalos, sin rehacerlos. Al terminar cada parte: commit por nombre y "Última entrega" actualizada con la parte completada, commits, archivos, total de comprobaciones de la suite, desvíos o dudas y qué parte sigue; después, commit de HANDOFF.md. Ante una ambigüedad o contradicción, detenete y registrala aquí.
-
-\### Parte 1: commit A (envolventes y centrado, sin estado)
-- Estado conocido (2026-10-10): una sesión anterior dejó cambios sin commit en BuffetModel.h, GustModel.h, PicoForceModels.h, SimEffects.h, mis_defines.h, tests/raw_checks.h y tests/simconnect_checks.cpp.
-- Leé del diseño solo:
-  - §0, §2.3, §2.4, §2.5 y §2.6.
-  - De §2.1, solo `SIMCONNECT_CENTERING_AERO_STIFFNESS` y el comentario de `SIMCONNECT_CENTERING_MIN_STIFFNESS`.
-  - De §2.8, solo el punto 3 (centrado).
-  - De §2.9, solo los casos de estos cambios: buffets, raw_checks, turbulencia, PicoForceModels y centrado.
-- Alcance: GustModel.h, PicoForceModels.h (factor √Q, tauHigh, textura con raíz), BuffetModel.h, el centrado en SimEffects.h y la constante en mis_defines.h, más sus pruebas. Todavía NO: NarrowbandNoise.h, FrictionModel.h, la escala del damper, los flags nuevos ni la documentación.
-- Suite `tests/simconnect_checks.vcxproj` (Win32) con 0 fallas. Actualizá solo los casos que el diseño lista como "cambian por diseño".
-- Commit: "Realismo A: envolventes de turbulencia, buffets, textura y centrado con fundamento teorico". Sin versión.
-
-\### Parte 2: commit B (ruido, fricción y damper, con estado)
-- **Aclaración 2026-10-11 (bloqueo `5cccbd5`), autorización general para pruebas de fricción:** toda prueba existente que llame a `command`/`commandWithPositionSource` con `Friction` en la máscara esperando fricción por velocidad, con posición constante, puede adaptarse con el mismo patrón ya autorizado para `simconnect_checks.cpp:109`. Primero una llamada en la posición inicial, que fija el ancla; luego la misma llamada con la posición desplazada ±0.05 en el sentido de la velocidad original (velocidad negativa → posición −0.05), conservando el signo y la intención esperados. Ejemplo: `tests/calibration_checks.h:375` pasa a `fx.command(rx,1,1,YokeSC::Friction,0,0);` y `CHECK(fx.command(rx,1,1,YokeSC::Friction,-.05f,0)>0);`. No cambiar signos esperados, cotas ni casos de otros efectos. Las pruebas de `motionAdjustedForce` no cambian (la función conserva la fricción por velocidad). Si alguna prueba de fricción no puede expresarse así, detenete. Listar en HANDOFF cada prueba adaptada.
-- **Aclaración 2026-10-11 (bloqueo `8da61f6`):** la textura de pista se recorta a ±0.12·E (ver §2.8.5 del diseño). `tests/raw_checks.h:25` NO se modifica: debe pasar tal cual. Retomá los cambios sin commit (NarrowbandNoise.h, FrictionModel.h, mis_defines.h, SimEffects.h, tests/simconnect_checks.cpp), aplicá ese recorte, completá las pruebas nuevas y los flags en 0, y seguí con el resto de esta parte.
-- Requisito: debe existir el commit "Realismo A". Si no existe, detenete.
-- Leé del diseño solo:
-  - §0, el resto de §2.1, §2.2 (coeficientes solo en el constructor), §2.7 y §2.8 puntos 1, 2 y 4 a 8.
-  - De §2.9, los casos de Narrowband, FrictionModel, límite conjunto, escala del damper, flags en 0 y las líneas 109 y 238-244.
-  - §3.
-- Alcance: NarrowbandNoise.h y FrictionModel.h (nuevos), los flags y `static_assert` de mis_defines.h, y SimEffects.h. Fricción Hayward–Armstrong solo con `YOKE_USE_SIMULATION!=1`; techo conjunto de damper y fricción 0.4. Más sus pruebas.
-- Suite con 0 fallas. Compilar `Build-Pico2.ps1` y también con `-Encoders`, sin advertencias nuevas; anotar programa y RAM frente a 99 868 / 18 408 bytes.
-- Commit: "Realismo B: ruido de banda estrecha, friccion Hayward-Armstrong y damper escalado". Sin versión y sin tocar documentación.
-
-\### Parte 3: documentación, versión y cierre
-- Requisito: deben existir los commits "Realismo A" y "Realismo B". Si falta alguno, detenete.
-- Leé del diseño solo §6, §7 y §4. Para los números de los ejemplos, usá las fórmulas ya implementadas en el código.
-- `tesis/explicacion_efectos_proyecto_ffb_yoke.tex`: NO lo leas completo. Ubicá cada parte de §6.1 B con `grep -n` de su `\label` o título y leé solo esas líneas. Agregá la sección de §6.1 A (`\label{sec:realismo}`), los comentarios `% [V-realismo]` y las notas visibles. Después copiá el archivo editado sobre `tesis/main.tex` y verificalo con `diff`.
-- Solo lo indicado en `LEEME md/CALCULO_PICO_SC8.md` (§6.2), `CAMBIOS_REALISMO.md` (§6.2b) y `MODELO_TURBULENCIA.md` (§6.3).
-- pdflatex, dos pasadas; anotar si compila.
-- Commit: "Realismo: documentacion y fundamentacion teorica en tesis y LEEME".
-- Versión, con el árbol limpio (salvo graphify-ino/):
-  `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Mejora basada en incorporar realismo a los efectos y fundamentacion teorica: turbulencia, buffets, centrado, damper, friccion y suelo"`
-  Verificar "Version Vx.y creada" y que exista `..\MiYoke_PD_VERSIONES\Vx_y\ACTUALIZACION_Vx_y.txt`.
-- "Última entrega" final con las tres partes: commits, tamaños, si el .tex compila, versión creada, desvíos y sugerencias.
+1. Archivos: `tesis/explicacion_efectos_proyecto_ffb_yoke.tex` y, al final, la misma copia en `tesis/main.tex` (copiar el archivo y verificar con `diff`). No leas el `.tex` completo: ubicá cada nota con `grep -n "textit{Actualización (realismo)"` y leé solo unas líneas alrededor de cada una.
+2. Notas visibles: hoy hay 114 notas con 3 textos genéricos. El diseño (§6, `LEEME md/DISENO_realismo_efectos.md`) pide `<qué cambió y por qué>`.
+   a) **Dentro de la sección `\label{sec:realismo}`** (desde `\section{Actualización: realismo...}` hasta antes de `\section{CENTRADO DINÁMICO (RESORTE)}`): eliminar todas las notas `\textit{Actualización (realismo)...}`, porque esa sección ya es la explicación.
+   b) **En el resto del documento:** reemplazar cada nota genérica por una sola oración específica para esa subsección, con el formato `\textit{Actualización (realismo): <antes> $\rightarrow$ <ahora>; <por qué, con la referencia corta>; ver Sección~\ref{sec:realismo}.}`. Tomar el "antes", el "ahora" y la referencia de la tabla "Cambios y fundamentos" de `sec:realismo`. Ejemplos:
+      - Turbulencia, presión: `$Q_T=\min(Q,1)$ $\rightarrow$ $S_V=\sqrt Q\le2$; la carga de ráfaga es $\propto\rho Vw$ (Pratt--Walker)`.
+      - Turbulencia, pasaaltos: `$\tau_H=1$ s $\rightarrow$ $\tau_H=29.5/V_e$ en [0.25, 1.5] s; decaimiento por plunge (Hoblit)`.
+      - Pérdida, inicio: `$\alpha_s(0.5+0.2f)$ $\rightarrow$ $\alpha_s[V_s/(V_s+\Delta)]^2$; margen de aviso de la antigua §23.207 (hipótesis)`.
+      - Fricción: `ley racional por velocidad $\rightarrow$ modelo Hayward--Armstrong por posición (sensor local); adherencia y presliding`.
+      - Si en una subsección solo se recalcularon números de ejemplo: `ejemplos recalculados con <ley nueva>`.
+      - Si varias notas seguidas de la misma subsección quedarían iguales, dejar una sola, al final de la subsección.
+3. Marcadores: eliminar los `% [V-realismo]` que quedaron solos (seguidos de una línea vacía o de otro marcador, sin contenido modificado debajo). Hay unos 19. Conservar los que preceden a contenido modificado.
+4. No cambiar ningún otro texto, fórmula, tabla ni número.
+5. Compilar con pdflatex, dos pasadas, sin referencias indefinidas. Copiar a `tesis/main.tex` y verificar que son idénticos.
+6. Commit por nombre (ambos `.tex`): "Tesis: notas de actualizacion especificas (que cambio y por que)".
+7. HANDOFF, "Última entrega": cantidad de notas eliminadas y reescritas, marcadores eliminados, si compila y el commit. Commit de HANDOFF.md por nombre.
 
 \## Última entrega
 
@@ -125,3 +104,20 @@ Hacé **solo la parte que te pidan**, cada una en una sesión nueva. Al empezar,
 \- Aclaración 2: Claude (2026-10-11), ante el bloqueo de la parte 2 (`8da61f6`). El bloqueo era correcto: el ruido de la textura podía superar el pico de las senoides que exige `tests/raw_checks.h:25`. Esa prueba es correcta: el pico ±0.12·E es la textura "suave" requerida por el usuario. Resolución en el diseño (§2.8.5): recortar la textura a ±0.12·roadLevel antes de sumarla, conservando RMS 0.7071. Simulado con las semillas del diseño (1000 pasos, E=1): se recorta el 2.5 %, extremos ±12.4 PWM. Cumple también `low*255<-10 && high*255>10`. No se autoriza modificar esa prueba.
 
 \- Aclaración 3: Claude (2026-10-11), ante el bloqueo `5cccbd5`. El bloqueo era correcto: `tests/calibration_checks.h:375` comprueba que activar Friccion en el menú produce fuerza, usando velocidad con posición constante; con el modelo por posición esa llamada solo fija el ancla. Se mantiene la intención (el interruptor del menú habilita la fricción) y se autoriza el patrón ancla + desplazamiento para esa y cualquier otra prueba de fricción del mismo tipo (ver Plan, parte 2). Revisadas también `simconnect_checks.cpp:264-270`: por saturación del centrado y dominio del damper, deberían seguir pasando sin cambios.
+
+\- Revisión final de V1.4: Claude (2026-10-11), con el Code Reviewer para código y pruebas.
+  - **Código y pruebas: APROBADO.** Suite recompilada y ejecutada de forma independiente (Release Win32): PASS, 140 908 comprobaciones, 0 fallas, sin advertencias.
+    - Conforme con §2.1–§2.8 del diseño: fórmulas, constantes, flags, condiciones de la escala del damper, fricción por posición solo con sensor local, techo conjunto 0.4, coeficientes AR(2) en el constructor, textura con recorte ±0.12·√E y `GroundModel.h` sin cambios.
+    - Sin cambios en los archivos prohibidos de §0.
+    - Pruebas modificadas solo en los casos autorizados; los casos nuevos de §2.9 están presentes. `legacy_effects_checks.cpp` verifica bit a bit los flags en 0 (§3.1).
+  - **Versión: OK.** Tag `V1.4` → `9861ae0`. `ACTUALIZACION_V1_4.txt` con el mensaje pedido. La copia coincide con el tag (salvo los finales de línea CRLF). Los `.tex` son idénticos entre sí y el `.tex` compila.
+  - **Documentación (`.md`): OK.** `CALCULO_PICO_SC8.md`, `CAMBIOS_REALISMO.md` y `MODELO_TURBULENCIA.md` coinciden con el código.
+  - **Documentación (`.tex`): REQUIERE CAMBIOS (menor).**
+    - Contenido técnico correcto. Se recalculó el ejemplo de pérdida: 10.584°, R 0.3207, E 0.4188, 14/7 PWM, pico 23/12; coincide.
+    - Las 114 notas visibles usan solo 3 textos genéricos y no dicen qué cambió ni por qué, como pide §6 del diseño y el usuario.
+    - Hay notas dentro de `sec:realismo` que remiten a sí misma, y ~19 marcadores `% [V-realismo]` sueltos.
+    - Corrección: ver "Plan para Codex".
+  - **Sugerencias de código diferidas** (cosméticas, sin efecto en el comportamiento; no se aplican ahora para no generar una versión solo por comentarios):
+    1. `SimEffects.h:182-188`: indentar `noise[3]`, `texNoise[2]` y su comentario como el resto de `private:`.
+    2. `SimEffects.h:71-73`: actualizar el comentario a "Narrow-band 7/11.3 Hz texture (or fixed sines with flag 0); amplitude sqrt(E) of the 0.5..40 kt ramp (ISO 8608)."
+  - **Estado:** requiere cambios menores de documentación. Después: validación del usuario en hardware (sección 4 del diseño) y recién entonces integrar a master.
