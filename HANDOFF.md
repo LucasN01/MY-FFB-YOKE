@@ -130,3 +130,24 @@ OK chequeo estatico (11 archivos, 44 labels). No hay LaTeX instalado: la compila
     - con `quit` activo, `LinkLost` imprime "Reconectando..." aunque el programa está terminando;
     - en `Stamp`, convertir los campos `WORD` a `unsigned`.
   - **Pruebas que el usuario ya puede hacer:** A (desenchufar y volver a enchufar en vuelo) y C (guardar efectos en pausa), con la Parte 1 compilada.
+
+\- Revisor: Claude (2026-10-11), con Code Reviewer. **Parte 2 (`69a4097`, versión V1.8): APROBADA.**
+  - **Corrección H5:** todos los accesos a `Serial` de `loop()` están bajo `UsbLock`, sin locks anidados y con `availableForWrite()` antes de cada `write`. El `yield()` propio usa `try_enter`. Ningún otro encabezado usa `Serial` (grep).
+  - **Watchdog:**
+    - 250 ms, alimentado antes del retorno de 2 ms;
+    - 3000 ms solo alrededor de los dos `calibration.save()`;
+    - motores al principio de `setup()`;
+    - `isr_hardfault` fuerte, con el nombre del vector del SDK;
+    - el motivo y la etapa se leen antes de `mark(Idle)`;
+    - la línea BOOT se envía una sola vez, después de la primera trama válida;
+    - los ensayos quedan fuera de la compilación por defecto y no se repiten tras un reinicio WDT.
+  - **Pruebas y compilación:** `health_checks.h` cubre §5 Parte 2. La suite (141059 comprobaciones), las 3 variantes de firmware y el puente dieron OK según Codex; no se recompiló porque el código no cambió.
+  - **Documentación:** los 8 reemplazos de §6 son literales y no hay otros cambios. Tag V1.8 en `69a4097` y `ACTUALIZACION_V1_8.txt` presente.
+  - **Observaciones (no bloquean), resueltas en el diseño, sin código:**
+    - `lp` y `gap` incluyen la duración de un guardado en flash, así que en la prueba D no hay que guardar desde el menú.
+    - La redacción sobre EN se corrigió: `begin()` deja el PWM en 0 y EN en alto.
+  - **Pendiente:**
+    - pruebas de hardware A a E del usuario;
+    - H5 sigue siendo hipótesis hasta el ensayo E;
+    - pull-down externo en EN antes de conectar los motores.
+    - Después, integrar a master solo a pedido del usuario.

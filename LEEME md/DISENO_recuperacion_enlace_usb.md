@@ -387,8 +387,9 @@ static_assert(YOKE_WDT_MS >= 50*CONTROL_LOOP_MS, "WDT demasiado corto para el la
 Cambios en `MiYoke_PD.ino`:
 
 1. **Setup, motores primero.** Primeras líneas de `setup()`: `rollMotor.begin(); pitchMotor.begin();`.
-   Se mueven desde `.ino:120-121`, para que EN quede en bajo antes de USB, LCD y
-   entradas.
+   Se mueven desde `.ino:120-121`. `MotorDriver::begin()` pone el PWM en 0 y después EN
+   en alto (`MotorDriver.h:28-33`): la salida queda sin fuerza (PWM 0) antes de USB, LCD y
+   entradas. Entre el reinicio y `begin()` solo actúa el pull-down (ver §4).
 2. **Setup, motivo del reinicio.** Leer y guardar en globales:
    ```cpp
    bootReason=rp2040.getResetReason();
@@ -440,7 +441,7 @@ Cambios en `MiYoke_PD.ino`:
 - **`yield()` propio:** el enlazador debe aceptar la definición fuerte. Codex confirma
   con grep que ninguna librería enlazada defina otro `yield()` fuerte para rp2040.
 - **Fuerza al reiniciar:** el watchdog reinicia IO_BANK0, PADS y PWM, y EN queda en
-  bajo en la primera línea de `setup()`. Durante el reinicio los pines solo tienen el
+  queda con PWM 0 desde la primera línea de `setup()`. Durante el reinicio los pines solo tienen el
   pull-down interno, y la errata RP2350-E9 desaconseja confiar en él.
   - **Requisito de hardware antes de conectar motores:** pull-down externo
     ≤ 8,2 kΩ en EN (GPIO 10 y 11).
@@ -516,6 +517,8 @@ Compilación:
   - Puede haber vencimientos aislados sin mensaje.
   - Esta prueba ya puede hacerse después de la parte 1.
 - **D.** Sesión normal de 30 min o más, en tierra y en vuelo, con el firmware final.
+  No guardar desde el menú durante esta sesión: `lp` y `gap` incluyen la duración del
+  guardado en flash y quedarían fijos en ese valor hasta el próximo arranque.
   No debe aparecer ninguna `ERROR enlace` ni ninguna `BOOT reset=WDT`. Si aparecen,
   conservar la consola y `*.anterior.*`.
 - **E. Validación de H5:** `YOKE_USB_STRESS 1`, con el simulador en vuelo.
