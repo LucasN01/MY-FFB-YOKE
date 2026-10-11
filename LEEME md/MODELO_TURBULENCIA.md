@@ -1,3 +1,5 @@
+> Actualizacion 11/10/2026: en SC8 la Pico usa τ_H = 29.5 m / V_e, limitada a [0.25, 1.5] s (1.5 s con V_e=0), y ponderacion √Q (0..2), en lugar de min(Q,1). Ver la seccion de actualizacion de realismo (`sec:realismo`) de tesis/explicacion_efectos_proyecto_ffb_yoke.tex. El resto de este documento conserva la descripcion historica.
+
 > Actualizacion 30/09/2026: se conserva este modelo de viento, pero su salida ahora forma parte de la fuerza exclusiva de SimConnect. Se eliminaron la suma con FFB nativo y la habilitacion HID de actuadores. Ganancia global: SIMCONNECT_TOTAL_GAIN. Puesta en marcha actual: LEEME_SIMCONNECT.md.
 
 # Modelo de turbulencia por SimConnect: implementación y justificación

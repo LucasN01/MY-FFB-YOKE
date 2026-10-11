@@ -10,6 +10,8 @@ Antes: `p=min(q/qRef,1)`. A partir de 120 kt de velocidad equivalente, con el aj
 
 Ahora: `p=min(q/qRef,4)`, `k=rest+(1-rest)*p`, `u=-G*K*k*x`.
 
+Actualizacion 2026-10: k=rest+0.85*p (SIMCONNECT_CENTERING_AERO_STIFFNESS); ver tesis, seccion de realismo.
+
 Se conserva el filtrado de 100 ms, las ganancias actuales y la suma final limitada a ±220/255. El factor 4 es un límite de representación del protocolo, no una propiedad del avión. Con referencia 120 kt cubre hasta 240 kt EAS, por encima del rango operativo de la referencia R182. Cambiar la referencia cambia ese rango. Puede alcanzarse antes el límite de salida por posición, ganancias u otros efectos: eso es saturación del dispositivo, no saturación aerodinámica.
 
 Ejemplo estacionario, pitch al 20 % de recorrido, ganancias por defecto y sin otros efectos:

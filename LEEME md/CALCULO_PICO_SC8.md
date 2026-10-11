@@ -47,7 +47,7 @@ Los modelos vigentes están en la raíz: `PicoForceModels.h`, `GroundModel.h`, `
 
 ## Actualización de textura sobre pista lisa
 
-Ahora `SimEffects.h` suma una base suave: `0.12 * E * (0.65*sin(2*pi*7*t) + 0.35*sin(2*pi*11.3*t))`. Se calcula en la Pico al ritmo de motores; E sigue siendo la rampa 0.5–40 kt. La suma con los baches se limita a ±E antes de aplicar ganancias y los techos de suelo existentes. No identifica superficies: agrega sensación de rodaje cuando la telemetría es demasiado lisa.
+Ahora `SimEffects.h` suma una base suave de amplitud `sqrt(E)` (ISO 8608): `clip(0.12 * sqrt(E) * (0.65*N7 + 0.35*N11.3), -0.12*sqrt(E), 0.12*sqrt(E))`. N7/N11.3 son ruido de banda estrecha 7/11.3 Hz, RMS 0.7071, con `SIMCONNECT_GROUND_NARROWBAND_TEXTURE=1`; el flag en 0 conserva senoides. Se calcula al ritmo de motores; E sigue siendo la rampa 0.5–40 kt para los baches de P3D. La suma con los baches se limita a ±sqrt(E), antes de ganancias y techos existentes. No identifica superficies: agrega sensación de rodaje cuando la telemetría es demasiado lisa.
 
 Con suelo .450 y total .90, la base aislada alcanza aproximadamente 12 PWM roll y 1 pitch como máximo, mientras los baches conservan el techo conjunto 40/4. Se anula parado, en vuelo o al deshabilitar efectos. `gr/gp` sigue mostrando sólo los baches; R/P incluye textura y demás efectos.
 
