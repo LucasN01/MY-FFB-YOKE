@@ -86,31 +86,33 @@ Hacé **solo la parte que te pidan**, cada una en una sesión nueva. Al empezar,
 
 \## Última entrega
 
-\- Agente: Codex (2026-10-11) — parte 2 del Plan para Codex **detenida por una prueba incompatible con el diseño, fuera de los casos autorizados**. Parte 2 incompleta; no se creó el commit B.
+\- Agente: Codex (2026-10-11) — retomada la parte 2 con la aclaración del 2026-10-11, **detenida por otro caso incompatible con la fricción por posición y fuera de los cambios autorizados**. Parte 2 incompleta; commit B pendiente.
 
-\- Rama: `mejora/realismo-efectos`. Base de esta sesión: `9fa96e9`. Precondición cumplida: existe commit A `d8ca14b` (Realismo A); árbol inicialmente limpio salvo `graphify-ino/`. Parte 1 sigue completada: suite Win32 PASS, 89 730 comprobaciones, 0 fallas; HANDOFF de esa entrega en `9fa96e9`. No se modificó `master`.
+\- Rama: `mejora/realismo-efectos`. Base de esta sesión: `8a7d885`. Precondición cumplida: commit A `d8ca14b` presente; Parte 1 completada con 89 730 comprobaciones y 0 fallas, HANDOFF `9fa96e9`. Se verificaron y conservaron los cambios sin commit de la sesión anterior, sin rehacerlos. No se modificó `master`.
 
-\- Bloqueo que debe aclarar Claude:
-  - [Código] `tests/raw_checks.h:25` exige `std::fabs(u)<=.450f*.9f*.12f+.000001f` para la textura en pista sin aceleraciones: conserva el límite de pico de las senoides anteriores.
-  - [Diseño] `LEEME md/DISENO_realismo_efectos.md:266-274` (§2.8.5) prescribe portadoras de ruido con RMS 0.7071, sin recorte individual, y conserva únicamente el recorte posterior de la suma a `±roadLevel`.
-  - [Código] `SimEffects.h:78-83` implementa esa fórmula; la señal aleatoria puede superar el pico anterior y la suite efectivamente falla en el caso citado.
-  - [Diseño] `LEEME md/DISENO_realismo_efectos.md:328` (§2.9) manda detenerse si falla otro caso, y la prueba de `raw_checks.h:25` no está entre los casos autorizados a cambiar. No se eligió entre modificar el modelo o modificar la prueba; no se relajó el límite. Se requiere aclaración del autor del diseño.
+\- Aclaración aplicada: [Diseño] `LEEME md/DISENO_realismo_efectos.md:272-276` (§2.8.5); [Código] `SimEffects.h:83-85` ahora recorta la textura a `±0.12·roadLevel` antes de sumarla. `tests/raw_checks.h:25` permanece intacta y ese caso ya no bloquea la suite.
 
-\- Cambios de código pendientes, SIN commit, conservados para verificar y retomar en la próxima sesión: `NarrowbandNoise.h` y `FrictionModel.h` (nuevos), `mis_defines.h` y `SimEffects.h`; `tests/simconnect_checks.cpp` adapta únicamente el caso de fricción por posición autorizado (línea original 109). Implementación del firmware de parte 2 realizada según el diseño; pruebas nuevas y flags en 0 todavía pendientes debido al bloqueo. `tests/raw_checks.h` no se modificó.
+\- Nuevo bloqueo que debe aclarar Claude:
+  - [Código] `tests/calibration_checks.h:371-375` activa las ganancias de damper/fricción, y en la línea 375 exige `fx.command(rx,1,1,YokeSC::Friction,0,-2)>0`: fuerza de fricción positiva por velocidad negativa con posición cero.
+  - [Diseño] §2.7 y §2.8.7 prescribe fricción Hayward-Armstrong por posición cuando `YOKE_USE_SIMULATION!=1`. [Código] `FrictionModel.h:14-18` fija el ancla en la primera posición y devuelve cero; sin desplazamiento la fuerza sigue siendo cero. Esa prueba depende de la ley anterior por velocidad.
+  - [Diseño] §2.9 solo autoriza adaptar los casos de fricción originales `simconnect_checks.cpp:109` y `:238-244`, y exige detenerse si falla otro caso. No autoriza modificar `tests/calibration_checks.h:375`, tampoco la aclaración del 2026-10-11.
+  - Suite ejecutada y fallo confirmado. No se modificó la prueba ni se alteró la implementación para satisfacerla por cuenta propia; se requiere especificar su adaptación o aclarar el comportamiento esperado.
 
-\- Validación: `tests/simconnect_checks.vcxproj`, MSBuild de Visual Studio 18 Community, Release Win32, `/t:Rebuild`, toolset v141: compila sin errores ni advertencias. Ejecución de `tests/bin/simconnect_checks.exe`: **FAIL line 25: std::fabs(u)<=.450f*.9f*.12f+.000001f**, salida 1. La suite se detiene en el primer fallo; total completo de comprobaciones no disponible. No se modificó la comprobación fallida ni ningún otro caso fuera de los autorizados. `git diff --check`: sin errores.
+\- Archivos de código pendientes SIN commit: `NarrowbandNoise.h` y `FrictionModel.h` (nuevos), `mis_defines.h`, `SimEffects.h` y `tests/simconnect_checks.cpp`. Esta sesión añade únicamente el recorte de textura sobre la implementación heredada. El caso autorizado original de fricción de `simconnect_checks.cpp:109` ya estaba adaptado. `tests/raw_checks.h` y `tests/calibration_checks.h` no se modificaron. Pruebas nuevas y flags en 0 todavía pendientes, pues el plan exige detenerse ante el fallo ajeno.
 
-\- Compilaciones Pico2: `powershell -ExecutionPolicy Bypass -File Build-Pico2.ps1` (modo configurado, potenciómetros `YOKE_USE_SIMULATION=2`) y `-Encoders` terminan con salida 0, sin advertencias en sus salidas. Potenciómetros: programa **101 636 bytes** y RAM **22 528 bytes**; frente a 99 868 / 18 408: **+1768 / +4120 bytes**. Encoders: programa **101 796 bytes** y RAM **22 764 bytes**; frente a esa misma referencia: **+1928 / +4356 bytes**. No se cargó firmware en la placa. Estos resultados no resuelven el bloqueo de la suite ni habilitan commit B.
+\- Suite: `tests/simconnect_checks.vcxproj`, MSBuild de Visual Studio 18 Community, Release Win32, `/t:Rebuild`, toolset v141: compila sin errores ni advertencias. `tests/bin/simconnect_checks.exe`: **FAIL line 375: fx.command(rx,1,1,YokeSC::Friction,0,-2)>0**, salida 1, caso de `tests/calibration_checks.h`. Total completo de comprobaciones no disponible por detención en el primer fallo; no se afirma suite con 0 fallas. `git diff --check`: sin errores.
 
-\- Revisión firmware de solo lectura: conforme al diseño. [Código] `NarrowbandNoise.h:12-28` precalcula coeficientes solo en constructor; `next()` y `reset()` no usan funciones trascendentales. [INO] `MiYoke_PD.ino:34` instancia global antes de `setup()`. [Código] `SimEffects.h:78-81`, `:113-115` agregan a lo sumo cinco pasos AR(2) por update; reinicios y dt=0 conservan lo especificado. `SimEffects.h:10` excluye fricción por posición en modo 1; `:157-165` conserva techo conjunto `0.4·axisGain`; `:174-177` conserva techos de suelo/fuerza. Sin bloqueos ni memoria dinámica añadidos. Tiempo máximo del lazo de 2 ms y `us=` no medidos en hardware.
+\- Compilaciones Pico2: `powershell -ExecutionPolicy Bypass -File Build-Pico2.ps1` (potenciómetros, modo configurado `YOKE_USE_SIMULATION=2`) y `-Encoders` terminan con salida 0, sin advertencias en sus salidas. Potenciómetros: programa **101 660 bytes**, RAM **22 528 bytes**; frente a referencia 99 868 / 18 408: **+1792 / +4120 bytes**. Encoders: programa **101 820 bytes**, RAM **22 764 bytes**; frente a la misma referencia: **+1952 / +4356 bytes**. No se cargó firmware en la placa. No resuelve el fallo de la suite ni habilita commit B.
 
-\- Grafo: `graphify update .` ejecutado (AST, sin API), 814 nodos y 1002 aristas. `MiYoke_PD.ino` no cambió; no corresponde `graphify-sync.cmd`. `graphify-ino/` permanece fuera de los commits.
+\- Revisión firmware de solo lectura: conforme al diseño aclarado, sin hallazgos. [Código] `SimEffects.h:83-85` mantiene el pico suave y `:95` conserva el recorte global de suelo. Precálculo de coeficientes solo en constructor global antes de `setup()`; máximo cinco pasos AR(2) por update y dos actualizaciones de fricción por ciclo; reinicios y dt=0 conservados. Exclusión de fricción por posición en modo 1, techo conjunto `0.4·axisGain`, límites de suelo/fuerza/PWM intactos. Sin bloqueos ni memoria dinámica añadidos. Tiempo del lazo de 2 ms y `us=` pendientes de medida en hardware.
 
-\- Documentación funcional y `.tex`: sin cambios, diferidos expresamente a parte 3. Compilación `.tex` no ejecutada. Versión no creada: el plan por sesiones reserva `nueva-version.ps1` para parte 3.
+\- Grafo: `graphify update .` ejecutado, AST sin API, 814 nodos y 1002 aristas. INO sin cambios, no corresponde `graphify-sync.cmd`. `graphify-ino/` fuera de commits.
 
-\- Commits de esta sesión: únicamente el registro del bloqueo en `HANDOFF.md`, en un commit separado. Commit B pendiente hasta aclarar el diseño y completar pruebas; no se presenta la implementación parcial como entrega aceptada.
+\- Documentación funcional y `.tex` sin cambios, diferidos a parte 3; no se compiló `.tex`. Versión no creada: regla por sesiones reserva `nueva-version.ps1` para parte 3.
 
-\- Sigue: Claude debe aclarar el límite de la textura o autorizar el ajuste de esa prueba. Después, retomar parte 2 verificando los cambios pendientes, completar sus casos nuevos y flags en 0, obtener suite con 0 fallas y crear commit B. Parte 3 (documentación, versión y cierre) todavía no habilitada. Sugerencias fuera de alcance: ninguna.
+\- Commit de esta sesión: únicamente `HANDOFF.md` para registrar el nuevo bloqueo. Código parcial conservado sin commit; no se creó commit B porque falta la suite aprobada y las pruebas nuevas.
+
+\- Sigue: Claude debe aclarar el caso `tests/calibration_checks.h:375`. Después, retomar parte 2 verificando los cambios pendientes, completar los casos nuevos y flags en 0, obtener suite con 0 fallas y crear commit B. Parte 3 todavía no habilitada. Sin sugerencias fuera de alcance.
 
 \## Revisión
 
