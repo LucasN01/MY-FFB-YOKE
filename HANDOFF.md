@@ -70,11 +70,15 @@ Codex por parte), porque toca puente, firmware con estado y documentación (con 
   5. Documentación: aplicar los reemplazos exactos de §6.1 a §6.6.
      - Buscar el TEXTO ACTUAL literal y reemplazarlo. No leer capítulos completos ni redactar.
      - Si un texto actual no aparece exactamente, anotarlo aquí y seguir con el resto.
-  6. Ejecutar `graphify-sync.cmd` (se editó el `.ino`) y `graphify update .`.
+  6. Ajustes menores de la revisión de la Parte 1, en `SimConnectBridge/main.cpp`:
+     - (a) En `LinkLost`, terminar el mensaje con "Reconectando %s..." solo si `!quit`; si `quit` está activo, terminarlo con "Fin del puente." (no reconectar mientras el programa termina).
+     - (b) En `Stamp`, pasar `unsigned(t.wHour)`, `unsigned(t.wMinute)` y `unsigned(t.wSecond)`.
+     - Agregar `SimConnectBridge/main.cpp` al commit y compilar también con `-Bridge`.
+  7. Ejecutar `graphify-sync.cmd` (se editó el `.ino`) y `graphify update .`.
 - Pruebas:
-  - `probar.ps1 -Pico -Potentiometers -Encoders` (incluye la suite C++). Tiene que dar todo OK.
+  - `probar.ps1 -Pico -Potentiometers -Encoders -Bridge` (incluye la suite C++). Tiene que dar todo OK.
   - `powershell -ExecutionPolicy Bypass -File compilar-tesis.ps1`: anotar su única línea.
-- Commit por nombre: `UsbGuard.h LoopSupervisor.h mis_defines.h MiYoke_PD.ino tests/health_checks.h tests/simconnect_checks.cpp "LEEME md/LEEME-LANZADOR.md" "LEEME md/LEEME_SIMCONNECT.md" "LEEME md/EFECTOS_SIMCONNECT.md" "LEEME md/MODELO_TURBULENCIA.md" "LEEME md/CALCULO_PICO_SC8.md" tesis/capitulos/01_arquitectura_sc8.tex HANDOFF.md`.
+- Commit por nombre: `UsbGuard.h LoopSupervisor.h mis_defines.h MiYoke_PD.ino SimConnectBridge/main.cpp tests/health_checks.h tests/simconnect_checks.cpp "LEEME md/LEEME-LANZADOR.md" "LEEME md/LEEME_SIMCONNECT.md" "LEEME md/EFECTOS_SIMCONNECT.md" "LEEME md/MODELO_TURBULENCIA.md" "LEEME md/CALCULO_PICO_SC8.md" tesis/capitulos/01_arquitectura_sc8.tex HANDOFF.md`.
   Mensaje: "Pico: mutex USB contra interbloqueo, watchdog por hardware y diagnostico de reinicio".
 - Versión:
   - Comando: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Recuperacion del enlace USB: mutex USB en Pico, watchdog por hardware y reconexion del puente"`.
@@ -110,4 +114,11 @@ OK puente SimConnect
 
 \## Revisión
 
-\- Pendiente.
+\- Revisor: Claude (2026-10-11), con Code Reviewer. **Parte 1 (`da4bd21`): APROBADA.**
+  - **Fidelidad al diseño:** `SerialLink.h` es literal a §3.1, y `main.cpp` cumple los puntos 1 a 11 de §3.2: cierre del handle en todas las salidas de `OpenPort`, `quit` en el handshake, desarme con el puerto cerrado o durante el diferido, `Record(wrote,wrote&&armed)`, reconexión solo con puerto, salida 4, rotación condicionada y texto viejo eliminado.
+  - **Errores:** no hay reentrada (un solo hilo; `Send` nunca se llama durante `OpenPort`), no hay uso del handle después de cerrarlo y los formatos son correctos.
+  - **Pruebas:** `link_checks.h` cubre todos los casos de §5 Parte 1 con los valores esperados correctos. No se recompiló: Codex informó OK y el código no cambió desde entonces.
+  - **Observaciones menores**, que se incorporan a la Parte 2, punto 6:
+    - con `quit` activo, `LinkLost` imprime "Reconectando..." aunque el programa está terminando;
+    - en `Stamp`, convertir los campos `WORD` a `unsigned`.
+  - **Pruebas que el usuario ya puede hacer:** A (desenchufar y volver a enchufar en vuelo) y C (guardar efectos en pausa), con la Parte 1 compilada.
