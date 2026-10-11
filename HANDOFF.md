@@ -46,23 +46,7 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 
 \## Plan para Codex
 
-Tarea: corrección de documentación tras la revisión de V1.4 (realismo). Rama `mejora/realismo-efectos`. Tarea simple, **sin partes**. Modelo recomendado: el de código, con esfuerzo medium. **Solo documentación:** no tocar código ni pruebas, y no crear versión (los cambios de `.tex` no generan versión).
-
-1. Archivos: `tesis/explicacion_efectos_proyecto_ffb_yoke.tex` y, al final, la misma copia en `tesis/main.tex` (copiar el archivo y verificar con `diff`). No leas el `.tex` completo: ubicá cada nota con `grep -n "textit{Actualización (realismo)"` y leé solo unas líneas alrededor de cada una.
-2. Notas visibles: hoy hay 114 notas con 3 textos genéricos. El diseño (§6, `LEEME md/DISENO_realismo_efectos.md`) pide `<qué cambió y por qué>`.
-   a) **Dentro de la sección `\label{sec:realismo}`** (desde `\section{Actualización: realismo...}` hasta antes de `\section{CENTRADO DINÁMICO (RESORTE)}`): eliminar todas las notas `\textit{Actualización (realismo)...}`, porque esa sección ya es la explicación.
-   b) **En el resto del documento:** reemplazar cada nota genérica por una sola oración específica para esa subsección, con el formato `\textit{Actualización (realismo): <antes> $\rightarrow$ <ahora>; <por qué, con la referencia corta>; ver Sección~\ref{sec:realismo}.}`. Tomar el "antes", el "ahora" y la referencia de la tabla "Cambios y fundamentos" de `sec:realismo`. Ejemplos:
-      - Turbulencia, presión: `$Q_T=\min(Q,1)$ $\rightarrow$ $S_V=\sqrt Q\le2$; la carga de ráfaga es $\propto\rho Vw$ (Pratt--Walker)`.
-      - Turbulencia, pasaaltos: `$\tau_H=1$ s $\rightarrow$ $\tau_H=29.5/V_e$ en [0.25, 1.5] s; decaimiento por plunge (Hoblit)`.
-      - Pérdida, inicio: `$\alpha_s(0.5+0.2f)$ $\rightarrow$ $\alpha_s[V_s/(V_s+\Delta)]^2$; margen de aviso de la antigua §23.207 (hipótesis)`.
-      - Fricción: `ley racional por velocidad $\rightarrow$ modelo Hayward--Armstrong por posición (sensor local); adherencia y presliding`.
-      - Si en una subsección solo se recalcularon números de ejemplo: `ejemplos recalculados con <ley nueva>`.
-      - Si varias notas seguidas de la misma subsección quedarían iguales, dejar una sola, al final de la subsección.
-3. Marcadores: eliminar los `% [V-realismo]` que quedaron solos (seguidos de una línea vacía o de otro marcador, sin contenido modificado debajo). Hay unos 19. Conservar los que preceden a contenido modificado.
-4. No cambiar ningún otro texto, fórmula, tabla ni número.
-5. Compilar con pdflatex, dos pasadas, sin referencias indefinidas. Copiar a `tesis/main.tex` y verificar que son idénticos.
-6. Commit por nombre (ambos `.tex`): "Tesis: notas de actualizacion especificas (que cambio y por que)".
-7. HANDOFF, "Última entrega": cantidad de notas eliminadas y reescritas, marcadores eliminados, si compila y el commit. Commit de HANDOFF.md por nombre.
+Sin tareas pendientes para Codex (2026-10-11). Sigue la validación del usuario en hardware.
 
 \## Última entrega
 
@@ -115,3 +99,9 @@ Tarea: corrección de documentación tras la revisión de V1.4 (realismo). Rama 
     1. `SimEffects.h:182-188`: indentar `noise[3]`, `texNoise[2]` y su comentario como el resto de `private:`.
     2. `SimEffects.h:71-73`: actualizar el comentario a "Narrow-band 7/11.3 Hz texture (or fixed sines with flag 0); amplitude sqrt(E) of the 0.5..40 kt ramp (ISO 8608)."
   - **Estado:** requiere cambios menores de documentación. Después: validación del usuario en hardware (sección 4 del diseño) y recién entonces integrar a master.
+
+\- Revisión de la corrección de notas: Claude (2026-10-11). **APROBADO.**
+  - Commit `5612d0a`: 102 notas específicas (antes → ahora; motivo; referencia), ninguna duplicada ni genérica, ninguna dentro de `sec:realismo`. 0 marcadores sueltos.
+  - El diff, excluyendo notas y marcadores, no tiene otras líneas cambiadas. `main.tex` es idéntico. Compila (informado por Codex: 102 páginas).
+  - Observación: la copia `..\MiYoke_PD_VERSIONES\V1_4` conserva el `.tex` anterior a esta corrección, porque los cambios solo de documentación no generan versión. El `.tex` vigente es el de la rama.
+- **Estado final de la tarea: aprobado.** Pendiente: validación del usuario en hardware (sección 4 del diseño). Después, integración a master por pedido del usuario.
