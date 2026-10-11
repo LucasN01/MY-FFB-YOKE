@@ -26,8 +26,17 @@ $dest = Join-Path (Split-Path $PSScriptRoot -Parent) "MiYoke_PD_VERSIONES\$carpe
 New-Item -ItemType Directory -Force $dest | Out-Null
 $tmp = Join-Path $env:TEMP "$carpeta.tar"
 git archive --format=tar -o $tmp HEAD
-tar -xf $tmp -C $dest
+# tar de Windows explicito: el tar de Git Bash interpreta "D:" como host remoto y no copia nada
+& (Join-Path $env:SystemRoot 'System32\tar.exe') -xf $tmp -C $dest
+$codTar = $LASTEXITCODE
 Remove-Item $tmp
+$esperados = @(git ls-files).Count
+$copiados = @(Get-ChildItem $dest -Recurse -File).Count
+if ($codTar -ne 0 -or $copiados -lt $esperados) {
+  git tag -d $tag | Out-Null
+  Remove-Item -Recurse -Force $dest
+  throw "Fallo la copia de la version ($copiados de $esperados archivos). Se elimino la etiqueta $tag; corregir y repetir."
+}
 
 # 4. Archivo de actualizacion
 $cambios = if ($prev) { git diff --name-status "$prev" HEAD } else { "Version base." }

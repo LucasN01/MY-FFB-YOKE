@@ -18,6 +18,8 @@ Rules:
 - Codigo: antes de buscar o abrir archivos, orientarse con graphify (query/explain/path). La lectura directa es solo para lineas puntuales de un archivo ya identificado. Cada "Plan para Codex" le indica lo mismo.
 - PDF: no leer el PDF directamente. Convertirlo con `markitdown archivo.pdf -o tmp/<nombre>.md` (markitdown instalado; tmp/ esta en .gitignore) y leer solo la seccion necesaria con grep. Si una tabla o formula sale desordenada, verificar solo esa pagina en el PDF.
 - LaTeX (.tex): ya es texto, markitdown no aplica. La tesis de efectos esta dividida en tesis/capitulos/NN_*.tex; abrir solo el capitulo afectado y, dentro de el, solo las lineas ubicadas por \label o titulo. Verificar con compilar-tesis.ps1 (salida de una linea), nunca con pdflatex directo.
+- Pruebas y compilacion: usar `powershell -ExecutionPolicy Bypass -File probar.ps1` (suite C++ + lanzador; agregar -Pico, -Encoders, -Potentiometers, -Bridge o -Todo segun el plan). Imprime una linea OK/FALLO por paso con solo las lineas de error. No invocar MSBuild, arduino-cli ni Build-*.ps1 directamente, no volcar logs completos y no repetir una compilacion que ya dio OK salvo que el codigo haya cambiado. En HANDOFF copiar solo esas lineas de resultado.
+- Versionado: ejecutar nueva-version.ps1 siempre desde PowerShell (si falla la copia, el script lo detecta, borra la etiqueta y se repite).
 
 
 ## VERSIONADO OBLIGATORIO Y AUTOMATICO (regla del usuario)

@@ -15,6 +15,8 @@ Rules:
 - Codigo: antes de buscar o abrir archivos, orientarse con `graphify query`/`explain`/`path`. Leer directamente solo las lineas puntuales de un archivo ya identificado.
 - PDF: no leer el PDF directamente. Convertirlo con `markitdown archivo.pdf -o tmp/<nombre>.md` (instalado; tmp/ esta en .gitignore) y leer solo la seccion necesaria con grep. Si una tabla o formula sale desordenada, verificar solo esa pagina.
 - LaTeX (.tex): la tesis de efectos esta dividida en tesis/capitulos/NN_*.tex; abrir solo el capitulo afectado y, dentro de el, solo las lineas ubicadas con grep por \label o titulo. Aplicar los cambios como reemplazo exacto del texto que da el diseno. Verificar con compilar-tesis.ps1 (salida de una linea), nunca con pdflatex directo.
+- Pruebas y compilacion: usar `powershell -ExecutionPolicy Bypass -File probar.ps1` (suite C++ + lanzador; agregar -Pico, -Encoders, -Potentiometers, -Bridge o -Todo segun el plan). Imprime una linea OK/FALLO por paso con solo las lineas de error. No invocar MSBuild, arduino-cli ni Build-*.ps1 directamente, no volcar logs completos y no repetir una compilacion que ya dio OK salvo que el codigo haya cambiado. En HANDOFF copiar solo esas lineas de resultado.
+- Versionado: ejecutar nueva-version.ps1 siempre desde PowerShell (si falla la copia, el script lo detecta, borra la etiqueta y se repite).
 
 ## Limitaciones del grafo en este proyecto
 - MiYoke_PD.ino se indexa vía copia en graphify-ino/ (ejecutar graphify-sync.cmd tras editarlo).
@@ -55,6 +57,7 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 
 ## AGENTES (Agency Agents) – aplicacion obligatoria
 - Toda implementacion → Minimal Change Engineer: cambiar solo lo especificado. Sin refactorizaciones, renombres, reformateos ni "mejoras" adicionales. Lo que parezca mejorable se anota en HANDOFF como sugerencia, sin aplicarlo.
+- Sin subagentes de revision: Codex no lanza revisores (Code Reviewer, Embedded Firmware Engineer u otros) ni repite revisiones; la revision la hace Claude despues. Los perfiles de esta lista se aplican como criterios propios al escribir el codigo.
 - Codigo de firmware → Embedded Firmware Engineer: respetar el lazo de control de 2 ms, nada bloqueante dentro del lazo (delay, Serial bloqueante, String), sin memoria dinamica en el lazo, saturar la fuerza antes de convertirla a PWM, mantener tipos y unidades de la especificacion.
 - Commits y versionado → Git Workflow Master, limitado a la regla VERSIONADO OBLIGATORIO Y AUTOMATICO: commit por nombre de archivo y nueva-version.ps1. Prohibido: git add . / git add -A, rebase, reescritura de historial, force push, crear o borrar tags a mano y cambiar la estrategia de ramas sin pedido del usuario.
 
