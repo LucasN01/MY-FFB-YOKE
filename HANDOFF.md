@@ -62,6 +62,7 @@ Hacé **solo la parte que te pidan**, cada una en una sesión nueva. Al empezar,
 - Commit: "Realismo A: envolventes de turbulencia, buffets, textura y centrado con fundamento teorico". Sin versión.
 
 \### Parte 2: commit B (ruido, fricción y damper, con estado)
+- **Aclaración 2026-10-11 (bloqueo `8da61f6`):** la textura de pista se recorta a ±0.12·E (ver §2.8.5 del diseño). `tests/raw_checks.h:25` NO se modifica: debe pasar tal cual. Retomá los cambios sin commit (NarrowbandNoise.h, FrictionModel.h, mis_defines.h, SimEffects.h, tests/simconnect_checks.cpp), aplicá ese recorte, completá las pruebas nuevas y los flags en 0, y seguí con el resto de esta parte.
 - Requisito: debe existir el commit "Realismo A". Si no existe, detenete.
 - Leé del diseño solo:
   - §0, el resto de §2.1, §2.2 (coeficientes solo en el constructor), §2.7 y §2.8 puntos 1, 2 y 4 a 8.
@@ -121,3 +122,5 @@ Hacé **solo la parte que te pidan**, cada una en una sesión nueva. Al empezar,
   - §2.9 y §3.5: pruebas y criterio de costo ajustados a lo anterior.
 
 \- Estado: diseño desbloqueado; continuar la implementación desde el punto 5 del pedido original.
+
+\- Aclaración 2: Claude (2026-10-11), ante el bloqueo de la parte 2 (`8da61f6`). El bloqueo era correcto: el ruido de la textura podía superar el pico de las senoides que exige `tests/raw_checks.h:25`. Esa prueba es correcta: el pico ±0.12·E es la textura "suave" requerida por el usuario. Resolución en el diseño (§2.8.5): recortar la textura a ±0.12·roadLevel antes de sumarla, conservando RMS 0.7071. Simulado con las semillas del diseño (1000 pasos, E=1): se recorta el 2.5 %, extremos ±12.4 PWM. Cumple también `low*255<-10 && high*255>10`. No se autoriza modificar esa prueba.

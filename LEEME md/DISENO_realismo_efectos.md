@@ -269,9 +269,11 @@ private:
        texCarrier[0]=texNoise[0].next();
        texCarrier[1]=texNoise[1].next();
    }
-   const float texture=roadLevel>0 ? roadLevel*.12f*(.65f*texCarrier[0]+.35f*texCarrier[1]) : 0;
+   // Same peak as the former sines (+-0.12*E): the runway texture stays soft (user requirement).
+   const float texture=roadLevel>0 ? clip(roadLevel*.12f*(.65f*texCarrier[0]+.35f*texCarrier[1]),
+                                          -.12f*roadLevel,.12f*roadLevel) : 0;
    ```
-   RMS 0.7071 es el RMS de una senoide unitaria: misma energía que antes. Cuando `roadLevel==0`, además de `roadTime=0`, reiniciar `texNoise[0..1]` y poner `texCarrier[0..1]=0`. El recorte posterior `clip(...,-roadLevel,roadLevel)` queda igual. Con el flag en 0 quedan las senoides actuales.
+   RMS 0.7071 es el RMS de una senoide unitaria: misma energía que antes. **Recorte a ±0.12·E (aclaración del 2026-10-11, bloqueo de Codex en `8da61f6`):** el ruido puede superar en picos el máximo de las senoides, que la prueba existente `tests/raw_checks.h:25` exige con razón (textura "suave", requisito del usuario). Se conserva ese pico y la prueba no cambia. Simulación con las semillas del diseño, en 1000 pasos a E=1: se recorta el 2.5 % de las muestras, con un extremo de ±12.4 PWM (ganancia de suelo 0.45, total 0.9). Así también se cumple `low*255<-10 && high*255>10` de esa misma prueba. Cuando `roadLevel==0`, además de `roadTime=0`, reiniciar `texNoise[0..1]` y poner `texCarrier[0..1]=0`. El recorte posterior `clip(...,-roadLevel,roadLevel)` queda igual. Con el flag en 0 quedan las senoides actuales.
    Requisito de usuario: la textura **sigue presente siempre** que el avión rueda a más de 0.5 kt. Con ruido de banda estrecha la amplitud instantánea fluctúa (envolvente aleatoria) alrededor de un nivel medio constante, en lugar de ser periódica. Si el usuario prefiere la sensación periódica, flag en 0.
 6. Miembros privados nuevos:
    ```cpp
@@ -427,7 +429,7 @@ Hoy los dos archivos son idénticos (`diff -q` sin diferencias): aplicar exactam
    - damper: `ζ=b/(2√(kJ))` → `b∝√k`; límites 0.5–2.
    - suelo: ISO 8608 → `G_v(f)=4π²G_d(n0)n0²V` (blanco, ∝V) → RMS ∝ √V. Se aplica **solo a la textura sintética**; los baches de P3D conservan la rampa lineal (evita contar dos veces la dependencia con V).
    - tren/spoiler: carga de flujo separado `q·S·C_p'` → `∝ IAS²` (IAS≈EAS); 150/140 kt son calibración de intensidad plena.
-4. Subsección "Generador de banda estrecha": ecuaciones AR(2), `r=e^{-ζω0Δt}`, `θ=ω0√(1−ζ²)Δt`, varianza estacionaria y ganancia; valores verificados (RMS, cruces por cero, % recortado); justificación de RMS 0.45 frente a 0.577 de la triangular (−2.2 dB, compromiso contra el recorte).
+4. Subsección "Generador de banda estrecha": ecuaciones AR(2), `r=e^{-ζω0Δt}`, `θ=ω0√(1−ζ²)Δt`, varianza estacionaria y ganancia; valores verificados (RMS, cruces por cero, % recortado); justificación de RMS 0.45 frente a 0.577 de la triangular (−2.2 dB, compromiso contra el recorte); en la textura de pista, RMS de senoide y recorte al pico anterior ±0.12·E (2.5 % recortado) para conservar la textura suave pedida por el usuario.
 5. Subsección "Fricción de Hayward–Armstrong": ecuaciones del ancla, rigidez de presliding `Fc/zmax=1.5`, adherencia sin velocidad; solo con sensor local (en modo SimConnect se conserva la ley por velocidad); zona de adherencia frente al resorte en tierra (|x|<0.25 con valores de fábrica) y en vuelo; techo conjunto damper+fricción 0.4.
 6. Subsección "Hipótesis a validar con ensayo": la lista de la sección 4 de este diseño.
 7. Subsección "Referencias teóricas incorporadas" con la lista completa de la sección 7 de este diseño.
