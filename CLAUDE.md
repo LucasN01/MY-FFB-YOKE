@@ -14,6 +14,11 @@ Rules:
   Para trazar el flujo completo, leer MiYoke_PD.ino directamente.
 - SimConnectBridge/*Model.h son wrappers de un include; la lógica está en la raíz.
 
+## AHORRO DE TOKENS: graphify, PDF y LaTeX (regla del usuario)
+- Codigo: antes de buscar o abrir archivos, orientarse con graphify (query/explain/path). La lectura directa es solo para lineas puntuales de un archivo ya identificado. Cada "Plan para Codex" le indica lo mismo.
+- PDF: no leer el PDF directamente. Convertirlo con `markitdown archivo.pdf -o tmp/<nombre>.md` (markitdown instalado; tmp/ esta en .gitignore) y leer solo la seccion necesaria con grep. Si una tabla o formula sale desordenada, verificar solo esa pagina en el PDF.
+- LaTeX (.tex): ya es texto, markitdown no aplica. Leer solo las partes necesarias, ubicadas por \label o titulo; nunca el archivo completo.
+
 
 ## VERSIONADO OBLIGATORIO Y AUTOMATICO (regla del usuario)
 Cada vez que un agente (Claude o Codex) modifique codigo (.h .hpp .c .cpp .ino .ps1 .cmd .py .vcxproj), DEBE crear una version nueva sin que el usuario lo pida. Pasos, en este orden:

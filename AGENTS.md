@@ -11,6 +11,11 @@ Rules:
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 
+## AHORRO DE TOKENS: graphify, PDF y LaTeX (regla del usuario)
+- Codigo: antes de buscar o abrir archivos, orientarse con `graphify query`/`explain`/`path`. Leer directamente solo las lineas puntuales de un archivo ya identificado.
+- PDF: no leer el PDF directamente. Convertirlo con `markitdown archivo.pdf -o tmp/<nombre>.md` (instalado; tmp/ esta en .gitignore) y leer solo la seccion necesaria con grep. Si una tabla o formula sale desordenada, verificar solo esa pagina.
+- LaTeX (.tex): leer solo las partes necesarias, ubicadas con grep por \label o titulo; nunca el archivo completo.
+
 ## Limitaciones del grafo en este proyecto
 - MiYoke_PD.ino se indexa vía copia en graphify-ino/ (ejecutar graphify-sync.cmd tras editarlo).
 - Las llamadas desde setup()/loop() a objetos globales NO aparecen en el grafo.
