@@ -79,9 +79,9 @@ public:
             else simMotion[i].reset();
         }
         const uint8_t frequencies[4]={13,SIMCONNECT_GEAR_BUFFET_HZ,15,8};
-        const float blend=float(dt)/(100.0f+dt); // 100 ms amplitude smoothing
+        const float blend=float(dt)/(100.0f+dt); // 100 ms envelope and stiffness smoothing
         const float rest=settings.effective(YokeGains::CenterRest);
-        const float stiffness=rest+(1-rest)*(rx.rawAvailable ? models.pressure : rx.pressure);
+        const float stiffness=rest+SIMCONNECT_CENTERING_AERO_STIFFNESS*(rx.rawAvailable ? models.pressure : rx.pressure);
         centerPressure=(mask & Centering) && rx.centeringAvailable
             ? centerPressure+blend*(stiffness-centerPressure) : 0;
         for(uint8_t i=0;i<4;++i) {

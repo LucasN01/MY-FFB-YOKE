@@ -119,6 +119,27 @@ int main(int argc,char** argv) {
     CHECK(extendedFx.command(extended,1,1,YokeSC::Damper,0,1)==0);
 
     }
+    // The factory spring curve is unchanged; rest stiffness adds equally at every Q.
+    for(float pressure : {0.0f,.25f,1.0f,4.0f,2.0f}) {
+        YokeGains::Settings springSettings;
+        const float rest=pressure==2 ? .30f : .15f;
+        CHECK(springSettings.set(YokeGains::CenterRest,pressure==2 ? 3000 : 1500));
+        YokeSC::Effects spring(springSettings);
+        YokeSC::Receiver springRx;
+        uint8_t springPacket[26];
+        for(uint32_t now=0;now<=3000;now+=2) {
+            if(now%20==0) {
+                frame4(springPacket,uint16_t(now/20+1),uint16_t(pressure*10000),0,0);
+                springPacket[2]=6;
+                YokeSC::put16(springPacket+24,YokeSC::crc(springPacket,24));
+                feed4(springRx,springPacket,now);
+            }
+            spring.update(springRx,now,true,YokeSC::Centering);
+        }
+        const float expected=pressure==2 ? 2.0f : rest+(1-rest)*pressure;
+        CHECK(near(spring.command(springRx,1,1,YokeSC::Centering,.1f),
+                   -.1f*expected*springSettings.effective(YokeGains::CenterPitch)));
+    }
     // Passive velocity loads must exist at neutral and may overcome the spring.
     CHECK(YokeSC::motionAdjustedForce(-.2f,2,1)<-.2f);
     CHECK(YokeSC::motionAdjustedForce(-.2f,-2,1)>-.2f);
@@ -352,6 +373,30 @@ int main(int argc,char** argv) {
     model.update(0,0,0,.02,0,1);
     f0=model.update(5,5,5,.02,0,1);
     CHECK(f0.roll==0 && f0.pitch==0);
+    // Gust speed factor accepts 2; invalid speed/tau clear and re-prime the model.
+    model.reset(); model.update(0,0,0,.02,2,1);
+    CHECK(model.update(0,1,0,.02,2,1).pitch>0);
+    CHECK(model.update(0,1,0,.02,2.01,1).pitch==0);
+    CHECK(model.update(0,1,0,.02,2,1).pitch==0);
+    for(double tau : {0.0,std::numeric_limits<double>::quiet_NaN()}) {
+        CHECK(model.update(0,2,0,.02,1,1,.25,true,tau).pitch==0);
+        CHECK(model.update(0,1,0,.02,1,1).pitch==0);
+    }
+    YokeGust::Model shortTau,longTau;
+    shortTau.update(0,0,0,.02,1,1,.25,true,.5);
+    longTau.update(0,0,0,.02,1,1,.25,true,1);
+    double shortH=0,longH=0,shortPrevious=0,longPrevious=0;
+    const double blendGust=-std::expm1(-.02/.08);
+    for(int i=0;i<50;++i) {
+        const double a=shortTau.update(0,5,0,.02,1,1,.25,true,.5).pitch;
+        const double b=longTau.update(0,5,0,.02,1,1,.25,true,1).pitch;
+        shortH=5*(shortPrevious+(a-shortPrevious)/blendGust);
+        longH=5*(longPrevious+(b-longPrevious)/blendGust);
+        shortPrevious=a; longPrevious=b;
+    }
+    CHECK(shortH<longH);
+    CHECK(std::fabs(shortH-5*std::exp(-2.0))<1e-10);
+    CHECK(std::fabs(longH-5*std::exp(-1.0))<1e-10);
     // Compare same continuous wind at 30/60/120 Hz (discretization tolerance).
     double results[3];
     for(int j=0;j<3;++j) {
@@ -405,9 +450,13 @@ int main(int argc,char** argv) {
     CHECK(b.stall==1 && b.gear==1 && b.spoiler==1);
     b=YokeBuffet::calculate(input,false);
     CHECK(b.stall==0 && b.gear==0 && b.spoiler==0);
-    input.aoa=7.5; b=YokeBuffet::calculate(input,true); CHECK(b.stall==0);
-    input.aoa=10; b=YokeBuffet::calculate(input,true); CHECK(b.stall>0 && b.stall<1);
-    input.flapLeft=input.flapRight=1; b=YokeBuffet::calculate(input,true); CHECK(b.stall==0);
+    input.aoa=10.9; b=YokeBuffet::calculate(input,true); CHECK(b.stall==0);
+    input.aoa=13; b=YokeBuffet::calculate(input,true); CHECK(b.stall>0 && b.stall<1);
+    input.aoa=10; input.flapLeft=input.flapRight=1; b=YokeBuffet::calculate(input,true); CHECK(b.stall==0);
+    input.aoa=10.5; input.flapLeft=input.flapRight=0;
+    CHECK(YokeBuffet::calculate(input,true).stall==0);
+    input.flapLeft=input.flapRight=1;
+    CHECK(YokeBuffet::calculate(input,true).stall>0);
     input.aoa=15; input.stallAlpha=0; b=YokeBuffet::calculate(input,true);
     CHECK(b.stall==0 && b.gear==1 && b.spoiler==1);
     input.retractable=0; b=YokeBuffet::calculate(input,true); CHECK(b.gear==0);
@@ -440,10 +489,10 @@ int main(int argc,char** argv) {
         renderer.update(signal,414,true,effect);
         CHECK(renderer.command(signal,1,1,effect)==0); // Desarmado por pausa/suelo/slew
     }
-    // Gear IAS ramp: no step at 100 kt, half amplitude at 125, full at 150.
+    // Gear load scales with IAS squared, reaching full intensity at 150 kt.
     input.retractable=1; input.gear=1;
-    input.ias=100; CHECK(YokeBuffet::calculate(input,true).gear==0);
-    input.ias=125; CHECK(near(float(YokeBuffet::calculate(input,true).gear),.5f));
+    input.ias=100; CHECK(near(float(YokeBuffet::calculate(input,true).gear),4.0f/9));
+    input.ias=125; CHECK(near(float(YokeBuffet::calculate(input,true).gear),25.0f/36));
     input.ias=150; CHECK(YokeBuffet::calculate(input,true).gear==1);
 
     // Sustained gear-only packets through the real receiver and oscillator.

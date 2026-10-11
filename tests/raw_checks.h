@@ -98,13 +98,30 @@ static void rawChecks() {
     for(int i=0;i<100;++i) {
         s.timeMs=100+i*20; s.value[YokeRaw::WindX]=float(std::sin(i*.2)*5);
         air.update(s);
-        const auto w=referenceWind.update(s.value[YokeRaw::WindX],0,0,.02,1,1,.25,true);
+        const auto w=referenceWind.update(s.value[YokeRaw::WindX],0,0,.02,2.0,1,.25,true,.25);
         CHECK(near(air.gust[0],float(w.roll)) && near(air.gust[1],float(w.pitch)));
-        CHECK(air.pressure==4 && near(air.buffet[1],.5f) && near(air.buffet[2],.375f));
+        CHECK(air.pressure==4 && near(air.buffet[1],25.0f/36) && near(air.buffet[2],.5f*125*125/(140*140)));
         CHECK(air.buffet[0]>0 && air.ground[0]==0 && air.ground[1]==0);
     }
     s.timeMs+=20; s.options=0; air.update(s);
     CHECK(air.gust[0]==0 && air.gust[1]==0 && air.buffet[0]==0 && air.buffet[1]==0 && air.buffet[2]==0);
+    // 120 kt equivalent pressure: unit gust speed and plunge tau about 0.478 s.
+    YokeSC::PicoForceModels referenceAir;
+    s=YokeRaw::Sample{}; s.options=YokeRaw::Gusts;
+    s.value[YokeRaw::PressurePSF]=float(.5*1.225*std::pow(120*.514444444,2)/47.88025898);
+    referenceAir.update(s);
+    s.timeMs=20; s.value[YokeRaw::WindY]=5; referenceAir.update(s);
+    CHECK(near(referenceAir.pressure,1));
+    const double firstHigh=referenceAir.gust[1]/(-std::expm1(-.02/.08));
+    const double inferredTau=-.02/std::log(firstHigh);
+    CHECK(std::fabs(inferredTau-.478)<.005);
+    s.value[YokeRaw::OnGround]=1;
+    const float speeds[]={10,10.375f,20.25f,40};
+    const float textureLevels[]={float(std::sqrt(9.5/39.5)),.5f,float(std::sqrt(.5)),1};
+    for(int i=0;i<4;++i) {
+        s.timeMs+=20; s.value[YokeRaw::GroundSpeed]=speeds[i]; referenceAir.update(s);
+        CHECK(near(referenceAir.groundEnvelope,textureLevels[i]));
+    }
     // The fast effects loop must not advance/reset a dynamic filter between packets.
     YokeSC::Receiver live; YokeSC::Effects effects;
     s=YokeRaw::Sample{}; s.value[YokeRaw::OnGround]=1; s.value[YokeRaw::GroundSpeed]=40;

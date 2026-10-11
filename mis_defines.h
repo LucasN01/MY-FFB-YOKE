@@ -225,8 +225,11 @@ static_assert(SIMCONNECT_TOTAL_GAIN >= 0 && SIMCONNECT_TOTAL_GAIN <= 100,
 #define SIMCONNECT_GROUND_VIBRATION_ENABLED 1
 #endif
 #define SIMCONNECT_CENTERING_PITCH_GAIN 0.800f
-// Rigidez minima en reposo como fraccion del maximo (0 = solo aerodinamico).
+// Rigidez mecanica de reposo, sumada a la aerodinamica (0 = solo aerodinamico).
 #define SIMCONNECT_CENTERING_MIN_STIFFNESS 0.15f
+// Centrado: rigidez = reposo (mecanica) + este coeficiente * Q (aerodinamica).
+// 0.85 = 1 - 0.15 conserva identica la curva de fabrica (k=0.15+0.85Q).
+#define SIMCONNECT_CENTERING_AERO_STIFFNESS 0.85f
 
 static_assert(SIMCONNECT_CENTERING_MIN_STIFFNESS >= 0 && SIMCONNECT_CENTERING_MIN_STIFFNESS <= 1,
               "Rigidez minima fuera de 0..1");

@@ -28,20 +28,31 @@ public:
         const double ratio=qPa/(.5*1.225*velocity*velocity);
         pressure=float(ratio>4 ? 4 : ratio);
         const bool air=s.value[OnGround]==0;
+        // Gust hinge load ~ q*dalpha = q*w/V ~ rho*V*w: scale with V_e/V_ref = sqrt(Q) (Pratt-Walker).
+        const double gustSpeed=pressure>0 ? std::sqrt(double(pressure)) : 0.0; // pressure <=4 -> 0..2
+        // Plunge time constant tau=2(W/S)/(g*rho0*a*V_e): sustained-gust dalpha decays as the aircraft
+        // accelerates vertically. C182RG: W/S=853 Pa, a=4.82/rad (Helmbold, AR 7.45) -> 29.5 m.
+        const double ve=std::sqrt(2.0*(qPa>0 ? qPa : 0)/1.225);
+        const double tauHigh=ve<=gustPlungeLength/1.5 ? 1.5 :
+                             (ve>=gustPlungeLength/.25 ? .25 : gustPlungeLength/ve);
         const auto wind=gustModel.update(s.value[WindX],s.value[WindY],s.value[WindZ],
-            dt,pressure>1 ? 1 : pressure,s.gustGain,s.gustLongitudinal,air && (s.options&Gusts));
+            dt,gustSpeed,s.gustGain,s.gustLongitudinal,air && (s.options&Gusts),tauHigh);
         gust[0]=float(wind.roll); gust[1]=float(wind.pitch);
         const YokeBuffet::Input b={s.value[IAS],s.value[AoA],s.value[StallAlpha],
             s.value[FlapLeft],s.value[FlapRight],s.value[VS0],s.value[VS1],
             s.value[Gear],s.value[Retractable],s.value[SpoilerLeft],s.value[SpoilerRight]};
         const auto amps=YokeBuffet::calculate(b,air && (s.options&Buffets));
         buffet[0]=float(amps.stall); buffet[1]=float(amps.gear); buffet[2]=float(amps.spoiler);
-        groundEnvelope=float(YokeGround::envelope(s.value[OnGround],s.value[GroundSpeed],true));
+        // Runway texture amplitude: ISO 8608 (G_d ~ n^-2) gives white profile velocity with
+        // level ~ V, so a resonant response grows ~ sqrt(V). Bumps from P3D keep the linear ramp.
+        const double ramp=YokeGround::envelope(s.value[OnGround],s.value[GroundSpeed],true);
+        groundEnvelope=float(std::sqrt(ramp));
         const auto force=groundModel.update(s.value[AccelX],s.value[AccelY],dt,
             s.value[OnGround],s.value[GroundSpeed],true);
         ground[0]=float(force.roll); ground[1]=float(force.pitch);
     }
 private:
+    static constexpr double gustPlungeLength=29.5; // metros; 2(W/S)/(g*rho0*a), perfil C182RG
     bool ready=false;
     uint32_t lastSample=0;
     YokeGust::Model gustModel;
