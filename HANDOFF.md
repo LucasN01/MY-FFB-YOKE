@@ -60,15 +60,24 @@ Tarea: umbral de inicio para el buffet de tren (100 kt) y de spoiler (80 kt). Ra
 
 \## Última entrega
 
-\- Agente: Claude (2026-10-11) — fase DISEÑO del Flujo: umbral de inicio del buffet de tren y de spoiler.
+\- Agente: Codex (2026-10-11) — implementación completada del umbral de inicio del buffet de tren y de spoiler. Rama `mejora/realismo-efectos`.
 
-\- Origen: validación del usuario en hardware de V1.4. Todos los efectos funcionan bien, salvo el buffet de tren, que se siente desde baja velocidad (por ejemplo, 60 kt tras el despegue).
+\- Commit de código, pruebas y documentación: `4b9f5f6` — "Buffet tren y spoiler: umbral de inicio 100/80 kt con crecimiento por presion dinamica".
+  - Código: `BuffetModel.h`.
+  - Pruebas: `tests/simconnect_checks.cpp` y `tests/raw_checks.h`.
+  - Documentación actualizada: `tesis/explicacion_efectos_proyecto_ffb_yoke.tex` y su copia `tesis/main.tex`; identidad verificada por hash.
 
-\- Diseño: `LEEME md/DISENO_umbral_buffet_tren_spoiler.md`.
-  - Ley: `sat[(V²−V_on²)/(V_full²−V_on²)]`, con tren 100/150 kt (umbral elegido por el usuario) y spoiler 80/140 kt (umbrales de TelemFFB).
-  - Revisado por el Master Plan Architect; sus hallazgos están incorporados (partes adicionales del `.tex`, tablas de picos y aclaración de atribución).
+\- Validación: suite Release Win32, **140913 comprobaciones, 0 fallas**. `Build-Pico2.ps1` terminó con código 0, sin advertencias; flash 101708/4186112 bytes (2 %), RAM 22528/524288 bytes (4 %), RAM libre 501760 bytes. `git diff --check` correcto. Revisión de Embedded Firmware Engineer sin hallazgos; no se midió en hardware el lazo de 2 ms.
 
-\- Historial de V1.4 (implementación, revisión y corrección de notas): commits hasta `915ade4`.
+\- Grafo: `graphify update .` completado con código 0, 824 nodos y 1014 aristas.
+
+\- LaTeX: `pdflatex` no disponible en PATH ni ubicaciones usuales; no se realizaron las dos pasadas solicitadas con esa herramienta. El compilador integrado `mcp__codex_app__compile_latex_document` devolvió `success` en dos llamadas sobre el texto final, sin diagnósticos retornados. No se dispone de log detallado para confirmar ausencia de referencias indefinidas.
+
+\- Versión creada: **V1.5**, mediante `nueva-version.ps1`; salida "Version V1.5 creada" y existencia verificada de `..\MiYoke_PD_VERSIONES\V1_5\ACTUALIZACION_V1_5.txt`.
+
+\- Desvíos: un único commit de código, pruebas y documentación por la regla superior DOCUMENTACION RELACIONADA, en lugar de los dos commits del plan. Compilación integrada como alternativa a `pdflatex`.
+
+\- Sigue: revisión de Claude y validación del usuario en hardware. No integrado a `master`.
 
 \## Revisión
 
