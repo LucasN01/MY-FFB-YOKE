@@ -331,6 +331,7 @@ Actualizar solo los casos que cambian por diseño (listados aquí) y agregar cas
 
 Casos que cambian:
 - `simconnect_checks.cpp:109`: `command(extended,1,1,Friction,0,-1)>0` dependía de la fricción por velocidad. Con el modelo de posición (build de pruebas sin `YOKE_USE_SIMULATION==1`) reemplazar por dos llamadas: `command(...,Friction,0,0)` (fija el ancla) y luego `command(...,Friction,-0.05f,0)`, esperando `>0`.
+- `tests/calibration_checks.h:375`, y cualquier otra prueba que pida fricción por velocidad con posición constante a través de `command` (aclaración del 2026-10-11): usar el mismo patrón. Primero una llamada en la posición inicial; después la posición desplazada ±0.05 en el sentido de la velocidad original, con el mismo signo esperado. Las pruebas de `motionAdjustedForce` no cambian.
 - `simconnect_checks.cpp:238-244`: si fallan, es porque dependen del estado acumulado de `friction[1]`. Antes de cada caso, llamar `effects.reset()` o fijar el ancla con una llamada en la posición inicial. No cambiar los valores esperados.
 - Buffets (`simconnect_checks.cpp:402-447`), entrada existente (α_s 15, VS0 45, VS1 60):
   - `aoa=7.5→0` pasa a `aoa=10.9→0` (flaps 0, inicio 11.02°).
