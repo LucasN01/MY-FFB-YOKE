@@ -94,7 +94,7 @@ Codex por parte), porque toca puente, firmware con estado y documentación (con 
 
 \## Última entrega
 
-- Parte 2 implementada (2026-10-11) en `mejora/recuperacion-enlace-usb`; Parte 1 aprobada por Claude en `e5a7c65` (implementacion `da4bd21`).
+- Parte 2 completada (2026-10-11) en `mejora/recuperacion-enlace-usb`; Parte 1 aprobada por Claude en `e5a7c65` (implementacion `da4bd21`).
 - Archivos de codigo: `UsbGuard.h`, `LoopSupervisor.h`, `mis_defines.h`, `MiYoke_PD.ino`, `SimConnectBridge/main.cpp`, `tests/health_checks.h`, `tests/simconnect_checks.cpp`.
 - Implementado: mutex USB y yield propio; motores al principio de setup; watchdog de 250 ms (3000 ms al guardar flash) y alimentacion antes del retorno de 2 ms; etapas persistentes, HardFault, BOOT y maximos lp/gap; ensayos de cuelgue y estres desactivados por defecto. Ajustes del puente de la revision: formatos unsigned y mensaje de fin con quit activo.
 - Documentacion actualizada mediante los ocho reemplazos exactos de §6: `LEEME md/LEEME-LANZADOR.md`, `LEEME md/LEEME_SIMCONNECT.md`, `LEEME md/EFECTOS_SIMCONNECT.md`, `LEEME md/MODELO_TURBULENCIA.md`, `LEEME md/CALCULO_PICO_SC8.md` y `tesis/capitulos/01_arquitectura_sc8.tex` (tres fragmentos). Ningun texto faltante.
@@ -116,8 +116,8 @@ OK chequeo estatico (11 archivos, 44 labels). No hay LaTeX instalado: la compila
 ```
 
 - `graphify-sync.cmd` y `graphify update .`: ejecutados; grafo actualizado (918 nodos, 1160 aristas). `git diff --check`: sin errores.
-- Commit de codigo y documentacion, por los archivos nombrados en el plan: `Pico: mutex USB contra interbloqueo, watchdog por hardware y diagnostico de reinicio`.
-- Version: pendiente de ejecutar nueva-version.ps1 despues del commit.
+- Commit de codigo y documentacion: `69a4097`, por los archivos nombrados en el plan: `Pico: mutex USB contra interbloqueo, watchdog por hardware y diagnostico de reinicio`.
+- Version: V1.8 creada por nueva-version.ps1 sobre el commit `69a4097`. Verificado `..\MiYoke_PD_VERSIONES\V1_8\ACTUALIZACION_V1_8.txt` existente. El commit posterior de HANDOFF solo registra esta version y los hashes de entrega.
 - Desvios: ninguno de alcance; la tesis solo tiene chequeo estatico porque no hay compilador LaTeX instalado, segun compilar-tesis.ps1.
 - Sigue: revision de Claude y pruebas A a E del usuario (§5 Hardware), incluida la verificacion de EN y los pull-down externos requeridos por el diseno. No integrar a master.
 \## Revisión
