@@ -85,24 +85,27 @@ Hacé **solo la parte que te pidan**, cada una en una sesión nueva. Al empezar,
 
 \## Última entrega
 
-\- Agente: Codex (2026-10-10) — fase IMPLEMENTACIÓN del Flujo: realismo y fundamentación teórica de los efectos. **Detenida antes de modificar código por contradicción en la especificación cerrada.**
+\- Agente: Codex (2026-10-11) — parte 1 del Plan para Codex completada: commit A, envolventes y centrado, sin estado.
 
-\- Rama: `mejora/realismo-efectos`, base de esta entrega `24b8865`. Precondición (§0) cumplida: árbol limpio salvo `graphify-ino/`, permitido por el pedido. No se modificó `master`.
+\- Rama: `mejora/realismo-efectos`. Base de esta sesión: `b0b8524`. Se verificaron contra las secciones autorizadas del diseño los siete archivos pendientes de una sesión anterior; coincidían con la parte 1 y no necesitaron modificaciones adicionales. No se rehízo el trabajo ni se modificó `master`.
 
-\- Bloqueo que debe aclarar el autor del diseño:
-  - [Diseño] `LEEME md/DISENO_realismo_efectos.md:103-118` (§2.2): los valores de caché comienzan en cero y `next()` calcula `expf`, `cosf` y `sqrtf` en la primera llamada. Sin embargo, la línea 124 afirma que el peor ciclo no paga ese costo.
-  - [Diseño] `LEEME md/DISENO_realismo_efectos.md:258` y `:264` (§2.8): las llamadas a `next()` están dentro de `Effects::update()`; [INO] `MiYoke_PD.ino:130` y `:167` sitúan la actualización en el lazo de control de 2 ms. No se especifica precálculo fuera de ese lazo.
-  - Se requiere aclarar si se acepta el costo de la primera llamada en el lazo o especificar el precálculo fuera del lazo. No se eligió ni implementó una solución, conforme a AGENTS.md y al punto 3 del pedido.
+\- Commit de código: `d8ca14b` — "Realismo A: envolventes de turbulencia, buffets, textura y centrado con fundamento teorico". Esta entrega se registra después en un commit separado de `HANDOFF.md`.
 
-\- Commits: A (sin estado), B (con estado) y documentación funcional pendientes. Esta entrega contiene únicamente el commit de `HANDOFF.md` que registra el bloqueo.
+\- Archivos incluidos en el commit A: `GustModel.h`, `PicoForceModels.h`, `BuffetModel.h`, `SimEffects.h`, `mis_defines.h`, `tests/raw_checks.h` y `tests/simconnect_checks.cpp`.
 
-\- Archivos modificados: solo `HANDOFF.md`, sección "Última entrega". Ningún archivo de código modificado. Documentación funcional y diseño sin cambios.
+\- Alcance verificado: factor de velocidad sqrt(Q) y tauHigh de turbulencia, envolventes de pérdida/tren/spoiler, raíz de la envolvente de textura de suelo, centrado aditivo con coeficiente aerodinámico 0.85 y sus pruebas. No se incorporaron NarrowbandNoise, FrictionModel, escala del damper ni flags nuevos.
 
-\- Validación: suite `tests/simconnect_checks.vcxproj` (Win32) no ejecutada; número total de comprobaciones no medido. Compilaciones Pico2 con potenciómetros y con `-Encoders` no ejecutadas; tamaños de programa y RAM no medidos frente a la referencia de 99 868 / 18 408 bytes. `.tex` sin cambios y compilación con `pdflatex` no ejecutada.
+\- Validación: `tests/simconnect_checks.vcxproj`, MSBuild de Visual Studio 18 Community, `/t:Rebuild /p:Configuration=Release /p:Platform=Win32`, toolset v141: compila sin errores ni advertencias. `tests/bin/simconnect_checks.exe`: **PASS, 89 730 comprobaciones, 0 fallas**, salida 0. `git diff --check`: sin errores. Ningún caso fuera de los autorizados fue relajado.
 
-\- Versión: no creada; esta entrega modifica solo documentación y no activa el versionado de código.
+\- Revisión firmware: conforme con el diseño, sin bloqueos ni memoria dinámica añadidos; límites de fuerza y PWM conservados. El tiempo máximo del lazo de 2 ms no se midió en hardware. Compilaciones Pico2 normal y `-Encoders`, y tamaños de programa/RAM, pendientes de la parte 2.
 
-\- Desvíos respecto del diseño: ninguno implementado. Sugerencias no aplicadas: ninguna adicional. Pendiente: aclaración del bloqueo por el autor del diseño, implementación, pruebas, documentación, versionado, revisión y validación en hardware.
+\- Grafo: `graphify update .` ejecutado, extracción AST sin API; 790 nodos y 970 aristas. `MiYoke_PD.ino` no cambió, por lo que no corresponde ejecutar `graphify-sync.cmd`. `graphify-ino/` permanece sin seguimiento y fuera de los commits.
+
+\- Documentación funcional: sin cambios, expresamente diferida a la parte 3 por el plan. `.tex` sin cambios; compilación no ejecutada en esta parte.
+
+\- Versión: no creada en esta parte, conforme al plan por sesiones; `nueva-version.ps1` corresponde únicamente al cierre de la parte 3.
+
+\- Desvíos o dudas: ninguno. Sugerencias adicionales: ninguna. Sigue la parte 2 (commit B: ruido, fricción y damper con estado); después, parte 3 (documentación, versión y cierre). Validación en hardware pendiente tras revisión.
 
 \## Revisión
 
