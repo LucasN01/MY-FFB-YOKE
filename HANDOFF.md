@@ -46,7 +46,7 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 
 \## Plan para Codex
 
-Sin tareas pendientes para Codex (2026-10-11). Sigue la validación del usuario en hardware de V1.5.
+Sin tareas pendientes para Codex (2026-10-11).
 
 \## Última entrega
 
@@ -79,3 +79,5 @@ Sin tareas pendientes para Codex (2026-10-11). Sigue la validación del usuario 
   - **Versión V1.5:** tag en `4b9f5f6`, `ACTUALIZACION_V1_5.txt` con el mensaje pedido.
   - **Desvío aceptado:** un único commit de código y documentación en lugar de dos. Es coherente con la regla DOCUMENTACION RELACIONADA.
   - **Pendiente:** validación del usuario en hardware (buffet de tren nulo hasta 100 kt). Después, integración a master por pedido del usuario.
+
+\- Integración (2026-10-11): el usuario validó V1.4 y V1.5 en hardware. `mejora/realismo-efectos` se integró a `master` por avance rápido (fast-forward). No se subió a GitHub.
