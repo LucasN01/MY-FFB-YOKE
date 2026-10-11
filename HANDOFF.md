@@ -40,7 +40,7 @@ Codex por parte), porque toca puente, firmware con estado y documentación (con 
 - Pruebas solo con `powershell -ExecutionPolicy Bypass -File probar.ps1 [...]`. En esta sección copiar únicamente las líneas OK/FALLO.
 
 \### Parte 1 — Puente + pruebas (sin versión)
-- Leer del diseño: §1.4, §3.1, §3.2 y §5 "Escritorio / Parte 1".
+- Leer del diseño: §1.4, §1.5, §3.1, §3.2 y §5 "Escritorio / Parte 1".
 - Código a leer: `SimConnectBridge/main.cpp` (completo, 215 líneas), `tests/simconnect_checks.cpp` (solo los `#include` y `main`) y `tests/simconnect_checks.vcxproj:12`.
 - Alcance:
   1. Crear `SimConnectBridge/SerialLink.h` tal como §3.1: todo `inline`, sin `Windows.h`.

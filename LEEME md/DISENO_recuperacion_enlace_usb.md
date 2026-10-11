@@ -77,6 +77,32 @@ Descartada por revisión: Wire/LCD. Todo tiene límite: timeout de 2 ms,
 - Firmware: el watchdog de 300 ms (`SimTelemetry.h:44`) es software y vive dentro de
   `loop()`. No hay watchdog por hardware.
 
+### 1.5 Segundo síntoma: guardar en el menú cierra el puente (causa confirmada en código)
+
+Reporte del usuario (2026-10-11): con el simulador en pausa, al entrar en calibración,
+cambiar un efecto y guardar, a veces aparece `ERROR serial write` y el puente termina
+(`Fin: muestras=555 error=1`). Cadena causal:
+
+1. `CalibrationControls.h:61-78`: `save()` escribe el registro con `EEPROM.write` y llama a
+   `EEPROM.commit()`.
+2. `libraries/EEPROM/src/EEPROM.cpp:102-106`: `write` marca `_dirty` solo si el byte
+   cambia. `commit()` (`:110-131`) vuelve enseguida si no hay cambios. Si los hay, ejecuta
+   `noInterrupts()`, borra un sector de 4 KB y lo programa. El borrado tarda unos 45 ms
+   típicos y hasta unos 400 ms como máximo, según la hoja de datos de la flash; ese máximo
+   falta confirmarlo para la flash de la Pico 2.
+3. Con las interrupciones deshabilitadas, el USB de la Pico no se atiende y el FIFO CDC no
+   se vacía.
+4. En pausa, el puente envía una trama cada 100 ms (`main.cpp:198`). Si una escritura
+   coincide con el borrado, vence a los 10 ms (`main.cpp:133`), y la primera falla termina
+   el puente (`main.cpp:61-63`).
+
+Esto explica el "en algunos efectos": solo hay escritura en flash cuando el valor guardado
+cambia, y además la escritura del puente tiene que coincidir con el borrado. La Pico no se
+cuelga; el problema es que el puente no tolera una pausa breve del USB. Lo resuelven
+`LinkMonitor` (§3.1: no da el enlace por perdido antes de 1000 ms y 3 vencimientos
+seguidos) y la eliminación de `failed=quit=true` (§3.2). No hace falta tocar el firmware de
+calibración. Prueba de aceptación: C (§5).
+
 ## 2. Objetivos y criterios de aceptación
 
 1. **Corrección de causa (H5):** todas las llamadas CDC del hilo principal y el `yield()`
@@ -482,8 +508,13 @@ Compilación:
   - Esperado: `Pico: BOOT reset=WDT ... etapa=15:PRUEBA` (con `falla=1` en la
     variante 3) y recuperación automática.
   - Al terminar, volver a `YOKE_TEST_HANG 0`.
-- **C.** Pausar y guardar ganancias 3 veces desde el menú. No debe aparecer ninguna
-  `ERROR enlace` ni ninguna `BOOT` nueva.
+- **C.** (Síntoma de §1.5.) Con el simulador en pausa, entrar en calibración, cambiar
+  un efecto (activar o desactivar, para que el valor guardado cambie) y guardar.
+  Repetir 10 veces alternando efectos, también en la sección de potenciómetros.
+  - El puente no debe cerrarse y no debe aparecer ninguna `ERROR enlace` ni ninguna
+    `BOOT` nueva.
+  - Puede haber vencimientos aislados sin mensaje.
+  - Esta prueba ya puede hacerse después de la parte 1.
 - **D.** Sesión normal de 30 min o más, en tierra y en vuelo, con el firmware final.
   No debe aparecer ninguna `ERROR enlace` ni ninguna `BOOT reset=WDT`. Si aparecen,
   conservar la consola y `*.anterior.*`.
