@@ -28,38 +28,70 @@
 
 \## Plan para Codex
 
-Sin tareas pendientes para Codex (2026-10-11).
+Tarea: congelamiento de la Pico 2 y recuperación del enlace USB (Claude, 2026-10-11).
+Rama: `mejora/recuperacion-enlace-usb` (ya creada; contiene el diseño). Diseño:
+`LEEME md/DISENO_recuperacion_enlace_usb.md`. Se divide en **2 partes** (una sesión de
+Codex por parte), porque toca puente, firmware con estado y documentación (con .tex).
+
+\### Precondiciones (ambas partes)
+- `git checkout mejora/recuperacion-enlace-usb` y `git status` limpio, salvo `graphify-ino/` sin versionar, que se ignora.
+- Orientarse con `graphify query/explain` antes de abrir código. Leer solo las líneas indicadas.
+- No tocar constantes de seguridad (regla 7). No usar `git add .` ni `git add -A`.
+- Pruebas solo con `powershell -ExecutionPolicy Bypass -File probar.ps1 [...]`. En esta sección copiar únicamente las líneas OK/FALLO.
+
+\### Parte 1 — Puente + pruebas (sin versión)
+- Leer del diseño: §1.4, §3.1, §3.2 y §5 "Escritorio / Parte 1".
+- Código a leer: `SimConnectBridge/main.cpp` (completo, 215 líneas), `tests/simconnect_checks.cpp` (solo los `#include` y `main`) y `tests/simconnect_checks.vcxproj:12`.
+- Alcance:
+  1. Crear `SimConnectBridge/SerialLink.h` tal como §3.1: todo `inline`, sin `Windows.h`.
+  2. Aplicar §3.2, puntos 1 a 11, en `SimConnectBridge/main.cpp`.
+  3. Crear `tests/link_checks.h` con los casos de §5 Parte 1 e incluirlo desde `tests/simconnect_checks.cpp`, con el mismo estilo `CHECK` que los demás.
+- Pruebas: `probar.ps1 -Bridge`. Tiene que dar OK la suite C++ y la compilación del puente.
+- Commit por nombre: `SimConnectBridge/SerialLink.h SimConnectBridge/main.cpp tests/link_checks.h tests/simconnect_checks.cpp HANDOFF.md`.
+  Mensaje: "Puente: reconexion USB automatica, diagnostico de enlace y rotacion de registros".
+- Ejecutar `graphify update .`.
+- **No** ejecutar `nueva-version.ps1` en esta parte.
+- Completar "Última entrega" con lo hecho en la Parte 1, las líneas OK/FALLO y los desvíos.
+
+\### Parte 2 — Firmware + documentación + versión
+- Precondición: la Parte 1 está commiteada y anotada en "Última entrega".
+- Leer del diseño: §1.2, §3.3, §3.4, §4, §5 "Parte 2" y §6.
+- Código a leer: `MiYoke_PD.ino` (completo, 255 líneas), `mis_defines.h` alrededor de `CONTROL_LOOP_MS` (línea ~164) y `LoopSupervisor.h`/`UsbGuard.h` (nuevos).
+- Verificaciones previas, con grep sobre `%LOCALAPPDATA%\Arduino15\packages\rp2040\hardware\rp2040\6.1.1`:
+  - que ninguna librería defina un `yield()` fuerte para rp2040;
+  - que el core no use `watchdog_hw->scratch[0]`;
+  - el nombre exacto del registro de reinicio de POWMAN en RP2350 (`powman_hw->chip_reset` o equivalente).
+  - Anotar el resultado en "Última entrega". Si algo contradice el diseño, detenerse y anotarlo; no improvisar.
+- Alcance:
+  1. Crear `UsbGuard.h` (§3.3) y `LoopSupervisor.h` (§3.4): parte pura `inline` y hardware bajo `ARDUINO_ARCH_RP2040`.
+  2. Agregar a `mis_defines.h` las constantes de §3.4 con esos valores por defecto: `YOKE_USB_GUARD 1`, `YOKE_TEST_HANG 0`, `YOKE_USB_STRESS 0`.
+  3. En `MiYoke_PD.ino`, aplicar §3.3 (`yield()` propio y `UsbLock` en cada acceso a `Serial`) y §3.4, puntos 1 a 10.
+  4. Crear `tests/health_checks.h` (§5 Parte 2) e incluirlo desde `tests/simconnect_checks.cpp`.
+  5. Documentación: aplicar los reemplazos exactos de §6.1 a §6.6.
+     - Buscar el TEXTO ACTUAL literal y reemplazarlo. No leer capítulos completos ni redactar.
+     - Si un texto actual no aparece exactamente, anotarlo aquí y seguir con el resto.
+  6. Ejecutar `graphify-sync.cmd` (se editó el `.ino`) y `graphify update .`.
+- Pruebas:
+  - `probar.ps1 -Pico -Potentiometers -Encoders` (incluye la suite C++). Tiene que dar todo OK.
+  - `powershell -ExecutionPolicy Bypass -File compilar-tesis.ps1`: anotar su única línea.
+- Commit por nombre: `UsbGuard.h LoopSupervisor.h mis_defines.h MiYoke_PD.ino tests/health_checks.h tests/simconnect_checks.cpp "LEEME md/LEEME-LANZADOR.md" "LEEME md/LEEME_SIMCONNECT.md" "LEEME md/EFECTOS_SIMCONNECT.md" "LEEME md/MODELO_TURBULENCIA.md" "LEEME md/CALCULO_PICO_SC8.md" tesis/capitulos/01_arquitectura_sc8.tex HANDOFF.md`.
+  Mensaje: "Pico: mutex USB contra interbloqueo, watchdog por hardware y diagnostico de reinicio".
+- Versión:
+  - Comando: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Recuperacion del enlace USB: mutex USB en Pico, watchdog por hardware y reconexion del puente"`.
+  - Verificar que imprima "Version Vx.y creada" y que exista `..\MiYoke_PD_VERSIONES\Vx_y\ACTUALIZACION_Vx_y.txt`.
+- Completar "Última entrega" con:
+  - lo hecho en la Parte 2;
+  - las líneas OK/FALLO;
+  - la línea de `compilar-tesis.ps1`;
+  - las verificaciones previas;
+  - la versión creada;
+  - los desvíos.
+- Luego: revisión de Claude y pruebas A a E del usuario (§5 Hardware). No integrar a `master`.
 
 \## Última entrega
 
-\- Agente: Codex (2026-10-11) — implementación completada del umbral de inicio del buffet de tren y de spoiler. Rama `mejora/realismo-efectos`.
-
-\- Commit de código, pruebas y documentación: `4b9f5f6` — "Buffet tren y spoiler: umbral de inicio 100/80 kt con crecimiento por presion dinamica".
-  - Código: `BuffetModel.h`.
-  - Pruebas: `tests/simconnect_checks.cpp` y `tests/raw_checks.h`.
-  - Documentación actualizada: `tesis/explicacion_efectos_proyecto_ffb_yoke.tex` y su copia `tesis/main.tex`; identidad verificada por hash.
-
-\- Validación: suite Release Win32, **140913 comprobaciones, 0 fallas**. `Build-Pico2.ps1` terminó con código 0, sin advertencias; flash 101708/4186112 bytes (2 %), RAM 22528/524288 bytes (4 %), RAM libre 501760 bytes. `git diff --check` correcto. Revisión de Embedded Firmware Engineer sin hallazgos; no se midió en hardware el lazo de 2 ms.
-
-\- Grafo: `graphify update .` completado con código 0, 824 nodos y 1014 aristas.
-
-\- LaTeX: `pdflatex` no disponible en PATH ni ubicaciones usuales; no se realizaron las dos pasadas solicitadas con esa herramienta. El compilador integrado `mcp__codex_app__compile_latex_document` devolvió `success` en dos llamadas sobre el texto final, sin diagnósticos retornados. No se dispone de log detallado para confirmar ausencia de referencias indefinidas.
-
-\- Versión creada: **V1.5**, mediante `nueva-version.ps1`; salida "Version V1.5 creada" y existencia verificada de `..\MiYoke_PD_VERSIONES\V1_5\ACTUALIZACION_V1_5.txt`.
-
-\- Desvíos: un único commit de código, pruebas y documentación por la regla superior DOCUMENTACION RELACIONADA, en lugar de los dos commits del plan. Compilación integrada como alternativa a `pdflatex`.
-
-\- Sigue: revisión de Claude y validación del usuario en hardware. No integrado a `master`.
+\- Pendiente (Parte 1 de la tarea de recuperación del enlace USB).
 
 \## Revisión
 
-\- Revisor: Claude (2026-10-11), con el Code Reviewer para código y pruebas. **APROBADO.**
-  - **Código:** solo `BuffetModel.h`. `quadraticOnset` y las llamadas 100/150 (tren) y 80/140 (spoiler) son idénticas al diseño (§3.1). No queda ninguna referencia a `quadratic`.
-  - **Pruebas:** solo los casos de §3.2, con valores esperados correctos. Suite recompilada por el revisor en un directorio temporal: PASS, 140 913 comprobaciones (140 908 + 5), 0 fallas.
-  - **Tesis:** ley, tablas de picos (tren y spoiler) y ejemplos verificados numéricamente. Las notas describen el cambio. `main.tex` es idéntico a la fuente.
-    - Observación: no hay `pdflatex` en esta PC. Codex compiló con su herramienta integrada ("success"); no fue verificable por el revisor.
-  - **Versión V1.5:** tag en `4b9f5f6`, `ACTUALIZACION_V1_5.txt` con el mensaje pedido.
-  - **Desvío aceptado:** un único commit de código y documentación en lugar de dos. Es coherente con la regla DOCUMENTACION RELACIONADA.
-  - **Pendiente:** validación del usuario en hardware (buffet de tren nulo hasta 100 kt). Después, integración a master por pedido del usuario.
-
-\- Integración (2026-10-11): el usuario validó V1.4 y V1.5 en hardware. `mejora/realismo-efectos` se integró a `master` por avance rápido (fast-forward). No se subió a GitHub.
+\- Pendiente.
