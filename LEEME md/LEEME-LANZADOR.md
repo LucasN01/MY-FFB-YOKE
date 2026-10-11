@@ -48,9 +48,12 @@ Se conservan las exclusiones previas del usuario: si un COM antiguo del yoke pas
 ahora a un Arduino, revisar esa entrada antigua en la lista de puertos ignorados
  de MobiFlight y retirarla si corresponde.
 
-La deteccion se realiza en cada inicio; no se agrego reconexion automatica durante
-una sesion activa del puente. Si se desenchufa la Pico durante el uso, terminar
-la sesion del puente y volver a iniciar con la placa conectada.
+La deteccion se realiza en cada inicio. Durante una sesion activa, si se pierde el
+enlace USB con la Pico (desconexion, reinicio por watchdog o escritura vencida), el
+puente no termina: registra el error con hora y codigo de Windows, reintenta abrir
+el mismo COM cada 500 ms y, al recuperarlo, envia tramas desarmadas durante 500 ms
+antes de volver a armar. Si se cierra el puente con el enlace sin recuperar, termina
+con codigo 4.
 En BOOTSEL la placa no expone el puerto serie del firmware: terminar la carga y
 conectarla normalmente. Un firmware con otro VID/PID requerira actualizar el filtro
 USB; este filtro coincide con la placa y compilacion comprobadas.

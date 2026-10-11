@@ -94,24 +94,32 @@ Codex por parte), porque toca puente, firmware con estado y documentación (con 
 
 \## Última entrega
 
-- Parte 1 completada (2026-10-11) en `mejora/recuperacion-enlace-usb`.
-- Archivos modificados: `SimConnectBridge/SerialLink.h` (nuevo, codigo inline literal de §3.1), `SimConnectBridge/main.cpp` (puntos 1 a 11 de §3.2), `tests/link_checks.h` (nuevo, casos de §5 Parte 1), `tests/simconnect_checks.cpp` (inclusion y ejecucion de linkChecks), `HANDOFF.md`.
-- Implementado: clasificacion y tolerancia de vencimientos de escritura, reconexion automatica al mismo COM, armado diferido, diagnostico del enlace y lineas BOOT con hora, cierre del puerto en fallos de apertura, cierre de registros en fallo de identificacion, rotacion condicionada a pico.log no vacio y salida 4 si el enlace sigue perdido.
-- Documentacion actualizada: esta entrega en `HANDOFF.md`. Los reemplazos de documentos de usuario y tesis corresponden a la Parte 2 (§6); no se editaron .tex.
-- Pruebas: `powershell -ExecutionPolicy Bypass -File probar.ps1 -Bridge`:
+- Parte 2 implementada (2026-10-11) en `mejora/recuperacion-enlace-usb`; Parte 1 aprobada por Claude en `e5a7c65` (implementacion `da4bd21`).
+- Archivos de codigo: `UsbGuard.h`, `LoopSupervisor.h`, `mis_defines.h`, `MiYoke_PD.ino`, `SimConnectBridge/main.cpp`, `tests/health_checks.h`, `tests/simconnect_checks.cpp`.
+- Implementado: mutex USB y yield propio; motores al principio de setup; watchdog de 250 ms (3000 ms al guardar flash) y alimentacion antes del retorno de 2 ms; etapas persistentes, HardFault, BOOT y maximos lp/gap; ensayos de cuelgue y estres desactivados por defecto. Ajustes del puente de la revision: formatos unsigned y mensaje de fin con quit activo.
+- Documentacion actualizada mediante los ocho reemplazos exactos de §6: `LEEME md/LEEME-LANZADOR.md`, `LEEME md/LEEME_SIMCONNECT.md`, `LEEME md/EFECTOS_SIMCONNECT.md`, `LEEME md/MODELO_TURBULENCIA.md`, `LEEME md/CALCULO_PICO_SC8.md` y `tesis/capitulos/01_arquitectura_sc8.tex` (tres fragmentos). Ningun texto faltante.
+- Verificaciones previas sobre Arduino-Pico 6.1.1 [Codigo]: `cores/rp2040/delay.cpp:30` declara yield debil; no hay otro yield fuerte en las bibliotecas enlazadas para RP2040. Las definiciones STM32/ESP32/CH32, ejemplos y tests de host no se enlazan; el yield de `cores/rp2040/freertos/freertos-main.cpp:111` esta bajo `__FREERTOS` (:21), desactivado en la configuracion de `Build-Pico2.ps1:13`. No hay uso de `watchdog_hw->scratch[0]` en core/SDK; `hardware_watchdog/watchdog.c:84,102-108` usa scratch[4..7]. `pico-sdk/src/rp2350/hardware_structs/include/hardware/structs/powman.h:113` confirma `powman_hw->chip_reset`. `RP2040Support.h:596,582,589` confirma el orden de resetReason_t y wdt_begin/wdt_reset.
+- Pruebas: `powershell -ExecutionPolicy Bypass -File probar.ps1 -Pico -Potentiometers -Encoders -Bridge`:
 
 ```text
-OK suite simconnect_checks - PASS: 141002 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+OK suite simconnect_checks - PASS: 141059 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
 OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
+OK Pico 2 (configurado) - Sketch uses 103148 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22556 bytes (4%) of dynamic memory, leaving 501732 bytes for local variables. Maximum is 524288 bytes.
+OK Pico 2 (encoders) - Sketch uses 103308 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22792 bytes (4%) of dynamic memory, leaving 501496 bytes for local variables. Maximum is 524288 bytes.
+OK Pico 2 (potenciometros) - Sketch uses 103148 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22556 bytes (4%) of dynamic memory, leaving 501732 bytes for local variables. Maximum is 524288 bytes.
 OK puente SimConnect
 ```
+- Tesis:
 
-- `git diff --check`: sin errores. `graphify update .`: ejecutado, grafo actualizado (887 nodos, 1111 aristas). graphify-ino/ sigue sin versionar.
-- Commit de esta entrega, por los cinco archivos nombrados en el plan: `Puente: reconexion USB automatica, diagnostico de enlace y rotacion de registros`.
-- Version: no creada en esta parte, segun la instruccion expresa del plan; nueva-version.ps1 corresponde a la Parte 2 final.
-- Desvios: ninguno de alcance. Se agrego hora al mensaje de reintento para cumplir §3.2 punto 2; se mantiene el periodo de 5 s indicado.
-- Sigue: Parte 2 (firmware, pruebas de supervision, reemplazos exactos de documentacion y tesis, compilaciones y version). Despues, revision de Claude y pruebas A a E del usuario; no integrar a master.
+```text
+OK chequeo estatico (11 archivos, 44 labels). No hay LaTeX instalado: la compilacion real se hace en Overleaf.
+```
 
+- `graphify-sync.cmd` y `graphify update .`: ejecutados; grafo actualizado (918 nodos, 1160 aristas). `git diff --check`: sin errores.
+- Commit de codigo y documentacion, por los archivos nombrados en el plan: `Pico: mutex USB contra interbloqueo, watchdog por hardware y diagnostico de reinicio`.
+- Version: pendiente de ejecutar nueva-version.ps1 despues del commit.
+- Desvios: ninguno de alcance; la tesis solo tiene chequeo estatico porque no hay compilador LaTeX instalado, segun compilar-tesis.ps1.
+- Sigue: revision de Claude y pruebas A a E del usuario (§5 Hardware), incluida la verificacion de EN y los pull-down externos requeridos por el diseno. No integrar a master.
 \## Revisión
 
 \- Revisor: Claude (2026-10-11), con Code Reviewer. **Parte 1 (`da4bd21`): APROBADA.**

@@ -162,6 +162,13 @@ static_assert(MOTOR_PWM_HARD_LIMIT >= 0 && MOTOR_PWM_HARD_LIMIT <= 220, "Techo P
 
 // Tiempo de ciclo de control, en milisegundos.
 #define CONTROL_LOOP_MS  2   // 2ms = 500Hz, igual orden que el proyecto original
+#define YOKE_WDT_MS        250   // reinicio por hardware si loop() no corre en 250 ms
+#define YOKE_WDT_FLASH_MS  3000  // durante EEPROM.commit (borrado de sector, max ~400 ms)
+#define YOKE_USB_GUARD     1     // serializar CDC con __usb_mutex (correccion H5)
+#define YOKE_TEST_HANG     0     // SOLO ENSAYO: 0=no, 1=for(;;), 2=noInterrupts+for(;;), 3=__builtin_trap
+#define YOKE_TEST_HANG_MS  60000 // instante del ensayo de cuelgue
+#define YOKE_USB_STRESS    0     // SOLO ENSAYO: 1 = escribir linea corta en cada ciclo de 2 ms
+static_assert(YOKE_WDT_MS >= 50*CONTROL_LOOP_MS, "WDT demasiado corto para el lazo");
 
 // Velocidad: filtro de primer orden, con el dt real medido en microsegundos.
 // 0.018 segundos equivale a alpha=0.90 cuando dt=0.002 segundos.

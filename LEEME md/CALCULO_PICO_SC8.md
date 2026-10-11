@@ -24,10 +24,10 @@ El CSV anterior tenía 4518 intervalos de tiempo cero entre 5669 pares consecuti
 En `SimConnectBridge/bin/Win32/RealismoSC8`:
 
 - `telemetry.csv`: 34 columnas de entradas crudas, tiempos, configuración y estados. `sent=1` significa escritura USB completada; las filas de recepción tienen `sent=0,armed=0` y no representan una orden de desarme. Las antiguas columnas de fuerzas desaparecen porque ya no se calculan en la PC.
-- `pico.log`: diagnóstico recibido de la Pico. `SC8 t=... gr=... gp=... R=... P=... us=...` muestra marca, señales de suelo por 10000 antes de ganancias, PWM total aplicado y máximo tiempo observado de `Effects::update` en microsegundos. No incluye el resto del bucle. Se registra aproximadamente cada 100 ms y puede omitir picos.
-- `bridge.log`: conexión y errores.
+- `pico.log`: diagnóstico recibido de la Pico. `SC8 t=... gr=... gp=... R=... P=... us=... lp=... gap=...` muestra marca, señales de suelo por 10000 antes de ganancias, PWM total aplicado, máximo tiempo observado de `Effects::update` (`us`), máxima duración del cuerpo de `loop()` (`lp`) y máximo intervalo entre ejecuciones del lazo (`gap`), en microsegundos desde el arranque. Se registra aproximadamente cada 100 ms y puede omitir picos. Una vez por arranque la Pico envía `BOOT reset=... wd=0x... pm=0x...`; tras un reinicio por watchdog agrega `etapa=n:NOMBRE` (última etapa del lazo) y `falla=1` si hubo HardFault.
+- `bridge.log`: conexión, errores del enlace USB con hora local y código de Windows, reconexiones y las líneas `Pico: BOOT ...`.
 
-Los registros se reemplazan al iniciar el ejecutable: guardar los de cada prueba antes de otra ejecución. El CSV original usado como regresión quedó preservado en `backups/antes-sc8/` junto al firmware y fuentes anteriores.
+Los registros se reemplazan al iniciar el ejecutable. Si el `pico.log` anterior no estaba vacío, la generación previa se conserva como `bridge.anterior.log`, `telemetry.anterior.csv` y `pico.anterior.log`. El CSV original usado como regresión quedó preservado en `backups/antes-sc8/` junto al firmware y fuentes anteriores.
 
 ## Comprobaciones realizadas
 

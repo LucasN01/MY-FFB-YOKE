@@ -53,10 +53,12 @@ static void feed4(YokeSC::Receiver& rx, const uint8_t* f, uint32_t time) {
 #include "raw_checks.h"
 #include "realism_checks.h"
 #include "link_checks.h"
+#include "health_checks.h"
 int legacyEffectsChecks();
 int simPositionFrictionChecks();
 int main(int argc,char** argv) {
     linkChecks();
+    healthChecks();
     rawChecks(); if(argc>1) replayRaw(argv[1]);
     groundChecks();
     realismChecks(); checks+=legacyEffectsChecks()+simPositionFrictionChecks();

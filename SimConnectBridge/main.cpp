@@ -35,7 +35,7 @@ YokeLink::BootLineScanner bootScanner;
 std::string com;
 void Stamp(char out[16]) {
     SYSTEMTIME t; GetLocalTime(&t);
-    sprintf_s(out,16,"%02u:%02u:%02u",t.wHour,t.wMinute,t.wSecond);
+    sprintf_s(out,16,"%02u:%02u:%02u",unsigned(t.wHour),unsigned(t.wMinute),unsigned(t.wSecond));
 }
 void ClosePort() {
     if(port!=INVALID_HANDLE_VALUE) { CloseHandle(port); port=INVALID_HANDLE_VALUE; }
@@ -44,8 +44,10 @@ void LinkLost(const char* motivo, unsigned long codigo, unsigned long escritos) 
     DWORD errores=0; COMSTAT estado{};
     if(port!=INVALID_HANDLE_VALUE) ClearCommError(port,&errores,&estado);
     char t[16]; Stamp(t);
-    Log("[%s] ERROR enlace USB con la Pico: %s (codigo Windows %lu, bytes %lu/%u, cola salida %lu, errores 0x%lX). Sin tramas validas el firmware desarma por watchdog. Reconectando %s...\n",
-        t,motivo,codigo,escritos,unsigned(YokeRaw::packetSize),estado.cbOutQue,errores,com.c_str());
+    Log("[%s] ERROR enlace USB con la Pico: %s (codigo Windows %lu, bytes %lu/%u, cola salida %lu, errores 0x%lX). Sin tramas validas el firmware desarma por watchdog. ",
+        t,motivo,codigo,escritos,unsigned(YokeRaw::packetSize),estado.cbOutQue,errores);
+    if(!quit) Log("Reconectando %s...\n",com.c_str());
+    else Log("Fin del puente.\n");
     ClosePort(); reconnect.onLost(GetTickCount64());
 }
 BOOL WINAPI Stop(DWORD) { quit=true; return TRUE; }

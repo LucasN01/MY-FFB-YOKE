@@ -202,7 +202,7 @@ Sustituir COM7 por el puerto real. Para observar el modelo sin abrir el COM:
 ```
 
 El CSV contiene las tres componentes de viento en knots, las dos salidas,
-presión, estado y parámetros. Se reemplaza en cada ejecución. En monitor puede
+presión, estado y parámetros. Se reemplaza en cada ejecución (la generación previa queda como `telemetry.anterior.csv`). En monitor puede
 mostrar fuerzas calculadas con `armed=0`; no significa que se hayan aplicado.
 
 Prueba comparativa propuesta: mismo avión, misma velocidad, viento sostenido,

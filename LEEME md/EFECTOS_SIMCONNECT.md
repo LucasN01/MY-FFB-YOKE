@@ -81,7 +81,7 @@ Monitor sin abrir COM ni enviar fuerzas:
 `telemetry.csv` registra las amplitudes `stall_amp`, `gear_amp`, `spoiler_amp`
 y los datos nuevos usados para calcularlas. Son amplitudes calculadas, no
 mediciones del PWM ni confirmación de banderas activas en Arduino. El CSV y
-`bridge.log` se reemplazan en cada ejecución.
+`bridge.log` se reemplazan en cada ejecución; la generación previa se conserva como `*.anterior.*` si su `pico.log` no estaba vacío.
 
 La carpeta raíz se llama `MiYoke_PD_V2.0` pero el `.ino` se llama
 `MiYoke_PD_V1.9.ino`. Arduino exige coincidencia entre carpeta y sketch. Las
