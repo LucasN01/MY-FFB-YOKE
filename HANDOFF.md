@@ -46,17 +46,7 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 
 \## Plan para Codex
 
-Tarea: umbral de inicio para el buffet de tren (100 kt) y de spoiler (80 kt). Rama `mejora/realismo-efectos`. Diseño: `LEEME md/DISENO_umbral_buffet_tren_spoiler.md`. Tarea simple, **sin partes**. Modelo recomendado: el de código, con esfuerzo medium.
-
-1. Al empezar: `git status` y `git log -3`. El árbol debe estar limpio (salvo `graphify-ino/`).
-2. Leé el diseño completo (es corto). Código: solo `BuffetModel.h` (§3.1). Pruebas: §3.2. Si otro caso falla, detenete y registralo aquí.
-3. Suite `tests/simconnect_checks.vcxproj` (Release Win32) con 0 fallas; informá el total de comprobaciones. Compilá `Build-Pico2.ps1` sin advertencias nuevas.
-4. Commit 1 por nombre (`BuffetModel.h` y pruebas): "Buffet tren y spoiler: umbral de inicio 100/80 kt con crecimiento por presion dinamica".
-5. Documentación (§4): solo `tesis/explicacion_efectos_proyecto_ffb_yoke.tex`. No lo leas completo: ubicá cada parte con `grep -n`. Después copialo sobre `tesis/main.tex` y verificá con `diff`. pdflatex, dos pasadas. Commit 2: "Tesis: umbral de inicio de buffet de tren y spoiler".
-6. Versión, con el árbol limpio:
-   `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Buffet de tren y spoiler: umbral de inicio 100 y 80 kt con crecimiento por presion dinamica"`
-   Verificar "Version Vx.y creada" y que exista `..\MiYoke_PD_VERSIONES\Vx_y\ACTUALIZACION_Vx_y.txt`.
-7. "Última entrega": commits, archivos, total de comprobaciones, tamaño de compilación, si el .tex compila, versión creada y desvíos. Commit de HANDOFF.md por nombre.
+Sin tareas pendientes para Codex (2026-10-11). Sigue la validación del usuario en hardware de V1.5.
 
 \## Última entrega
 
@@ -81,4 +71,11 @@ Tarea: umbral de inicio para el buffet de tren (100 kt) y de spoiler (80 kt). Ra
 
 \## Revisión
 
-\- (pendiente)
+\- Revisor: Claude (2026-10-11), con el Code Reviewer para código y pruebas. **APROBADO.**
+  - **Código:** solo `BuffetModel.h`. `quadraticOnset` y las llamadas 100/150 (tren) y 80/140 (spoiler) son idénticas al diseño (§3.1). No queda ninguna referencia a `quadratic`.
+  - **Pruebas:** solo los casos de §3.2, con valores esperados correctos. Suite recompilada por el revisor en un directorio temporal: PASS, 140 913 comprobaciones (140 908 + 5), 0 fallas.
+  - **Tesis:** ley, tablas de picos (tren y spoiler) y ejemplos verificados numéricamente. Las notas describen el cambio. `main.tex` es idéntico a la fuente.
+    - Observación: no hay `pdflatex` en esta PC. Codex compiló con su herramienta integrada ("success"); no fue verificable por el revisor.
+  - **Versión V1.5:** tag en `4b9f5f6`, `ACTUALIZACION_V1_5.txt` con el mensaje pedido.
+  - **Desvío aceptado:** un único commit de código y documentación en lugar de dos. Es coherente con la regla DOCUMENTACION RELACIONADA.
+  - **Pendiente:** validación del usuario en hardware (buffet de tren nulo hasta 100 kt). Después, integración a master por pedido del usuario.
