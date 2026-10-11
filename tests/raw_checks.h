@@ -100,7 +100,7 @@ static void rawChecks() {
         air.update(s);
         const auto w=referenceWind.update(s.value[YokeRaw::WindX],0,0,.02,2.0,1,.25,true,.25);
         CHECK(near(air.gust[0],float(w.roll)) && near(air.gust[1],float(w.pitch)));
-        CHECK(air.pressure==4 && near(air.buffet[1],25.0f/36) && near(air.buffet[2],.5f*125*125/(140*140)));
+        CHECK(air.pressure==4 && near(air.buffet[1],.45f) && near(air.buffet[2],.5f*9225.0f/13200));
         CHECK(air.buffet[0]>0 && air.ground[0]==0 && air.ground[1]==0);
     }
     s.timeMs+=20; s.options=0; air.update(s);

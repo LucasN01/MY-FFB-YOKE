@@ -17,10 +17,11 @@ inline double ramp(double v, double low, double high) {
     const double x=(v-low)/(high-low);
     return x<0 ? 0 : (x>1 ? 1 : x);
 }
-// Separated-flow/wake load ~ q*S*Cp' ~ IAS^2 (IAS ~ EAS at low altitude); full at `full` kt.
-inline double quadratic(double v, double full) {
-    const double x=v/full;
-    return v<=0 ? 0 : (x>=1 ? 1 : x*x);
+// Separated-flow/wake load ~ q*S*Cp' ~ IAS^2 (IAS ~ EAS at low altitude). Above a
+// perceptual onset it grows with the excess dynamic pressure: 0 at `onset`, 1 at `full` kt.
+inline double quadraticOnset(double v, double onset, double full) {
+    const double x=(v*v-onset*onset)/(full*full-onset*onset);
+    return v<=onset ? 0 : (x>=1 ? 1 : x);
 }
 inline Output calculate(const Input& t, bool airborne) {
     Output result;
@@ -41,11 +42,12 @@ inline Output calculate(const Input& t, bool airborne) {
                                (airflow>1.5 ? 1.5 : airflow);
         result.stall=amplitude>1 ? 1 : amplitude;
     }
-    // Full-intensity IAS 150/140 kt: yoke calibration, not aircraft Vle; physics fixes the quadratic shape.
+    // Onset/full IAS: tren 100/150 kt (user-validated perceptual onset), spoiler 80/140 kt
+    // (TelemFFB thresholds). Not aircraft Vle; physics fixes the q-proportional growth.
     if (t.retractable==1 && range(t.gear,0,1))
-        result.gear=t.gear*quadratic(t.ias,150);
+        result.gear=t.gear*quadraticOnset(t.ias,100,150);
     if (range(t.spoilerLeft,0,1) && range(t.spoilerRight,0,1))
-        result.spoiler=(t.spoilerLeft+t.spoilerRight)*0.5*quadratic(t.ias,140);
+        result.spoiler=(t.spoilerLeft+t.spoilerRight)*0.5*quadraticOnset(t.ias,80,140);
     return result;
 }
 }

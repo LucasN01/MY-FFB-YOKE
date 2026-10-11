@@ -502,11 +502,17 @@ int main(int argc,char** argv) {
         renderer.update(signal,414,true,effect);
         CHECK(renderer.command(signal,1,1,effect)==0); // Desarmado por pausa/suelo/slew
     }
-    // Gear load scales with IAS squared, reaching full intensity at 150 kt.
+    // Gear load grows with excess IAS^2 above 100 kt, full at 150 kt.
     input.retractable=1; input.gear=1;
-    input.ias=100; CHECK(near(float(YokeBuffet::calculate(input,true).gear),4.0f/9));
-    input.ias=125; CHECK(near(float(YokeBuffet::calculate(input,true).gear),25.0f/36));
+    input.ias=100; CHECK(YokeBuffet::calculate(input,true).gear==0);
+    input.ias=110; CHECK(near(float(YokeBuffet::calculate(input,true).gear),.168f));
+    input.ias=125; CHECK(near(float(YokeBuffet::calculate(input,true).gear),.45f));
     input.ias=150; CHECK(YokeBuffet::calculate(input,true).gear==1);
+    input.spoilerLeft=input.spoilerRight=1;
+    input.ias=60; CHECK(YokeBuffet::calculate(input,true).spoiler==0);
+    input.ias=80; CHECK(YokeBuffet::calculate(input,true).spoiler==0);
+    input.ias=110; CHECK(near(float(YokeBuffet::calculate(input,true).spoiler),5700.0f/13200));
+    input.ias=140; CHECK(YokeBuffet::calculate(input,true).spoiler==1);
 
     // Sustained gear-only packets through the real receiver and oscillator.
     // Check both 500 Hz motor commands and the 100 ms LCD sampling cadence.

@@ -76,7 +76,8 @@ El análisis de fundamento teórico del 10 de octubre de 2026 motivó esta actua
 \toprule Cambio&Antes&Ahora&Fundamento&Referencia\\\midrule\endhead
 Turbulencia&$\min(Q,1)$; $\tau_H=1$ s&$S_V=\sqrt Q\le2$; $\tau_H=\sat_{[0.25,1.5]}(29.5/V_e)$&$q\Delta\alpha\propto Vw$ y decaimiento por plunge&Pratt--Walker; Hoblit\\
 Pérdida&$\alpha_0=\alpha_s(0.5+0.2f)$&$\alpha_0=\alpha_s[V_s/(V_s+\Delta)]^2$&Margen máximo de aviso como hipótesis de buffet&14 CFR 23.207 antigua\\
-Tren/spoiler&$d\sat[(V-100)/50]$; $\bar s\sat[(V-80)/60]$&$d\min[(V/150)^2,1]$; $\bar s\min[(V/140)^2,1]$&Carga de flujo separado $qSC_p'$&Mabey\\
+% [V-realismo]
+Tren/spoiler&$d\sat[(V-100)/50]$; $\bar s\sat[(V-80)/60]$&$d\sat[(V^2-100^2)/(150^2-100^2)]$; $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$&Carga $qSC_p'$ sobre un umbral de percepción&Mabey; TelemFFB (spoiler)\\
 Portadora buffet&Triangular, RMS $1/\sqrt3$&AR(2), $\zeta=0.15$, RMS 0.45; recorte $\pm1$&Respuesta irregular de banda estrecha&Mabey; Newland; Box et al.\\
 Centrado&$k=r+(1-r)Q$&$k=r+0.85Q$&Rigidez mecánica más aerodinámica&Etkin--Reid; Nelson\\
 Damper&$Bm$&$Bs_Bm$; $s_B=\sat_{[0.5,2]}\sqrt{k_f/(r+0.85)}$&$\zeta$ constante con inercia fija&Ogata\\
@@ -138,7 +139,7 @@ Es blanco y proporcional a $V$; un resonador fijo responde con RMS $\propto\sqrt
 
 \subsubsection{Tren y spoiler}
 % [V-realismo]
-La excitación por flujo separado escala como $qSC_p'$, aproximadamente IAS$^2$ si IAS$\approx$EAS. Las intensidades plenas 150/140 kt son calibración del yugo, no Vle ni límites de spoiler.
+La excitación por flujo separado escala como $qSC_p'$, aproximadamente IAS$^2$ si IAS$\approx$EAS. Sobre el inicio se aplica $R(V)=\sat[(V^2-V_{\rm on}^2)/(V_{\rm full}^2-V_{\rm on}^2)]$: crece con la presión dinámica excedente $q-q_{\rm on}$. El inicio es un umbral de percepción: tren 100 kt, validado por el usuario en hardware (2026-10-11); spoiler 80 kt, tomado de TelemFFB. Las intensidades plenas 150/140 kt son calibración del yugo, no Vle ni límites de spoiler. De TelemFFB se toman sólo los umbrales de spoiler 80/140 kt; su interpolación es lineal (\code{utils.scale}), mientras que la forma cuadrática de MiYoke se funda en $qSC_p'$ (Mabey).
 
 
 
@@ -187,7 +188,8 @@ Con ganancias de fábrica, en tierra el resorte pitch antes de $G$ es $0.8\times
 \item Adherencia: soltar en tierra y vuelo; con $F_c=0.01$ la zona de tierra baja a 8.3\%. Si molesta, bajar Friccion o usar modelo 0.
 \item Con Damper cero, no debe aparecer vibración ni ciclo límite. Si aparece, probar preslide 0.03--0.04; ante rebote, 0.015.
 \item Buffet con $\zeta=0.15$, RMS 0.45 debe sentirse irregular. Ajustar ganancia si queda débil por los $-2.2$ dB.
-\item Tren abajo a 80 kt: 28.4\% de intensidad plena; validar sensación frente al anterior umbral 100 kt. Intensidades 150/140 kt son calibración.
+% [V-realismo]
+\item Tren y spoiler sin efecto por debajo de 100/80 kt; umbral validado por el usuario en hardware (2026-10-11).
 \item Comparar textura a 5/10/20 kt; a 10 kt amplitud aproximadamente doble. Baches P3D conservan rampa lineal.
 \item Frecuencias 13/10/15 y 7/11.3 Hz son resonancias supuestas, por validar.
 \item Comparar retorno en tierra y 120 kt; no debe rebotar en vuelo ni quedar suelto en tierra; escala mínima del damper 0.5.
@@ -1498,12 +1500,12 @@ Quedan como mejoras futuras una fuente válida de compresión por rueda, un efec
 
 \subsection{Qué hace este efecto}
 % [V-realismo]
-Genera una vibración irregular de banda estrecha de roll y pitch cuando el avión está en vuelo, tiene tren retráctil y su tren izquierdo está al menos parcialmente desplegado. La intensidad crece con la extensión y con la velocidad indicada, proporcional al cuadrado de IAS hasta intensidad plena en 150 kt, sin umbral de 100 kt. La frecuencia central es 10 Hz; onda triangular sólo con flag 0.
+Genera una vibración irregular de banda estrecha de roll y pitch cuando el avión está en vuelo, tiene tren retráctil y su tren izquierdo está al menos parcialmente desplegado. La intensidad es nula hasta 100 kt; sobre ese inicio crece con la extensión y con el exceso de $q$ hasta intensidad plena en 150 kt. La frecuencia central es 10 Hz; onda triangular sólo con flag 0.
 
 La idea sencilla es: \emph{``representar una vibración aerodinámica asociada al tren expuesto al flujo de aire''}. El simulador no envía esa vibración instantánea: informa posición de tren y velocidad; la Pico calcula tanto la amplitud como la oscilación.
 
 % [V-realismo]
-\textit{Actualización (realismo): umbral de tren a 100 kt y triangular $\rightarrow$ carga cuadrática sin umbral y banda estrecha de 10 Hz; flujo separado y respuesta irregular (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Qué no está incluido}
 No representa impactos de ruedas, rodaje, ruido del motor de extensión, vibración del actuador ni golpe de enclavado. Tampoco calcula fuerza de arrastre ni torque de bisagra. El buffet puede continuar con el tren inmóvil y extendido: no necesita que el tren esté moviéndose.
@@ -1515,12 +1517,12 @@ La entrada observada es únicamente el tren izquierdo. No se promedian tren dere
 \begin{center}
 \fbox{\begin{minipage}{0.91\linewidth}
 % [V-realismo]
-IAS y extensión de tren $\rightarrow$ verificar vuelo y tren retráctil $\rightarrow$ factor $\min[(IAS/150)^2,1]$ $\times$ extensión $\rightarrow$ envolvente $0\ldots1$ $\rightarrow$ filtro local de 100 ms $\rightarrow$ banda estrecha de 10 Hz $\rightarrow$ ganancia del efecto y ganancia total $\rightarrow$ roll recibe la mitad de pitch $\rightarrow$ límite general $\rightarrow$ PWM.
+IAS y extensión de tren $\rightarrow$ verificar vuelo y tren retráctil $\rightarrow$ factor $\sat[(IAS^2-100^2)/(150^2-100^2)]$ $\times$ extensión $\rightarrow$ envolvente $0\ldots1$ $\rightarrow$ filtro local de 100 ms $\rightarrow$ banda estrecha de 10 Hz $\rightarrow$ ganancia del efecto y ganancia total $\rightarrow$ roll recibe la mitad de pitch $\rightarrow$ límite general $\rightarrow$ PWM.
 \end{minipage}}
 \end{center}
 
 % [V-realismo]
-\textit{Actualización (realismo): rampa lineal de IAS y triangular $\rightarrow$ $\min[(IAS/150)^2,1]$ y AR(2); cadena acorde con carga de flujo separado (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Variables que forman o habilitan el efecto}
 \begin{longtable}{p{0.32\linewidth}p{0.18\linewidth}p{0.42\linewidth}}
@@ -1540,24 +1542,25 @@ No se usa presión dinámica, velocidad sobre suelo, viento, AoA, flaps, posici�
 \subsection{Paso 1: fórmula de amplitud en la Pico}
 \subsubsection{Rampa y multiplicación por despliegue}
 Definimos $\sat_{[0,1]}(x)=\min(1,\max(0,x))$. En \code{BuffetModel.h::calculate}:
+% [V-realismo]
 \begin{align}
-R_g(V)&=\min[(V/150)^2,1],\\
+R_g(V)&=\sat[(V^2-100^2)/(150^2-100^2)],\\
 E_g&=d\,R_g(V).
 \label{eq:gear-env}
 \end{align}
 % [V-realismo]
-$V$ es IAS en kt y $d$ la extensión fraccionaria. No hay umbral de 100 kt: a 80 kt, $R_g=0.284444$; a 125 kt, 0.694444; desde 150 kt, uno. Con media extensión a 125 kt, $E_g=0.347222$.
+$V$ es IAS en kt y $d$ la extensión fraccionaria. Hasta 100 kt, $R_g=0$; a 110 kt, 0.168; a 125 kt, 0.45; a 140 kt, 0.768; desde 150 kt, uno. Con media extensión a 125 kt, $E_g=0.225$.
 
 % [V-realismo]
-\textit{Actualización (realismo): $d\sat[(V-100)/50]$ $\rightarrow$ $d\min[(V/150)^2,1]$; carga de flujo separado proporcional a IAS$^2$ (Mabey); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 % [V-realismo]
 \subsubsection{Procedencia y límites de la calibración}
 % [V-realismo]
-El flujo separado aporta $qSC_p'$, aproximadamente proporcional a IAS$^2$ a baja altura. 150 kt es calibración de intensidad plena; no es Vle/Vlo ni dato certificado del tren. No existe umbral adicional de despliegue del 10\%.
+El flujo separado aporta $qSC_p'$, aproximadamente proporcional a IAS$^2$ a baja altura. El inicio de 100 kt es un umbral de percepción validado por el usuario en hardware (2026-10-11); sobre él la intensidad crece con $q-q_{\rm on}$. 150 kt es calibración de intensidad plena; no es Vle/Vlo ni dato certificado del tren. No existe umbral adicional de despliegue del 10\%.
 
 % [V-realismo]
-\textit{Actualización (realismo): umbral 100 kt y rampa lineal $\rightarrow$ escala IAS$^2$ hasta 150 kt; el flujo separado motiva la ley y la intensidad plena es calibración local (Mabey); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Validación específica}
 El modelo acepta IAS finita entre 0 y 1000 kt. Fuera de ese rango devuelve cero para los tres buffets. Tren requiere $d$ finito en $[0,1]$ y retráctil exactamente igual a 1. Un despliegue 1.2 no se interpreta como totalmente desplegado: deshabilita este objetivo. La ausencia o invalidez de datos de pérdida o spoiler puede anular esos efectos sin anular un tren válido.
@@ -1632,22 +1635,23 @@ PWM positivo deja LEFT en cero y activa RIGHT; negativo hace lo contrario. En Pi
 \subsection{Ejemplos numéricos}
 \subsubsection{Tren extendido a 125 kt}
 % [V-realismo]
-En vuelo, $d=1$: $E_g=(125/150)^2=0.694444$. En régimen, para portadora recortada $T=0.8$ ($T$ representa ahora ruido), $w_g=0.555556$; $u_P=0.080000$, $u_R=0.040000$, PWM 20/10 pitch/roll. Con $T=-0.8$ cambia el signo; media extensión reduce la amplitud a la mitad.
+En vuelo, $d=1$: $E_g=(125^2-100^2)/(150^2-100^2)=0.45$. En régimen, para portadora recortada $T=0.8$ ($T$ representa ahora ruido), $w_g=0.36$; $u_P=0.051840$, $u_R=0.025920$, PWM 13/7 pitch/roll. Con $T=-0.8$ cambia el signo; media extensión reduce la amplitud a la mitad.
 
 % [V-realismo]
-\textit{Actualización (realismo): ejemplo de tren con rampa lineal $\rightarrow$ ejemplo recalculado con $(125/150)^2$ y muestra de ruido; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Tabla de picos ideales a extensión completa}
 % [V-realismo]
 Filtro estabilizado, portadora recortada en $|T|=1$, ganancias de fábrica. Son techos instantáneos, no RMS.
+% [V-realismo]
 \begin{center}\begin{tabular}{rrrr}
 \toprule IAS (kt)&$E_g$&Pico PWM roll&Pico PWM pitch\\\midrule
-80&0.284444&5&10\\
-100&0.444444&8&16\\
-110&0.537778&10&20\\
-120&0.640000&12&24\\
-125&0.694444&13&26\\
-140&0.871111&16&32\\
+80&0.000000&0&0\\
+100&0.000000&0&0\\
+110&0.168000&3&6\\
+120&0.352000&6&13\\
+125&0.450000&8&17\\
+140&0.768000&14&28\\
 150&1.000000&18&37\\
 180&1.000000&18&37\\
 \bottomrule\end{tabular}\end{center}
@@ -1655,7 +1659,7 @@ Filtro estabilizado, portadora recortada en $|T|=1$, ganancias de fábrica. Son 
 La portadora aleatoria puede llegar al recorte unitario. Con flag 0, pasos exactos de 2 ms y fase 250, la triangular de 10 Hz sólo llega a 0.96; a amplitud uno redondea 18/35 roll/pitch.
 
 % [V-realismo]
-\textit{Actualización (realismo): picos de tren con rampa lineal $\rightarrow$ picos recalculados con $\min[(V/150)^2,1]$; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Arranque con objetivo 0.5}
 % [V-realismo]
@@ -1690,12 +1694,13 @@ La pantalla se actualiza cada 100 ms. Sólo con flag 0 coincide con el período 
 En la copia local de \code{MotionEffectsMixIn.py::ac_update_landing_gear}, TelemFFB relaciona despliegue con una rampa de velocidad y usa senoides en dos direcciones, con frecuencia predeterminada 10 Hz. También contempla efectos de movimiento y enclavado y, para X-Plane, umbrales relacionados con Vle. MiYoke conserva la idea de buffet por despliegue/velocidad, pero ahora usa una portadora de banda estrecha y reparto roll/pitch 1:2 (triangular sólo con flag 0).
 
 Los literales 100/150 de la clase de referencia se comparan con velocidad en m/s; no son una demostración de que el original use 100/150 kt. % [V-realismo]
-En la ley anterior de MiYoke se eligieron explícitamente kt; ahora sólo se conserva 150 kt como intensidad plena y el crecimiento es cuadrático sin umbral. Tampoco se copió el corte de despliegue mayor que 0.1 de esa ruta. La restricción local a tren retráctil y la lectura sólo del izquierdo deben evaluarse como decisiones propias, no como reproducción completa de TelemFFB.
+% [V-realismo]
+En MiYoke se eligieron explícitamente kt: el inicio de 100 kt es un umbral de percepción validado por el usuario en hardware (2026-10-11), con intensidad plena en 150 kt y crecimiento cuadrático sobre el inicio. Tampoco se copió el corte de despliegue mayor que 0.1 de esa ruta. La restricción local a tren retráctil y la lectura sólo del izquierdo deben evaluarse como decisiones propias, no como reproducción completa de TelemFFB.
 
 Referencia de localización: \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/base/MotionEffectsMixIn.py}{TelemFFB, MotionEffectsMixIn.py}. La comparación se hizo contra la copia incluida en el proyecto.
 
 % [V-realismo]
-\textit{Actualización (realismo): rampa de tren basada en umbral TelemFFB $\rightarrow$ escala IAS$^2$ sin umbral; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Original alemán y decisiones locales}
 % [V-realismo]
@@ -1709,10 +1714,11 @@ No se identificó en las fuentes del original local una cadena SimConnect que pr
 ``Buffet tren'' admite 0--1 con paso 0.01; inicialmente 0.16. ``Ganancia total'' inicialmente 0.90 escala también otros efectos. El menú no ofrece ganancias separadas de buffet tren por eje: roll es la mitad de pitch en código. Los valores persistidos pueden reemplazar los defaults.
 
 \code{SIMCONNECT_GEAR_BUFFET_HZ} vale actualmente 10, admite enteros de 1 a 20 y requiere recompilar firmware. % [V-realismo]
-La referencia de intensidad plena de 150 kt se edita en \code{BuffetModel.h} y requiere recompilar; ya no existe umbral de 100 kt. Cambiar frecuencia altera el carácter y la respuesta mecánica, no la envolvente de velocidad. Cambiar el centro de potenciómetro no ajusta este efecto.
+% [V-realismo]
+El inicio de 100 kt y la intensidad plena de 150 kt se editan en \code{BuffetModel.h} y requieren recompilar; se debe mantener $150>100$. Cambiar frecuencia altera el carácter y la respuesta mecánica, no la envolvente de velocidad. Cambiar el centro de potenciómetro no ajusta este efecto.
 
 % [V-realismo]
-\textit{Actualización (realismo): ajuste de umbral 100 kt y rampa $\rightarrow$ referencia de intensidad plena 150 kt para IAS$^2$; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Cómo elegir una ganancia}
 En régimen sin saturar, un pico pitch deseado $P$ conduce a $c_g\simeq P/(255GE_g)$ para $E_g>0$. Buscar 10 PWM pitch con $E_g=0.5$ y $G=0.90$ da $c_g\simeq0.08715$, aproximable a 0.09 desde el menú. Es una cota ideal de pico; muestreo y transmisión mecánica pueden reducir la sensación.
@@ -2046,12 +2052,12 @@ El estimador completo está en \code{BuffetModel.h::calculate}. \code{main.cpp} 
 
 \subsection{Qué hace el efecto}
 % [V-realismo]
-Genera una vibración en ambos ejes cuando el avión está en vuelo, los spoilers están desplegados e IAS es positiva. La amplitud aumenta con el promedio de despliegue y el cuadrado de IAS hasta intensidad plena en 140 kt. La placa produce banda estrecha de 15 Hz (triangular con flag 0); pitch recibe el doble de comando que roll.
+Genera una vibración en ambos ejes cuando el avión está en vuelo, los spoilers están desplegados e IAS supera 80 kt. La amplitud aumenta desde 80 kt con el promedio de despliegue y el exceso de presión dinámica hasta intensidad plena en 140 kt. La placa produce banda estrecha de 15 Hz (triangular con flag 0); pitch recibe el doble de comando que roll.
 
 La idea sencilla es: \emph{``cuanto más spoiler expuesto y mayor velocidad dentro de la banda, más vibración''}. Se trata de una señal háptica aproximada, no del cálculo del arrastre, la sustentación perdida o la fuerza real transmitida desde las superficies al yugo.
 
 % [V-realismo]
-\textit{Actualización (realismo): umbral de spoiler a 80 kt y triangular $\rightarrow$ carga cuadrática sin umbral y banda estrecha de 15 Hz; flujo separado y respuesta irregular (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Qué se entiende por spoiler en esta implementación}
 Se leen las posiciones izquierda y derecha publicadas por el simulador. No se lee solamente la palanca de aerofrenos ni la bandera de armado. Si el avión utiliza esas superficies para ayudar al alabeo y lo publica en las variables estándar, ese despliegue puede alimentar el efecto.
@@ -2063,12 +2069,12 @@ No distingue despliegue simétrico de aerofrenado y despliegue asimétrico de as
 \begin{center}
 \fbox{\begin{minipage}{0.91\linewidth}
 % [V-realismo]
-Spoiler izquierdo/derecho e IAS $\rightarrow$ comprobar vuelo y datos $\rightarrow$ promedio de despliegue $\times$ factor $\min[(IAS/140)^2,1]$ $\rightarrow$ envolvente $0\ldots1$ $\rightarrow$ filtro local 100 ms $\rightarrow$ banda estrecha 15 Hz $\rightarrow$ ganancias $\rightarrow$ roll mitad de pitch $\rightarrow$ suma y límite general $\rightarrow$ polaridad y PWM.
+Spoiler izquierdo/derecho e IAS $\rightarrow$ comprobar vuelo y datos $\rightarrow$ promedio de despliegue $\times$ factor $\sat[(IAS^2-80^2)/(140^2-80^2)]$ $\rightarrow$ envolvente $0\ldots1$ $\rightarrow$ filtro local 100 ms $\rightarrow$ banda estrecha 15 Hz $\rightarrow$ ganancias $\rightarrow$ roll mitad de pitch $\rightarrow$ suma y límite general $\rightarrow$ polaridad y PWM.
 \end{minipage}}
 \end{center}
 
 % [V-realismo]
-\textit{Actualización (realismo): rampa lineal y triangular $\rightarrow$ $\min[(IAS/140)^2,1]$ y AR(2); cadena acorde con carga de flujo separado (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Variables de SimConnect}
 \begin{longtable}{p{0.37\linewidth}p{0.18\linewidth}p{0.37\linewidth}}
@@ -2101,23 +2107,24 @@ Por tanto, el roll resultante no es una fuerza dirigida al lado del spoiler. Es 
 \textit{Actualización (realismo): promedio de despliegue excitando triangular $\rightarrow$ el mismo promedio excitando AR(2); respuesta irregular sin dirección por asimetría (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Rampa con velocidad indicada}
+% [V-realismo]
 \begin{align}
-R_{sp}(V)&=\min[(V/140)^2,1],\\
+R_{sp}(V)&=\sat[(V^2-80^2)/(140^2-80^2)],\\
 E_{sp}&=\bar s R_{sp}(V).
 \label{eq:spoiler-env}
 \end{align}
 % [V-realismo]
-No hay umbral de 80 kt: a 80 kt el factor es 0.326531, a 110 kt 0.617347 y desde 140 kt uno. La carga de flujo separado es aproximadamente proporcional a IAS$^2$; 140 kt calibra intensidad plena, sin relación automática con límites del avión. \code{--reference-knots} no ajusta este efecto; 15 Hz es la frecuencia central fija.
+Hasta 80 kt el factor es cero; a 110 kt, 0.431818; desde 140 kt, uno. Los umbrales 80/140 kt coinciden con TelemFFB, que interpola linealmente (\code{utils.scale}); MiYoke usa crecimiento con la presión dinámica excedente, fundado en $qSC_p'$ (Mabey). 140 kt calibra intensidad plena, sin relación automática con límites del avión. \code{--reference-knots} no ajusta este efecto; 15 Hz es la frecuencia central fija.
 
 % [V-realismo]
-\textit{Actualización (realismo): $\bar s\sat[(V-80)/60]$ $\rightarrow$ $\bar s\min[(V/140)^2,1]$; carga de flujo separado proporcional a IAS$^2$ (Mabey); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Umbral de despliegue y continuidad}
 % [V-realismo]
 MiYoke permite despliegue continuo desde cero, sin condición $\bar s>0.1$. Con IAS 140 kt y ambos spoilers 0.05, $E_{sp}=0.05$. La condición de TelemFFB no se copió.
 
 % [V-realismo]
-\textit{Actualización (realismo): factor nulo bajo 80 kt $\rightarrow$ factor cuadrático para IAS positiva, conservando despliegue continuo; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 2: cálculo en el microcontrolador}
 % [V-realismo]
@@ -2187,23 +2194,24 @@ Con PWM positivo se activa RIGHT y LEFT queda en cero; negativo activa LEFT y an
 \subsection{Ejemplos numéricos completos}
 \subsubsection{IAS 110 kt, spoilers a 80\% y 40\%}
 % [V-realismo]
-Vuelo válido, filtro estabilizado y ganancias de fábrica. $\bar s=(0.8+0.4)/2=0.6$, $R_{sp}=(110/140)^2=0.617347$ y $E_{sp}=0.370408$. Con portadora recortada $T=0.8$, $w_{sp}=0.296327$, $u_P=0.042671$, $u_R=0.021336$: PWM 11/5 pitch/roll. Signo opuesto de portadora invierte las salidas. En pico unitario, máximos 14/7. La asimetría de spoilers no impone signo de roll.
+Vuelo válido, filtro estabilizado y ganancias de fábrica. $\bar s=(0.8+0.4)/2=0.6$, $R_{sp}=(110^2-80^2)/(140^2-80^2)=0.431818$ y $E_{sp}=0.259091$. Con portadora recortada $T=0.8$, $w_{sp}=0.207273$, $u_P=0.029847$, $u_R=0.014924$: PWM 8/4 pitch/roll. Signo opuesto de portadora invierte las salidas. En pico unitario, máximos 10/5. La asimetría de spoilers no impone signo de roll.
 
 % [V-realismo]
-\textit{Actualización (realismo): ejemplo de spoiler con rampa lineal $\rightarrow$ ejemplo recalculado con $(110/140)^2$ y muestra de ruido; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Tabla de picos ideales}
 % [V-realismo]
 Régimen estabilizado, portadora recortada en $|T|=1$, ganancias de fábrica.
+% [V-realismo]
 \begin{center}\begin{tabular}{rrrrrr}
 \toprule IAS (kt)&$s_L$&$s_R$&$E_{sp}$&PWM roll&PWM pitch\\\midrule
-80&1&1&0.326531&6&12\\
-95&1&1&0.460459&8&17\\
-110&1&1&0.617347&11&23\\
-125&1&1&0.797194&15&29\\
+80&1&1&0.000000&0&0\\
+95&1&1&0.198864&4&7\\
+110&1&1&0.431818&8&16\\
+125&1&1&0.698864&13&26\\
 140&1&1&1.000000&18&37\\
 180&1&1&1.000000&18&37\\
-110&0.8&0.4&0.370408&7&14\\
+110&0.8&0.4&0.259091&5&10\\
 140&1&0&0.500000&9&18\\
 140&0.05&0.05&0.050000&1&2\\
 \bottomrule\end{tabular}\end{center}
@@ -2211,7 +2219,7 @@ Régimen estabilizado, portadora recortada en $|T|=1$, ganancias de fábrica.
 La saturación de envolvente desde 140 kt no es saturación del driver.
 
 % [V-realismo]
-\textit{Actualización (realismo): tabla de picos con rampa lineal $\rightarrow$ picos recalculados con $\min[(V/140)^2,1]$; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 % [V-realismo]
 \subsubsection{Arranque con objetivo de prueba 0.3 (sólo flag 0)}
@@ -2230,12 +2238,13 @@ La amplitud crece aunque las muestras elegidas a 100 y 300 ms den cero. La fase 
 \subsection{Procedencia y diferencias con TelemFFB}
 \subsubsection{Promedio y umbrales}
 La copia local de \code{MotionEffectsMixIn.py::ac_update_spoilers} promedia una lista de posiciones, pondera por velocidad y utiliza umbrales definidos como $80\,\code{kt2ms}$ y $140\,\code{kt2ms}$. % [V-realismo]
-La ley anterior de MiYoke correspondía a esas referencias en kt; ahora sólo conserva 140 kt como intensidad plena y usa crecimiento cuadrático, sin umbral de 80 kt.
+% [V-realismo]
+MiYoke toma de TelemFFB sólo los umbrales 80/140 kt, incluido el inicio en 80 kt. TelemFFB interpola linealmente entre ellos (\code{utils.scale}); MiYoke usa una forma cuadrática sobre el inicio, fundada en la carga $qSC_p'$ (Mabey).
 
 La velocidad de esa ruta de TelemFFB es IAS si está disponible y TAS como alternativa. MiYoke exige IAS válida. También se omite la condición de despliegue $>0.1$ de la referencia, por decisión local de permitir una entrada continua desde cero.
 
 % [V-realismo]
-\textit{Actualización (realismo): rampa de spoiler basada en umbral TelemFFB $\rightarrow$ escala IAS$^2$ sin umbral de 80 kt; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Generación de la vibración}
 % [V-realismo]
@@ -2275,12 +2284,12 @@ No existe una ganancia de spoiler independiente por eje ni un balance izquierdo/
 
 \subsubsection{Rampa, frecuencia y filtro}
 % [V-realismo]
-La referencia de intensidad plena de 140 kt está en \code{BuffetModel.h}: ajustarla requiere recompilar y mantener una referencia positiva; ya no existe umbral de 80 kt. La frecuencia 15 es el tercer elemento del arreglo en \code{SimEffects.h}; se cambia en firmware. Los 100 ms son compartidos con otras envolventes y rigidez, por lo que modificar el literal no afecta únicamente spoiler.
+El inicio de 80 kt y la intensidad plena de 140 kt están en \code{BuffetModel.h}: ajustarlos requiere recompilar y mantener $140>80$. La frecuencia 15 es el tercer elemento del arreglo en \code{SimEffects.h}; se cambia en firmware. Los 100 ms son compartidos con otras envolventes y rigidez, por lo que modificar el literal no afecta únicamente spoiler.
 
 Si la rampa ya saturó por velocidad, subir IAS no aumenta la señal. Si la suma está saturada por otros efectos, subir ganancia puede no aumentar el pico final. Son dos saturaciones distintas. Antes de cambiar parámetros hay que identificar cuál está actuando.
 
 % [V-realismo]
-\textit{Actualización (realismo): umbral 80 kt y rampa lineal $\rightarrow$ referencia 140 kt de intensidad plena cuadrática; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ejemplo de ajuste de ganancia}
 En régimen y antes de recorte, $P_P\simeq255Gc_{sp}E_{sp}$ es el pico pitch ideal. Despejando, $c_{sp}\simeq P_P/(255GE_{sp})$. Para $E_{sp}=0.3$, $G=0.9$ y pico deseado de 8 cuentas, da aproximadamente 0.11619; el menú permite 0.12 como aproximación.
