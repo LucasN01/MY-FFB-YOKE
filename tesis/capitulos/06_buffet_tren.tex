@@ -1,0 +1,240 @@
+\section{BUFFET POR TREN DE ATERRIZAJE}
+\label{sec:buffet-tren}
+
+\subsection{Qué hace este efecto}
+% [V-realismo]
+Genera una vibración irregular de banda estrecha de roll y pitch cuando el avión está en vuelo, tiene tren retráctil y su tren izquierdo está al menos parcialmente desplegado. La intensidad es nula hasta 100 kt; sobre ese inicio crece con la extensión y con el exceso de $q$ hasta intensidad plena en 150 kt. La frecuencia central es 10 Hz; onda triangular sólo con flag 0.
+
+La idea sencilla es: \emph{``representar una vibración aerodinámica asociada al tren expuesto al flujo de aire''}. El simulador no envía esa vibración instantánea: informa posición de tren y velocidad; la Pico calcula tanto la amplitud como la oscilación.
+
+% [V-realismo]
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Qué no está incluido}
+No representa impactos de ruedas, rodaje, ruido del motor de extensión, vibración del actuador ni golpe de enclavado. Tampoco calcula fuerza de arrastre ni torque de bisagra. El buffet puede continuar con el tren inmóvil y extendido: no necesita que el tren esté moviéndose.
+
+La entrada observada es únicamente el tren izquierdo. No se promedian tren derecho y de nariz, ni se verifica que los tres estén trabados. Un avión de tren fijo queda excluido por la condición \code{IS GEAR RETRACTABLE=1}, aunque en la realidad pueda transmitir vibraciones. Esa exclusión es una decisión del modelo.
+
+\subsection{Recorrido y variables de SimConnect}
+\subsubsection{Cadena de cálculo}
+\begin{center}
+\fbox{\begin{minipage}{0.91\linewidth}
+% [V-realismo]
+IAS y extensión de tren $\rightarrow$ verificar vuelo y tren retráctil $\rightarrow$ factor $\sat[(IAS^2-100^2)/(150^2-100^2)]$ $\times$ extensión $\rightarrow$ envolvente $0\ldots1$ $\rightarrow$ filtro local de 100 ms $\rightarrow$ banda estrecha de 10 Hz $\rightarrow$ ganancia del efecto y ganancia total $\rightarrow$ roll recibe la mitad de pitch $\rightarrow$ límite general $\rightarrow$ PWM.
+\end{minipage}}
+\end{center}
+
+% [V-realismo]
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Variables que forman o habilitan el efecto}
+\begin{longtable}{p{0.32\linewidth}p{0.18\linewidth}p{0.42\linewidth}}
+\toprule Variable & Unidad solicitada & Uso\\\midrule\endhead
+\code{AIRSPEED INDICATED} & knots & Velocidad $V$ de la rampa de intensidad.\\
+\code{GEAR LEFT POSITION} & percent over 100 & Extensión $d$ del tren izquierdo: 0 retraído, 1 extendido.\\
+\code{IS GEAR RETRACTABLE} & Bool & Debe ser exactamente 1.\\
+\code{SIM ON GROUND} & Bool & Debe ser 0: sólo se calcula objetivo en vuelo.\\
+\code{IS SLEW ACTIVE} & Bool & Debe ser 0 para habilitar.\\
+\bottomrule
+\end{longtable}
+Los nombres y unidades se contrastaron con el \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{SDK de Prepar3D}. Se usa posición real publicada del tren, no \code{GEAR HANDLE POSITION}. Los eventos \code{Sim}/\code{Pause}, la frescura y el armado completan la habilitación.
+
+\subsubsection{Variables que no intervienen en la amplitud}
+No se usa presión dinámica, velocidad sobre suelo, viento, AoA, flaps, posición de yugo ni velocidad del mando. \code{--reference-knots} y los argumentos de ráfagas no cambian esta ley. La validación compartida puede desarmar el paquete si otras variables son inválidas; esa dependencia de integridad no significa que sean factores de intensidad.
+
+\subsection{Paso 1: fórmula de amplitud en la Pico}
+\subsubsection{Rampa y multiplicación por despliegue}
+Definimos $\sat_{[0,1]}(x)=\min(1,\max(0,x))$. En \code{BuffetModel.h::calculate}:
+% [V-realismo]
+\begin{align}
+R_g(V)&=\sat[(V^2-100^2)/(150^2-100^2)],\\
+E_g&=d\,R_g(V).
+\label{eq:gear-env}
+\end{align}
+% [V-realismo]
+$V$ es IAS en kt y $d$ la extensión fraccionaria. Hasta 100 kt, $R_g=0$; a 110 kt, 0.168; a 125 kt, 0.45; a 140 kt, 0.768; desde 150 kt, uno. Con media extensión a 125 kt, $E_g=0.225$.
+
+% [V-realismo]
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+% [V-realismo]
+\subsubsection{Procedencia y límites de la calibración}
+% [V-realismo]
+El flujo separado aporta $qSC_p'$, aproximadamente proporcional a IAS$^2$ a baja altura. El inicio de 100 kt es un umbral de percepción validado por el usuario en hardware (2026-10-11); sobre él la intensidad crece con $q-q_{\rm on}$. 150 kt es calibración de intensidad plena; no es Vle/Vlo ni dato certificado del tren. No existe umbral adicional de despliegue del 10\%.
+
+% [V-realismo]
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Validación específica}
+El modelo acepta IAS finita entre 0 y 1000 kt. Fuera de ese rango devuelve cero para los tres buffets. Tren requiere $d$ finito en $[0,1]$ y retráctil exactamente igual a 1. Un despliegue 1.2 no se interpreta como totalmente desplegado: deshabilita este objetivo. La ausencia o invalidez de datos de pérdida o spoiler puede anular esos efectos sin anular un tren válido.
+
+\subsection{Paso 2: obtención local de la envolvente}
+El puente transmite IAS, extensión de tren, condición retráctil y estado de suelo. La Pico calcula $E_g$ en \code{BuffetModel.h}, lo guarda en \code{PicoForceModels::buffet[1]} y lo usa directamente como $E_{g,\rm rx}$. No transmite un entero de amplitud. El objetivo se actualiza por nueva muestra, hasta unos 50 Hz; filtro y portadora avanzan con el ciclo local nominal de 2 ms.
+
+\subsection{Paso 3: filtro y portadora}
+\subsubsection{Suavizado de 100 ms}
+En la placa, con $\Delta t$ en ms:
+\begin{align}
+\beta_n&=\frac{\Delta t_n}{100+\Delta t_n},\\
+A_{g,n}&=A_{g,n-1}+\beta_n(E_{g,\rm rx,n}-A_{g,n-1}).
+\end{align}
+$A_g$ es la amplitud suavizada. Con 2 ms, $\beta=2/102$. Es una discretización del filtro de primer orden $\tau\dot A+A=E$, con $\tau=100$ ms. Desde cero y objetivo constante, alcanza aproximadamente 62.85\% a 100 ms, 94.87\% a 300 ms y 99.29\% a 500 ms.
+
+El número 100 se comparte con otras envolventes y el centrado dentro de \code{Effects::update}. Modificarlo directamente cambia más de un efecto. No es un tiempo físico medido del tren.
+
+% [V-realismo]
+\textit{Actualización (realismo): amplitud objetivo de rampa lineal $\rightarrow$ objetivo cuadrático de IAS con el mismo filtro de 100 ms; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
+
+% [V-realismo]
+\subsubsection{Portadora de banda estrecha y modo triangular}
+% [V-realismo]
+La portadora predeterminada es el resonador AR(2) de la Sección~\ref{sec:realismo}, con frecuencia 10 Hz, $\zeta=0.15$ y RMS 0.45 antes de recortar:
+% [V-realismo]
+\begin{equation}w_{g,n}=A_{g,n}\sat_{[-1,1]}(N_{10,n}).\end{equation}
+% [V-realismo]
+Los coeficientes se precalculan antes de setup; cada update de tiempo positivo ejecuta un paso a período nominal de 2 ms. dt=0 conserva la portadora. La excitación irregular modela flujo separado; frecuencia y amortiguamiento son hipótesis pendientes de ensayo.
+
+% [V-realismo]
+Con \code{SIMCONNECT_BUFFET_NARROWBAND=0} se conserva $T(\phi)=0.004\phi-1$ para $\phi<500$ y $3-0.004\phi$ en el resto; $\phi=(\phi+10\Delta t_{\rm ms})\bmod1000$, inicio 250. Sólo ese modo usa fase triangular periódica. Al reiniciar amplitudes y portadoras se limpian ambos modos.
+
+% [V-realismo]
+\textit{Actualización (realismo): triangular de 10 Hz $\rightarrow$ AR(2) de 10 Hz, $\zeta=0.15$, RMS 0.45 y recorte $\pm1$; respuesta irregular de banda estrecha (Mabey; Newland; Box); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Cola al retirar el tren o tocar tierra}
+Cuando llega $E_g=0$, el filtro mantiene inicialmente parte de $A_g$ y la reduce suavemente. Con ciclo de 2 ms y sin reinicio, $A_{g,n}=A_{g,0}(100/102)^n$. No existe para los buffets la rama de corte instantáneo que sí tiene vibración de suelo.
+
+Al tocar tierra, la Pico pone los tres objetivos de buffet en cero pero puede seguir armado para suelo y centrado. Puede haber una breve coexistencia entre cola de buffet y comienzo de rodaje. En cambio, pausa, desarme, DTR perdido o watchdog vencido deshabilitan efectos y limpian el estado. Es importante distinguir objetivo cero de pérdida de habilitación.
+
+\subsection{Paso 4: comandos de roll y pitch}
+% [V-realismo]
+$T_g=\sat_{[-1,1]}(N_{10})$ es la portadora recortada; sólo con flag 0 se sustituye por $T(\phi_g)$.
+Con $c_g=0.16$ como ganancia ``Buffet tren'' y $G=0.90$ como ganancia total:
+\begin{align}
+u_{P,g}&=G c_g w_g=0.144 A_gT_g,\\
+u_{R,g}&=0.5G c_g w_g=0.072 A_gT_g.
+\end{align}
+Pitch recibe toda la amplitud y roll la mitad, con la misma fase. La relación 1:2 corresponde a comando antes del redondeo, no a fuerza física. No son las ganancias ``Centrado roll/pitch'' ni ``Turbul. roll/pitch'': cada una pertenece a otra ruta.
+
+No se utiliza el desplazamiento del yugo y tampoco la zona muerta de 0.02 de turbulencias. Las señales pequeñas de buffet llegan a la conversión PWM y pueden desaparecer por redondeo. Damper y fricción pueden sumarse al resultado, pero no multiplican la portadora de tren.
+
+% [V-realismo]
+\textit{Actualización (realismo): comando con triangular $\rightarrow$ comando con ruido de banda estrecha y la misma relación 1:2; excitación irregular de buffet (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Paso 5: de comando normalizado a PWM}
+\subsubsection{Conversión completa}
+Con el tren aislado, se aplica
+\begin{align}
+u_{{\rm out},a}&=\sat_{[-220/255,220/255]}(u_{a,g}),\\
+p_a&=\sat_{[-220,220]}\left[\operatorname{round}_{\rm sim}\!\left(255\,
+\sat_{[-1,1]}(s_a u_{{\rm out},a})\right)\right].
+\end{align}
+$s_a$ es polaridad de motor, inicialmente $+1$. El redondeo suma 0.5 a positivos y resta 0.5 a negativos antes de convertir a entero. El driver multiplica por \code{PWM_MAX}, inicialmente 255; el 220 es techo posterior, no el multiplicador.
+
+Con ganancias iniciales los picos ideales son $0.144\times255=36.72$ cuentas en pitch y 18.36 en roll: redondean a \textbf{37 y 18}. No hay techo propio de 40 como en suelo. El límite general pertenece a la suma de todos los efectos.
+
+\subsubsection{Pines y significado eléctrico}
+PWM positivo deja LEFT en cero y activa RIGHT; negativo hace lo contrario. En Pico, roll usa GP6/GP7 y pitch GP8/GP9; enable GP10/GP11. La escala eléctrica es 0--255 y la frecuencia PWM configurada 490 Hz. Por ejemplo, 18 cuentas son 7.06\% de duty; no son 18 N ni 18\% de torque medido. La portadora de 10 Hz modula el comando sobre ese PWM.
+
+\subsection{Ejemplos numéricos}
+\subsubsection{Tren extendido a 125 kt}
+% [V-realismo]
+En vuelo, $d=1$: $E_g=(125^2-100^2)/(150^2-100^2)=0.45$. En régimen, para portadora recortada $T=0.8$ ($T$ representa ahora ruido), $w_g=0.36$; $u_P=0.051840$, $u_R=0.025920$, PWM 13/7 pitch/roll. Con $T=-0.8$ cambia el signo; media extensión reduce la amplitud a la mitad.
+
+% [V-realismo]
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Tabla de picos ideales a extensión completa}
+% [V-realismo]
+Filtro estabilizado, portadora recortada en $|T|=1$, ganancias de fábrica. Son techos instantáneos, no RMS.
+% [V-realismo]
+\begin{center}\begin{tabular}{rrrr}
+\toprule IAS (kt)&$E_g$&Pico PWM roll&Pico PWM pitch\\\midrule
+80&0.000000&0&0\\
+100&0.000000&0&0\\
+110&0.168000&3&6\\
+120&0.352000&6&13\\
+125&0.450000&8&17\\
+140&0.768000&14&28\\
+150&1.000000&18&37\\
+180&1.000000&18&37\\
+\bottomrule\end{tabular}\end{center}
+% [V-realismo]
+La portadora aleatoria puede llegar al recorte unitario. Con flag 0, pasos exactos de 2 ms y fase 250, la triangular de 10 Hz sólo llega a 0.96; a amplitud uno redondea 18/35 roll/pitch.
+
+% [V-realismo]
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Arranque con objetivo 0.5}
+% [V-realismo]
+Sólo con \code{SIMCONNECT_BUFFET_NARROWBAND=0}: desde $A_g=0$, fase 250 y pasos de 2 ms, con un primer update de inicialización ya completado:
+\begin{center}\begin{tabular}{rrrrrr}
+\toprule ms&Fase&$A_g$&$T$&PWM roll&PWM pitch\\\midrule
+2&270&0.009804&0.08&0&0\\10&350&0.047135&0.40&0&1\\20&450&0.089826&0.80&1&3\\24&490&0.105753&0.96&2&4\\74&990&0.259695&$-0.96$&$-5$&$-9$\\100&250&0.314236&0&0&0\\300&250&0.474358&0&0&0\\\bottomrule
+\end{tabular}\end{center}
+La última fila no significa que no haya buffet: la muestra cae en cruce por cero aunque la amplitud ya sea alta.
+
+% [V-realismo]
+\textit{Actualización (realismo): arranque triangular como modo general $\rightarrow$ ejemplo sólo con flag 0; el modo predeterminado es irregular de banda estrecha (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Habilitación y diagnóstico}
+\subsubsection{Banderas y estados}
+Los buffets están activados por defecto en el puente. \code{--no-buffets} anula los tres objetivos; \code{--gusts} no es necesario. El cálculo requiere vuelo, simulación en marcha, ausencia de pausa/slew e intervalo de datos menor que 250 ms. En monitor se registran entradas; no se calcula amplitud en Windows.
+
+La placa exige habilitación general, \code{SIMCONNECT_GEAR_BUFFET_ENABLED}, bit \code{Gear}, ganancia efectiva, DTR y trama armada de menos de 300 ms. El menú fuerza comandos a cero. Un update de efectos mayor que 50 ms reinicia ondas. Cambiar el interruptor de efecto a apagado hace efectiva ganancia cero; el objetivo puede seguir calculándose en la Pico, pero su aporte se hace cero.
+
+\subsubsection{CSV, LCD y aliasing de 10 Hz}
+Registrar IAS, extensión de tren, condición retráctil, estado de suelo y armado de las filas enviadas. SC8 no calcula ni registra \code{gear_amp} o \code{Buffet_Tren} en Windows; su objetivo se obtiene en la Pico.
+
+% [V-realismo]
+La pantalla se actualiza cada 100 ms. Sólo con flag 0 coincide con el período de la triangular de 10 Hz: sincronizadas pueden mostrar siempre la misma fase, incluso cero, como documentaban las pruebas de ese modo. La portadora aleatoria no se repite cada 100 ms, pero la pantalla tampoco reconstruye su banda. \textbf{No debe bajarse la frecuencia del efecto sólo para hacerlo visible en el LCD}: conviene mejorar el diagnóstico o registrar máximos/RMS en una ventana.
+
+% [V-realismo]
+\textit{Actualización (realismo): aliasing de triangular atribuido al modo general $\rightarrow$ caso restringido al flag 0; AR(2) no repite fase cada 100 ms (Newland; Box); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Procedencia y comparación con las referencias}
+\subsubsection{TelemFFB}
+% [V-realismo]
+En la copia local de \code{MotionEffectsMixIn.py::ac_update_landing_gear}, TelemFFB relaciona despliegue con una rampa de velocidad y usa senoides en dos direcciones, con frecuencia predeterminada 10 Hz. También contempla efectos de movimiento y enclavado y, para X-Plane, umbrales relacionados con Vle. MiYoke conserva la idea de buffet por despliegue/velocidad, pero ahora usa una portadora de banda estrecha y reparto roll/pitch 1:2 (triangular sólo con flag 0).
+
+Los literales 100/150 de la clase de referencia se comparan con velocidad en m/s; no son una demostración de que el original use 100/150 kt. % [V-realismo]
+% [V-realismo]
+En MiYoke se eligieron explícitamente kt: el inicio de 100 kt es un umbral de percepción validado por el usuario en hardware (2026-10-11), con intensidad plena en 150 kt y crecimiento cuadrático sobre el inicio. Tampoco se copió el corte de despliegue mayor que 0.1 de esa ruta. La restricción local a tren retráctil y la lectura sólo del izquierdo deben evaluarse como decisiones propias, no como reproducción completa de TelemFFB.
+
+Referencia de localización: \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/base/MotionEffectsMixIn.py}{TelemFFB, MotionEffectsMixIn.py}. La comparación se hizo contra la copia incluida en el proyecto.
+
+% [V-realismo]
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Original alemán y decisiones locales}
+% [V-realismo]
+No se identificó en las fuentes del original local una cadena SimConnect que produzca este buffet con esta rampa. El esquema de dos PWM tiene un antecedente en \code{AxisCalibration.cpp::MoveMotor}, pero la envolvente, transporte, renderizado de portadora, ganancia 0.16, factor roll 0.5 y filtro de 100 ms son de la ruta actual. No se atribuyen a una ley aerodinámica ni a una calibración física medida.
+
+% [V-realismo]
+\textit{Actualización (realismo): envolvente lineal local $\rightarrow$ cuadrática con portadora AR(2); se distingue la fundamentación de flujo separado de la atribución al original (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Ajustes, calibración y mejoras posibles}
+\subsubsection{Qué se puede ajustar ahora}
+``Buffet tren'' admite 0--1 con paso 0.01; inicialmente 0.16. ``Ganancia total'' inicialmente 0.90 escala también otros efectos. El menú no ofrece ganancias separadas de buffet tren por eje: roll es la mitad de pitch en código. Los valores persistidos pueden reemplazar los defaults.
+
+\code{SIMCONNECT_GEAR_BUFFET_HZ} vale actualmente 10, admite enteros de 1 a 20 y requiere recompilar firmware. % [V-realismo]
+% [V-realismo]
+El inicio de 100 kt y la intensidad plena de 150 kt se editan en \code{BuffetModel.h} y requieren recompilar; se debe mantener $150>100$. Cambiar frecuencia altera el carácter y la respuesta mecánica, no la envolvente de velocidad. Cambiar el centro de potenciómetro no ajusta este efecto.
+
+% [V-realismo]
+\textit{Actualización (realismo): $d\min[(V/150)^2,1]$ $\rightarrow$ $d\sat[(V^2-100^2)/(150^2-100^2)]$; umbral de percepción validado en hardware (2026-10-11), crecimiento con $q-q_{\rm on}$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Cómo elegir una ganancia}
+En régimen sin saturar, un pico pitch deseado $P$ conduce a $c_g\simeq P/(255GE_g)$ para $E_g>0$. Buscar 10 PWM pitch con $E_g=0.5$ y $G=0.90$ da $c_g\simeq0.08715$, aproximable a 0.09 desde el menú. Es una cota ideal de pico; muestreo y transmisión mecánica pueden reducir la sensación.
+
+La primera cuenta ideal aparece aproximadamente si $E_g\ge0.5/(255Gc_g)$ en pitch y el doble en roll. Con ganancias iniciales son 0.01362 y 0.02723. Señal válida y bandera encendida no garantizan vibración perceptible.
+
+\subsubsection{Ensayo y mejoras propuestas}
+Comparar primero el tren aislado: confirmar tipo retráctil y posición real en CSV, deshabilitar otros efectos desde el menú con pausa reconocida, variar despliegue y comprobar la rampa en condiciones del simulador. Los 100/150 kt no son instrucciones operativas para un avión real. Observar varios ciclos y usar un registro suficientemente rápido.
+
+Se puede mejorar la adaptación mediante perfiles por aeronave, lecturas de todos los trenes, separación entre movimiento/impacto y buffet, ganancias por eje y diagnóstico de picos. Son propuestas; no están implementadas aquí. Si se desea usar Vle como referencia, debe definirse conscientemente la relación con la sensación, no suponer que Vle es por sí sola el inicio físico del buffet.
+
+\subsection{Fuentes y alcance de la comprobación}
+La ruta verificable es \code{BuffetModel.h::calculate} $\rightarrow$ \code{main.cpp::Send} $\rightarrow$ \code{SimTelemetry.h::Receiver::feed} $\rightarrow$ \code{SimEffects.h::update/command} $\rightarrow$ sketch $\rightarrow$ \code{MotorDriver.h}. Ganancias y frecuencia están en \code{mis_defines.h}/\code{GainSettings.h}. \code{tests/simconnect_checks.cpp} comprueba rampa, habilitación, proporción por eje y submuestreo del LCD.
+
+\code{LEEME md/EFECTOS_SIMCONNECT.md} conserva valores históricos como frecuencia de tren 2 Hz y ganancia 0.025. La fuente vigente usa 10 Hz y 0.16, que son los valores de esta sección. Las referencias de variables son el SDK enlazado; los ejemplos son cálculo de software, no mediciones del yugo ni verificación del firmware cargado.
+\newpage

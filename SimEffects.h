@@ -27,7 +27,7 @@ inline float triangle(uint16_t phase) {
 }
 // Passive loads: stiffness-scaled viscous damping and Hayward-Armstrong local friction.
 // Simulated position uses velocity-regularized Coulomb friction. Commands are not calibrated N.
-// See the realism update section in tesis/explicacion_efectos_proyecto_ffb_yoke.tex.
+// See the realism update section in tesis/capitulos/02_realismo.tex.
 inline float motionAdjustedForce(float base, float velocity, float gain,
                                 bool damper=YOKE_DAMPER_ENABLED,
                                 bool friction=YOKE_FRICTION_ENABLED,

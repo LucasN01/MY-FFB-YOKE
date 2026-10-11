@@ -1,0 +1,166 @@
+\section{Actualización: realismo y fundamentación teórica de los efectos}\label{sec:realismo}
+% [V-realismo]
+El análisis de fundamento teórico del 10 de octubre de 2026 motivó esta actualización. Se conserva el mapeo de comando $\pm1$ a PWM y el protocolo SC8. Roll dominante y textura siempre presente durante rodaje habilitado son requisitos del usuario. Las ganancias siguen expresadas en comandos, sin calibración a newtons.
+
+
+
+\subsection{Cambios y fundamentos}
+% [V-realismo]
+\begingroup\small
+\begin{longtable}{p{0.11\linewidth}p{0.19\linewidth}p{0.24\linewidth}p{0.19\linewidth}p{0.12\linewidth}}
+\toprule Cambio&Antes&Ahora&Fundamento&Referencia\\\midrule\endhead
+Turbulencia&$\min(Q,1)$; $\tau_H=1$ s&$S_V=\sqrt Q\le2$; $\tau_H=\sat_{[0.25,1.5]}(29.5/V_e)$&$q\Delta\alpha\propto Vw$ y decaimiento por plunge&Pratt--Walker; Hoblit\\
+Pérdida&$\alpha_0=\alpha_s(0.5+0.2f)$&$\alpha_0=\alpha_s[V_s/(V_s+\Delta)]^2$&Margen máximo de aviso como hipótesis de buffet&14 CFR 23.207 antigua\\
+% [V-realismo]
+Tren/spoiler&$d\sat[(V-100)/50]$; $\bar s\sat[(V-80)/60]$&$d\sat[(V^2-100^2)/(150^2-100^2)]$; $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$&Carga $qSC_p'$ sobre un umbral de percepción&Mabey; TelemFFB (spoiler)\\
+Portadora buffet&Triangular, RMS $1/\sqrt3$&AR(2), $\zeta=0.15$, RMS 0.45; recorte $\pm1$&Respuesta irregular de banda estrecha&Mabey; Newland; Box et al.\\
+Centrado&$k=r+(1-r)Q$&$k=r+0.85Q$&Rigidez mecánica más aerodinámica&Etkin--Reid; Nelson\\
+Damper&$Bm$&$Bs_Bm$; $s_B=\sat_{[0.5,2]}\sqrt{k_f/(r+0.85)}$&$\zeta$ constante con inercia fija&Ogata\\
+Fricción&$-\mathrm{sgn}(v)F_cm/(0.2+m)$&$-F_cz/z_{\max}$ con ancla local&Presliding y adherencia sin derivada&Hayward--Armstrong\\
+Suelo, textura&$0.12E(0.65\sin7t'+0.35\sin11.3t')$&$0.12\sqrt E(0.65N_7+0.35N_{11.3})$, recorte $\pm0.12\sqrt E$&PSD de velocidad del perfil $\propto V$; baches mantienen $E$&ISO 8608; Newland\\
+\bottomrule\end{longtable}
+\endgroup
+% [V-realismo]
+En textura, $t'=2\pi t$. El techo de suma baches más textura pasa de $\pm E$ a $\pm\sqrt E$. Flags en cero conservan leyes anteriores de portadora, escala de damper, fricción y textura sinusoidal; las envolventes nuevas permanecen.
+
+
+
+\subsection{Derivaciones}
+
+
+\subsubsection{Ráfaga y constante de plunge}
+% [V-realismo]
+Para ráfaga vertical pequeña, $\Delta\alpha=w/V$, y $\Delta H\propto q\Delta\alpha=\tfrac12\rho Vw$. A densidad fija, normalizar por velocidad de referencia conduce a $V_e/V_{\rm ref}=\sqrt Q$. Se usa EAS como aproximación háptica; no se reconstruyen todos los coeficientes de bisagra.
+% [V-realismo]
+\begin{equation}
+\tau=\frac{2m}{\rho VSa}=\frac{2(W/S)}{g\rho_0aV_e},\quad V_e=\sqrt{2q/\rho_0}.
+\end{equation}
+% [V-realismo]
+Es el término $Z_w$ de Etkin--Reid y respuesta en plunge de Hoblit. Se supone que el pasaaltos representa el decaimiento de $\Delta\alpha$ por aceleración vertical. Con TAS, $\rho V=V_e\sqrt{\rho\rho_0}$: usar $\rho_0V_e$ aproxima nivel del mar y subestima $\tau$ alrededor de 16\% a 10\,000 ft.
+
+% [V-realismo]
+Perfil C182RG: $W=3100$ lbf, $S=174$ ft$^2$, $b=36$ ft, $AR=b^2/S=7.4483$. Helmbold da $a=2\pi AR/(2+\sqrt{AR^2+4})=4.82$ rad$^{-1}$; $W/S\simeq853$ Pa. Así $2(W/S)/(9.81\times1.225\times a)\simeq29.5$ m. El código utiliza 29.5 m y limita $\tau_H$ a 0.25--1.5 s; a velocidad cero usa 1.5 s. Datos confirmados en POH local R182 de 1978: peso y carga alar, páginas impresas ii y 1-5; área y envergadura, Figura 1-1, página 1-2.
+% [V-realismo]
+\begin{center}\begin{tabular}{rrrr}\toprule EAS (kt)&$V_e$ (m/s)&$\tau_H$ (s)&$S_V$ (ref.120 kt)\\\midrule
+60&30.8667&0.95572&0.50000\\80&41.1556&0.71679&0.66667\\120&61.7333&0.47786&1.00000\\140&72.0222&0.40960&1.16667\\\bottomrule\end{tabular}\end{center}
+
+
+
+\subsubsection{Inicio de pérdida}
+% [V-realismo]
+En vuelo nivelado $L=W=\tfrac12\rho V^2SC_L$ y, suponiendo $C_L\propto\alpha$, $\alpha_{\rm on}/\alpha_s=[V_s/(V_s+\Delta)]^2$. Se toma $\Delta=\max(10\text{ kt},0.15V_s)$, margen máximo de §23.207 anterior a la enmienda 23-64. Esa regla fijaba aviso entre 5 kt y ese máximo; §23.2150 exige margen suficiente sin esas cifras. Suponer comienzo de buffet en el máximo es decisión del diseño: en C182 el aviso reglamentario es la bocina, no este efecto calculado.
+% [V-realismo]
+\begin{equation}\alpha_{\rm on}=\alpha_{0L}+(\alpha_s-\alpha_{0L})[V_s/(V_s+\Delta)]^2.\end{equation}
+% [V-realismo]
+Con $V_s=60$ kt, $\alpha_s=15^\circ$ y $\alpha_{0L}=-3.5^\circ$, da $10.09184^\circ$, frente a $11.02041^\circ$ si $\alpha_{0L}=0$. El código conserva la aproximación cero. Con flaps y VS0 menor, el inicio ahora se adelanta, en lugar de retrasarse.
+
+
+
+\subsubsection{Damper}
+% [V-realismo]
+De $\zeta=b/(2\sqrt{kJ})$ y $J$ fijo, mantener $\zeta$ exige $b\propto\sqrt k$. El firmware normaliza por rigidez a $Q=1$, usa $k_f$ filtrada y limita el factor a 0.5--2. Se busca mantener sensación relativa, sin identificación de inercia ni torque.
+
+
+
+\subsubsection{Textura sintética de suelo}
+% [V-realismo]
+ISO 8608 caracteriza $G_d(n)=G_d(n_0)(n/n_0)^{-2}$. Con $f=nV$, $G_z(f)=G_d(f/V)/V$; al derivar el perfil:
+% [V-realismo]
+\begin{equation}G_v(f)=(2\pi f)^2G_z(f)=4\pi^2G_d(n_0)n_0^2V.\end{equation}
+% [V-realismo]
+Es blanco y proporcional a $V$; un resonador fijo responde con RMS $\propto\sqrt V$. Sólo se aplica a textura sintética: las aceleraciones P3D ya incluyen dependencia de velocidad, por lo que los baches conservan rampa lineal. $\sqrt E$ adapta arranque a 0.5 kt y saturación a 40 kt; no mide rugosidad.
+
+
+
+\subsubsection{Tren y spoiler}
+% [V-realismo]
+La excitación por flujo separado escala como $qSC_p'$, aproximadamente IAS$^2$ si IAS$\approx$EAS. Sobre el inicio se aplica $R(V)=\sat[(V^2-V_{\rm on}^2)/(V_{\rm full}^2-V_{\rm on}^2)]$: crece con la presión dinámica excedente $q-q_{\rm on}$. El inicio es un umbral de percepción: tren 100 kt, validado por el usuario en hardware (2026-10-11); spoiler 80 kt, tomado de TelemFFB. Las intensidades plenas 150/140 kt son calibración del yugo, no Vle ni límites de spoiler. De TelemFFB se toman sólo los umbrales de spoiler 80/140 kt; su interpolación es lineal (\code{utils.scale}), mientras que la forma cuadrática de MiYoke se funda en $qSC_p'$ (Mabey).
+
+
+
+\subsection{Generador de banda estrecha}
+% [V-realismo]
+La entrada $\xi_n$ uniforme en $[-1,1]$ viene de xorshift32, con varianza $1/3$. Para $\omega_0=2\pi f_0$ y $\Delta t=0.002$ s:
+% [V-realismo]
+\begin{align}
+r&=e^{-\zeta\omega_0\Delta t},&\theta&=\omega_0\sqrt{1-\zeta^2}\Delta t,\\
+a_1&=2r\cos\theta,&a_2&=-r^2,\\
+y_n&=a_1y_{n-1}+a_2y_{n-2}+g\xi_n,\\
+U&=\frac{1-a_2}{(1+a_2)[(1-a_2)^2-a_1^2]},&g&=\frac{\sigma_{\rm objetivo}}{\sqrt{U/3}}.
+\end{align}
+% [V-realismo]
+La varianza estacionaria es $g^2U/3$. Coeficientes sólo en constructor global antes de setup; next ejecuta multiplicaciones y xorshift sin exponenciales, cosenos ni raíces dentro del lazo. Reset conserva coeficientes y reinicia estado y semilla; dt=0 no avanza ruido.
+
+% [V-realismo]
+Para buffet, $\sigma=0.45$ frente a triangular $1/\sqrt3=0.57735$: $20\log_{10}(0.45/0.57735)=-2.17$ dB. Es compromiso para reducir recorte; ganancia de menú permite ensayo. Tres resonadores 13/10/15 Hz usan $\zeta=0.15$ y recorte $\pm1$. Para textura 7/11.3 Hz se usa RMS de senoide 0.7071 y recorte de mezcla a pico $\pm0.12\sqrt E$. La referencia del diseño recorta cerca de 2.5\% en 1000 pasos a nivel pleno. La suite de 50\,000 pasos verifica RMS 0.405--0.495, media menor que 0.02, frecuencia por cruces 10.4--15.6 Hz para el resonador de 13 Hz y secuencia idéntica tras reset; son criterios de prueba, no mediciones del mecanismo.
+
+
+% [V-realismo]
+Medición de las clases C++ actuales, compiladas con MSBuild Win32 y toolset v141: 50\,000 pasos de 2 ms por buffet (100 s, transitorio inicial incluido), semillas de producción. RMS y media se calculan antes del recorte; cruces por cero divididos por dos y por duración; recorte indica fracción con $|y|>1$.
+% [V-realismo]
+\begin{center}\begin{tabular}{rrrrr}
+\toprule Resonador (Hz)&RMS&Media&Cruces (Hz)&Recorte (\%)\\\midrule
+13&0.441952&0.010809&13.185&2.116\\
+10&0.457021&0.009752&10.185&2.928\\
+15&0.453433&$-0.003574$&14.975&2.578\\
+\bottomrule\end{tabular}\end{center}
+% [V-realismo]
+La mezcla de textura $0.65N_7+0.35N_{11.3}$ con semillas de producción, 1000 pasos (2 s) y nivel pleno, se recorta el 2.500\% al superar $\pm1$, equivalente al pico $\pm0.12\sqrt E$. Son medidas computacionales de secuencias finitas, no ensayos de fuerza del mecanismo.
+
+
+\subsection{Fricción de Hayward--Armstrong}
+% [V-realismo]
+Con ancla $w$, deformación $z=x-w$ se recorta a $\pm z_{\max}$ y se actualiza $w=x-z$. La resistencia es $f=-F_cz/z_{\max}$. Primera posición sólo fija el ancla. Rigidez de presliding: $0.03/0.02=1.5$. En reposo se conserva adherencia sin estimar velocidad. Modelo 1 sólo con sensor local; SimConnect mantiene la ley racional por velocidad.
+
+% [V-realismo]
+Con ganancias de fábrica, en tierra el resorte pitch antes de $G$ es $0.8\times0.15x=0.12x$, frente a $F_c=0.03$: adherencia posible hasta $|x|\approx0.25$; en roll la misma proporción. A $Q=1$, resorte pitch $0.8x$: zona $|x|\approx0.0375$, aproximadamente 4\%. Al comparar fuerzas se cancela el mismo factor $G$ en ambas ramas. El techo de damper más fricción es $0.4H_a$ después de suma algebraica.
+
+
+
+\subsection{Hipótesis a validar con ensayo}
+% [V-realismo]
+\begin{itemize}
+\item Adherencia: soltar en tierra y vuelo; con $F_c=0.01$ la zona de tierra baja a 8.3\%. Si molesta, bajar Friccion o usar modelo 0.
+\item Con Damper cero, no debe aparecer vibración ni ciclo límite. Si aparece, probar preslide 0.03--0.04; ante rebote, 0.015.
+\item Buffet con $\zeta=0.15$, RMS 0.45 debe sentirse irregular. Ajustar ganancia si queda débil por los $-2.2$ dB.
+% [V-realismo]
+\item Tren y spoiler sin efecto por debajo de 100/80 kt; umbral validado por el usuario en hardware (2026-10-11).
+\item Comparar textura a 5/10/20 kt; a 10 kt amplitud aproximadamente doble. Baches P3D conservan rampa lineal.
+\item Frecuencias 13/10/15 y 7/11.3 Hz son resonancias supuestas, por validar.
+\item Comparar retorno en tierra y 120 kt; no debe rebotar en vuelo ni quedar suelto en tierra; escala mínima del damper 0.5.
+\item Centro reposo ahora endurece en todo $Q$. Con $r=1$, $Q=4$, $k=4.4$ (antes 1); revisar ajustes guardados y PWM a alta velocidad.
+\item Otro avión exige recalcular longitud de plunge $2(W/S)/(9.81\times1.225\times a)$.
+\item Para comparar, poner en cero y recompilar estos flags:
+\begin{itemize}
+\item \code{YOKE_FRICTION_MODEL};
+\item \code{YOKE_DAMPER_STIFFNESS_SCALING};
+\item \code{SIMCONNECT_BUFFET_NARROWBAND};
+\item \code{SIMCONNECT_GROUND_NARROWBAND_TEXTURE}.
+\end{itemize}
+\end{itemize}
+% [V-realismo]
+No se cargó firmware ni se midió el tiempo del lazo de 2 ms en hardware; el registro us informa sólo Effects::update.
+
+
+
+\subsection{Referencias teóricas incorporadas}
+% [V-realismo]
+\begin{enumerate}
+\item Etkin, B.; Reid, L. D. \textit{Dynamics of Flight: Stability and Control}, 3.ª ed., Wiley, 1996. Momento de bisagra, mando libre, fuerza $\propto q$ y término $Z_w$.
+\item Nelson, R. C. \textit{Flight Stability and Automatic Control}, 2.ª ed., McGraw-Hill, 1998. Coeficientes de bisagra y fuerzas de mando.
+\item Pratt, K. G.; Walker, W. G. \textit{A Revised Gust-Load Formula and a Re-evaluation of V-G Data Taken on Civil Transport Airplanes from 1933 to 1950}, NACA Report 1206, 1954. Carga lineal en ráfaga por velocidad y alivio por masa.
+\item Hoblit, F. M. \textit{Gust Loads on Aircraft: Concepts and Applications}, AIAA Education Series, 1988. Plunge y variación de ángulo por ráfaga.
+\item 14 CFR Part 23: §23.207 antes de enmienda 23-64 (2017), redacción 1993: margen mínimo 5 kt y máximo $\max(10\text{ kt},15\%V_s)$; §23.2150: margen suficiente sin cifras; §23.143(c), edición 2013: fuerzas máximas de mando.
+\item Mabey, D. G. \textit{Some Aspects of Aircraft Dynamic Loads due to Flow Separation}, AGARD R-750, 1988; también AGARD CP-483, \textit{Aircraft Dynamic Loads due to Flow Separation}, 1990.
+\item Newland, D. E. \textit{An Introduction to Random Vibrations, Spectral and Wavelet Analysis}, 3.ª ed., Longman, 1993. Resonador excitado por ruido blanco.
+\item Box, G. E. P.; Jenkins, G. M.; Reinsel, G. C. \textit{Time Series Analysis: Forecasting and Control}. Varianza estacionaria AR(2).
+\item ISO 8608:2016, \textit{Mechanical vibration --- Road surface profiles --- Reporting of measured data}. PSD de perfil $\propto n^{-2}$.
+\item Ogata, K. \textit{Modern Control Engineering}, Pearson. Sistema masa--resorte--amortiguador.
+\item McCormick, B. W. \textit{Aerodynamics, Aeronautics, and Flight Mechanics}, 2.ª ed., Wiley, 1995. Ala finita, aproximación de Helmbold.
+\item Hayward, V.; Armstrong, B. ``A new computational model of friction applied to haptic rendering'', \textit{Experimental Robotics VI}, LNCIS 250, Springer, 2000, pp. 403--412.
+\item Armstrong-Hélouvry, B.; Dupont, P.; Canudas de Wit, C. ``A survey of models, analysis tools and compensation methods for the control of machines with friction'', \textit{Automatica} 30(7), 1994, pp. 1083--1138.
+\item Karnopp, D. ``Computer simulation of stick-slip friction in mechanical dynamic systems'', \textit{J. Dyn. Sys., Meas., Control} 107(1), 1985, pp. 100--103.
+\item Cessna R182, POH local del usuario: \path{tesis/auditoria_c182rg/fuentes/R182_1978_POH.pdf}; peso y carga alar en ii y 1-5, dimensiones y área en Figura 1-1, página 1-2.
+\end{enumerate}
+
+

@@ -1,0 +1,312 @@
+\section{BUFFET POR PERDIDA}
+\label{sec:buffet-perdida}
+
+\subsection{Qué representa el efecto}
+% [V-realismo]
+Genera una vibración de roll y pitch al aumentar el ángulo de ataque dentro de una banda previa al ángulo de pérdida informado por el avión. La intensidad depende además de flaps e IAS comparada con una velocidad de referencia. La placa sintetiza ruido de banda estrecha centrado en 13 Hz (triangular con flag 0) y pitch recibe el doble de comando que roll.
+
+La idea sencilla es: \emph{``cuanto más se aproxima el ángulo de ataque al umbral del modelo, aumentar el temblor, ponderándolo por el flujo que estima la velocidad''}. La vibración puede comenzar antes de alcanzar \code{STALL ALPHA}; no es un interruptor que espere a que la pérdida ya se haya producido.
+
+% [V-realismo]
+\textit{Actualización (realismo): inicio $\alpha_s(0.5+0.2f)$ y triangular $\rightarrow$ margen de aviso y banda estrecha de 13 Hz; hipótesis de aviso y excitación irregular (antigua §23.207; Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Qué no calcula}
+No calcula caída de ala, movimiento de morro, pérdida de sustentación, un empuje de recuperación ni un stick shaker certificado. No utiliza el estado de la bocina de pérdida. No reconstruye esfuerzo de bisagra o vibración estructural en unidades físicas y no demuestra que una aeronave real comience a vibrar a la fracción de AoA elegida.
+
+El modelo produce buffet de ángulo positivo. No usa valor absoluto de AoA: no representa simétricamente una pérdida con ángulo negativo. Una velocidad baja por sí sola tampoco activa vibración si el ángulo sigue por debajo de la banda.
+
+\subsection{Recorrido desde SimConnect}
+\begin{center}
+\fbox{\begin{minipage}{0.91\linewidth}
+% [V-realismo]
+AoA, ángulo de pérdida, flaps, VS0/VS1 e IAS $\rightarrow$ validar datos y vuelo $\rightarrow$ promedio de flaps $\rightarrow$ ángulo de comienzo y velocidad de referencia $\rightarrow$ rampa de AoA $\times$ factor de velocidad al cuadrado $\rightarrow$ envolvente limitada $0\ldots1$ $\rightarrow$ filtro local 100 ms $\rightarrow$ banda estrecha 13 Hz $\rightarrow$ ganancias y reparto roll/pitch $\rightarrow$ límite general $\rightarrow$ PWM.
+\end{minipage}}
+\end{center}
+
+% [V-realismo]
+\textit{Actualización (realismo): cadena con inicio lineal en flaps y triangular $\rightarrow$ inicio por $[V_s/(V_s+\Delta)]^2$ y AR(2); hipótesis de aviso e irregularidad (antigua §23.207; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Variables, unidades y validez}
+\subsubsection{Entradas directas}
+\begin{longtable}{p{0.42\linewidth}p{0.16\linewidth}p{0.34\linewidth}}
+\toprule Variable & Unidad solicitada & Símbolo/uso\\\midrule\endhead
+\code{AIRSPEED INDICATED} & knots & $V$: factor de flujo.\\
+\code{INCIDENCE ALPHA} & degrees & $\alpha$: ángulo de ataque.\\
+\code{STALL ALPHA} & degrees & $\alpha_s$: extremo de la banda.\\
+\code{TRAILING EDGE FLAPS LEFT PERCENT} & percent over 100 & $f_L$: flap izquierdo, 0--1.\\
+\code{TRAILING EDGE FLAPS RIGHT PERCENT} & percent over 100 & $f_R$: flap derecho, 0--1.\\
+\code{DESIGN SPEED VS0} & knots & $V_{s0}$: referencia de diseño VS0.\\
+\code{DESIGN SPEED VS1} & knots & $V_{s1}$: referencia de diseño VS1.\\
+\bottomrule
+\end{longtable}
+En el modelo, VS0 se usa como extremo de referencia con flap completo y VS1 como extremo limpio. No se recalculan con peso, factor de carga, hielo u otros estados. Son datos de diseño publicados por el avión, no una medición online de la velocidad de pérdida real en todas las condiciones.
+
+\subsubsection{Conversión de unidades solicitada}
+El \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{SDK de Prepar3D} publica ángulos como radianes y velocidades de diseño como pies/s. \code{main.cpp} pide explícitamente grados y knots en \code{SimConnect_AddToDataDefinition}: SimConnect entrega los datos en las unidades solicitadas. El modelo no vuelve a convertir radianes ni pies/s.
+
+``Percent over 100'' se interpreta aquí como fracción 0--1: 0.5 equivale a 50\% de despliegue. No se introducen valores 50 en la fórmula. Los flaps leídos son las superficies de borde de salida, no la palanca ni un número de posición discreto.
+
+\subsubsection{Rangos de sanidad}
+Para calcular pérdida se requieren todos estos datos válidos:
+\begin{center}\begin{tabular}{ll}
+\toprule Dato & Rango admitido\\\midrule
+IAS & 0--1000 kt\\
+AoA & $-90$ a $+90$ grados\\
+Ángulo de pérdida & 1--45 grados\\
+Cada flap & 0--1\\
+VS0 y VS1 & 10--400 kt cada una\\\bottomrule
+\end{tabular}\end{center}
+Todos deben ser finitos. Si el avión devuelve \code{STALL ALPHA=0}, se anula el objetivo de pérdida: no se inventa un ángulo alternativo de 15 grados. No se acepta una velocidad de referencia cero. La validación no exige $V_{s0}\le V_{s1}$: si un avión publica referencias invertidas pero dentro de rango, la interpolación utiliza esos datos tal cual.
+
+\subsubsection{Estados y variables que no participan}
+Se requiere vuelo, actividad sin pausa/slew y muestras recientes. No se utiliza directamente \code{DYNAMIC PRESSURE}, viento, posición del yugo, trim, aceleración G ni bocina de pérdida. La validación compartida de la trama puede retirar la salida si otros campos esenciales son inválidos. Los parámetros de presión de referencia o de ráfagas no ajustan este buffet.
+
+\subsection{Paso 1: promedio de flaps}
+\begin{equation}
+f=\frac{f_L+f_R}{2}.
+\end{equation}
+$f=0$ representa ambos retraídos; $f=1$, ambos completamente desplegados. El promedio se utiliza en dos lugares distintos: ángulo de inicio y velocidad de referencia.
+
+\subsubsection{Qué se pierde al promediar}
+Flaps $(1,0)$ y $(0.5,0.5)$ producen $f=0.5$, aunque las configuraciones no sean físicamente equivalentes. El modelo no crea un buffet lateral por asimetría de flaps ni calcula cada ala por separado. Esa simplificación debe tenerse presente al interpretar el reparto fijo de roll y pitch.
+
+\subsection{Paso 2: determinar dónde empieza el buffet}
+\subsubsection{Ángulo de comienzo}
+\begin{equation}
+\alpha_0=\alpha_s\left(\frac{V_{\rm ref}}{V_{\rm ref}+\Delta}\right)^2,\quad \Delta=\max(10,0.15V_{\rm ref})\ {\rm kt}.
+\label{eq:stall-onset}
+\end{equation}
+% [V-realismo]
+$\alpha_s$ es el ángulo recibido y $V_{\rm ref}=(1-f)V_{s1}+fV_{s0}$. La relación deriva del margen máximo del aviso de pérdida de la antigua §23.207; ubicar allí el buffet es una hipótesis, no una identificación del aviso real del C182. El modelo supone ángulo de sustentación nula cero.
+
+% [V-realismo]
+Con $\alpha_s=15^\circ$, VS1=60 y VS0=45 kt: inicios 11.020408$^\circ$, 10.584$^\circ$ y 10.041322$^\circ$ para $f=0,0.5,1$. Con flaps, ahora se adelanta; antes se retrasaba.
+
+% [V-realismo]
+\textit{Actualización (realismo): $\alpha_s(0.5+0.2f)$ $\rightarrow$ $\alpha_s[V_s/(V_s+\Delta)]^2$; margen máximo de aviso como hipótesis de buffet (antigua §23.207); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Rampa normalizada de ángulo}
+\begin{equation}
+R_\alpha=\sat_{[0,1]}\left(\frac{\alpha-\alpha_0}{\alpha_s-\alpha_0}\right).
+\label{eq:stall-ramp}
+\end{equation}
+El numerador indica cuánto se avanzó desde el comienzo; el denominador es el ancho de la banda. Debajo o justo en $\alpha_0$, resulta cero. A mitad de banda vale 0.5 y desde $\alpha_s$ vale 1. No sigue creciendo sin límite después de ese ángulo.
+
+% [V-realismo]
+Los rangos garantizan $\alpha_s>0$, $V_{\rm ref}>0$ y $\Delta>0$; por tanto, $0<\alpha_0<\alpha_s$ y el denominador es positivo. No hay división por cero con entradas aceptadas.
+
+% [V-realismo]
+\textit{Actualización (realismo): rampa de AoA desde $\alpha_s(0.5+0.2f)$ $\rightarrow$ desde el inicio por margen de velocidad; hipótesis de aviso (antigua §23.207); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Paso 3: referencia de velocidad y factor de flujo}
+\subsubsection{Interpolación de VS0 y VS1}
+\begin{equation}
+V_{\rm ref}=V_{s1}+(V_{s0}-V_{s1})f
+=(1-f)V_{s1}+fV_{s0}.
+\label{eq:stall-vref}
+\end{equation}
+Con flaps retraídos toma VS1; con flaps completos toma VS0. Con media extensión toma su promedio. Para VS1=60 kt y VS0=45 kt, el resultado a $f=0.5$ es 52.5 kt. Es una interpolación lineal de referencias, no una solución del modelo aerodinámico del avión.
+
+\subsubsection{Cociente al cuadrado y límite 1.5}
+\begin{equation}
+B=\min\left[\left(\frac{V}{V_{\rm ref}}\right)^2,1.5\right].
+\label{eq:stall-flow}
+\end{equation}
+$V/V_{\rm ref}$ compara IAS con la referencia de diseño; elevar al cuadrado refuerza su dependencia con velocidad. Si IAS coincide con la referencia, $B=1$; si es la mitad, $B=0.25$. El máximo 1.5 se alcanza desde $V/V_{\rm ref}=\sqrt{1.5}\simeq1.224745$.
+
+La relación cuadrática está motivada por $q=\rho V^2/2$, cuyo fundamento general explica \href{https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/dynamic-pressure-2/}{NASA Glenn}. Pero esta fórmula usa IAS y velocidades de diseño sin medir densidad: no debe presentarse como el cálculo exacto de $q/q_{\rm stall}$ ni como una medición del esfuerzo de mando. El límite 1.5 proviene del estimador de referencia TelemFFB.
+
+\subsubsection{Flaps no significa simplemente más o menos vibración}
+% [V-realismo]
+Si VS0 es menor que VS1, aumentar $f$ baja $V_{\rm ref}$: adelanta el inicio y aumenta $B$ a IAS fija. Ambas tendencias refuerzan el buffet en este estimador; no constituyen una ley universal del avión.
+
+% [V-realismo]
+\textit{Actualización (realismo): flaps retrasaban el inicio $\rightarrow$ lo adelantan al reducir $V_s$; hipótesis de margen máximo de aviso (antigua §23.207); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Paso 4: envolvente final de la Pico}
+\begin{equation}
+E_s=\min(1,R_\alpha B),\qquad 0\le E_s\le1.
+\label{eq:stall-envelope}
+\end{equation}
+La rampa y el factor de flujo se multiplican; después se limita el producto a uno. Si $R_\alpha=0$, no hay objetivo aunque IAS sea alta. Si IAS es cero, tampoco hay objetivo aunque AoA supere el ángulo de pérdida.
+
+\subsubsection{Saturación antes de alcanzar el ángulo de pérdida}
+Con $B=1.5$, la amplitud llega a uno cuando $R_\alpha\ge2/3$. Por tanto, puede saturar antes de $\alpha_s$. El ángulo de saturación, si $B\ge1$, es
+\begin{equation}
+\alpha_{\rm sat}=\alpha_0+\frac{\alpha_s-\alpha_0}{B}.
+\end{equation}
+% [V-realismo]
+Con $\alpha_s=15^\circ$, flaps cero y flujo limitado a 1.5, da $\alpha_{\rm sat}=13.673469^\circ$. Si $B<1$, ni siquiera con $R_\alpha=1$ se llega a envolvente uno: el máximo es $B$. El modelo no afirma que a $13.673469^\circ$ el avión ya esté en pérdida; únicamente saturó su señal háptica.
+
+% [V-realismo]
+\textit{Actualización (realismo): saturación calculada desde el inicio anterior $\rightarrow$ recalculada desde $\alpha_s[V_s/(V_s+\Delta)]^2$; hipótesis de aviso (antigua §23.207); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Qué ocurre después de la banda}
+Con $\alpha\ge\alpha_s$, $R_\alpha$ permanece en uno. El buffet no desaparece ni se debilita por entrar más profundamente en pérdida, salvo cambios de velocidad o datos. Su frecuencia sigue fija. No representa por sí solo la evolución completa de una pérdida profunda.
+
+\subsection{Paso 5: USB, filtro y señal firmada}
+\subsubsection{Transporte}
+SC8 transmite las entradas crudas de pérdida. \code{PicoForceModels.h} calcula $E_s$ mediante \code{BuffetModel.h} y guarda el resultado en \code{buffet[0]}. $E_{s,\rm rx}=E_s$ en coma flotante, sin truncado a diezmilésimas. CRC, secuencia, armado y frescura condicionan la entrada; la síntesis local continúa nominalmente cada 2 ms.
+
+\subsubsection{Suavizado de 100 ms}
+La amplitud interna cumple
+\begin{equation}
+A_{s,n}=A_{s,n-1}+\frac{\Delta t_{\rm ms}}{100+\Delta t_{\rm ms}}
+(E_{s,\rm rx,n}-A_{s,n-1}).
+\end{equation}
+Es un filtro de primer orden que suaviza entrada y salida de la condición. Con 2 ms, se corrige 1.96\% de la diferencia por ciclo. Un escalón desde cero llega al 62.85\% a 100 ms y 94.87\% a 300 ms; no hay una espera fija de 100 ms antes de vibrar.
+
+Si el objetivo pasa a cero pero la comunicación sigue armada, queda cola: $A_{s,n}=A_{s,0}(100/102)^n$ con esos intervalos. Si el avión vuelve al suelo, el objetivo es cero, pero esa cola puede coexistir brevemente con rodaje. El desarme general sí anula el efecto y reinicia el estado.
+
+
+% [V-realismo]
+\textit{Actualización (realismo): objetivo de pérdida con inicio lineal en flaps $\rightarrow$ inicio por margen de velocidad con el mismo filtro; hipótesis de aviso (antigua §23.207); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Portadora de banda estrecha de 13 Hz}
+% [V-realismo]
+Se usa $w_s=A_sT_s$, con $T_s=\sat_{[-1,1]}(N_{13})$, RMS 0.45 antes del recorte y $\zeta=0.15$; ver Sección~\ref{sec:realismo}. Con \code{SIMCONNECT_BUFFET_NARROWBAND=0}, $T_s$ vuelve a la triangular de pico uno, $\phi=(\phi+13\Delta t_{\rm ms})\bmod1000$, inicio 250; ramas $0.004\phi-1$ y $3-0.004\phi$. Ambos ejes comparten portadora y relación 1:2, sin variar frecuencia con profundidad.
+
+% [V-realismo]
+\textit{Actualización (realismo): triangular de 13 Hz $\rightarrow$ AR(2) de 13 Hz, RMS 0.45 y recorte $\pm1$; respuesta irregular de banda estrecha (Mabey; Newland; Box); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Paso 6: ganancias, roll/pitch y PWM}
+\subsubsection{Comando por eje}
+Con ganancia ``Buffet perdida'' $c_s=0.24$ y general $G=0.90$:
+\begin{align}
+u_{P,s}&=Gc_sw_s=0.216 A_sT_s,\\
+u_{R,s}&=0.5Gc_sw_s=0.108 A_sT_s.
+\end{align}
+% [V-realismo]
+El signo depende de la portadora, no del signo de posición del yugo. Ambos ejes comparten portadora; roll tiene la mitad del comando. El efecto puede vibrar con el mando centrado. No aplica la zona muerta de turbulencias y no usa el factor 10 de suelo.
+
+% [V-realismo]
+\textit{Actualización (realismo): portadora triangular compartida $\rightarrow$ ruido de banda estrecha compartido, manteniendo 1:2; excitación irregular de pérdida (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Conversión eléctrica}
+Se suma con los demás efectos, se limita a $L=220/255$, se aplica polaridad de motor, se limita a $[-1,1]$, se multiplica por \code{PWM_MAX}=255, se redondea simétricamente y se impone el techo duro de 220:
+\begin{equation}
+p_a=\sat_{[-220,220]}\left\{\operatorname{round}_{\rm sim}
+\left[255\,\sat_{[-1,1]}\left(s_a\sat_{[-L,L]}(u_{a,s})\right)\right]\right\}
+\end{equation}
+para el efecto aislado. El pico ideal inicial es 55.08 cuentas pitch y 27.54 roll: redondea a \textbf{55 y 28}. No existe un techo propio de buffet inferior al general; estas magnitudes provienen de sus ganancias iniciales.
+
+PWM positivo activa RIGHT y deja LEFT en cero; negativo hace lo contrario. En Pico, roll GP6/GP7 y pitch GP8/GP9, con PWM configurado a 490 Hz. Los 13 Hz describen la oscilación del comando, no esa frecuencia eléctrica. Ni comando normalizado ni PWM son fuerza física calibrada.
+
+\subsection{Ejemplos completos}
+\subsubsection{Flaps a mitad, AoA de 12 grados e IAS de 60 kt}
+% [V-realismo]
+Vuelo válido, $\alpha_s=15^\circ$, VS0=45, VS1=60 kt, $f=0.5$, $\alpha=12^\circ$ e IAS=60 kt:
+\begin{enumerate}
+\item $V_{\rm ref}=52.5$ kt, $\Delta=10$ kt y $\alpha_0=15(52.5/62.5)^2=10.584000^\circ$.
+\item $R_\alpha=0.320652$; $B=1.306122$; $E_s=0.418811$.
+\item En régimen $A_s=E_s$. Para portadora recortada $T_s=0.6$, $w_s=0.251287$.
+\item $u_P=0.054278$ y $u_R=0.027139$; PWM 14/7 pitch/roll.
+\end{enumerate}
+% [V-realismo]
+Con portadora en pico, máximos 23/12 PWM pitch/roll. Son evaluaciones del estimador, no un vuelo medido.
+
+% [V-realismo]
+\textit{Actualización (realismo): ejemplo con inicio lineal en flaps $\rightarrow$ ejemplo recalculado con $\alpha_s[V_s/(V_s+\Delta)]^2$; hipótesis de margen de aviso (antigua §23.207); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Comparación de ángulo, flaps y velocidad}
+% [V-realismo]
+$\alpha_s=15^\circ$, VS0=45 y VS1=60 kt; régimen con portadora recortada en pico $|T_s|=1$.
+\begin{center}\begin{tabular}{rrrrrr}
+\toprule AoA (grados)&$f$&IAS (kt)&$E_s$&PWM roll&PWM pitch\\\midrule
+7.5&0&60&0.000000&0&0\\
+10&0&60&0.000000&0&0\\
+12&0&60&0.246154&7&14\\
+15&0&60&1.000000&28&55\\
+20&0&60&1.000000&28&55\\
+12&0.5&60&0.418811&12&23\\
+12&1&60&0.592500&16&33\\
+12&0&90&0.369231&10&20\\
+12.5&0&90&0.557692&15&31\\
+15&0&30&0.250000&7&14\\
+\bottomrule\end{tabular}\end{center}
+% [V-realismo]
+Las envolventes son flotantes; no enteros USB. Los casos son combinaciones ilustrativas de entradas.
+
+% [V-realismo]
+\textit{Actualización (realismo): tabla con inicio $\alpha_s(0.5+0.2f)$ $\rightarrow$ tabla recalculada con inicio por margen de velocidad; hipótesis de aviso (antigua §23.207); ver Sección~\ref{sec:realismo}.}
+
+% [V-realismo]
+\subsubsection{Arranque con objetivo de prueba 0.6530 (sólo flag 0)}
+% [V-realismo]
+La tabla conserva el objetivo artificial 0.6530 para explicar el filtro y la fase del modo anterior; no es la envolvente nueva del ejemplo de flaps a mitad.
+Desde amplitud cero y fase 250, con pasos de 2 ms:
+\begin{center}\begin{tabular}{rrrrrr}
+\toprule ms&Fase&$A_s$&$T$&PWM roll&PWM pitch\\\midrule
+2&276&0.012804&0.104&0&0\\
+10&380&0.061558&0.520&1&2\\
+20&510&0.117313&0.960&3&6\\
+50&900&0.254976&$-0.600$&$-4$&$-8$\\
+100&550&0.410392&0.800&9&18\\
+200&850&0.562865&$-0.400$&$-6$&$-12$\\
+300&150&0.619512&$-0.400$&$-7$&$-14$\\\bottomrule
+\end{tabular}\end{center}
+La intensidad de una muestra depende de amplitud y fase a la vez. Una envolvente creciente no implica que cada muestra PWM sea mayor que la anterior.
+
+% [V-realismo]
+\textit{Actualización (realismo): arranque triangular como modo general $\rightarrow$ tabla restringida al flag 0; AR(2) produce excitación irregular (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Procedencia: TelemFFB, física y adaptación propia}
+\subsubsection{Fórmulas reconocibles de TelemFFB}
+La copia local de \code{BuffetingEffectMixIn.py::ac_update_buffeting} contiene el promedio de flaps, la banda de AoA que empieza en $\alpha_s(0.5+0.2f)$, la interpolación VS0/VS1 y el factor cuadrático limitado por \code{ACCEL_STALL_Q_CAP=1.5}. La frecuencia base configurada allí es 13 Hz. Son antecedentes concretos, no sólo una semejanza de nombres.
+
+Referencia pública de localización: \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/base/BuffetingEffectMixIn.py}{TelemFFB, BuffetingEffectMixIn.py}. Se compara la copia local; la rama pública puede evolucionar.
+
+\subsubsection{Diferencias que afectan los números}
+\begin{itemize}
+\item El inicio ya no es el de TelemFFB: depende del margen de velocidad de aviso de pérdida y de la hipótesis de sustentación lineal.
+\item TelemFFB utiliza TAS en el factor de velocidad de esa ruta; MiYoke utiliza IAS. No se consideran numéricamente equivalentes en todas las condiciones.
+\item La referencia admite caminos alternativos si faltan umbrales o velocidades. MiYoke exige los datos y rangos descritos; no inventa reemplazos.
+\item TelemFFB incluye su intensidad en el producto \emph{antes} del límite final de magnitud. MiYoke limita primero $R_\alpha B$ a uno y después aplica ganancia de placa. No es el mismo orden de saturación.
+\item Su renderizado Classic y Dynamic contempla diferencias de onda/dirección; Dynamic agrega envolvente irregular, frecuencia dependiente de profundidad y compensación de amplitud. MiYoke usa ruido de banda estrecha fijo a 13 Hz, portadora compartida por eje y relación 1:2; la triangular queda con flag 0.
+\end{itemize}
+Para ver el tercer punto, si $R_\alpha B=1.5$ y una intensidad de referencia fuese 0.24, multiplicar antes de saturar produciría 0.36; MiYoke limita primero a 1 en la Pico y aplica después 0.24, antes de la ganancia general. Por eso no debe describirse como copia numérica completa de TelemFFB.
+
+% [V-realismo]
+\textit{Actualización (realismo): inicio heredado de TelemFFB y triangular $\rightarrow$ inicio por margen de aviso y AR(2); hipótesis reglamentaria e irregularidad (antigua §23.207; Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Original alemán y constantes locales}
+No se identificó en las fuentes originales locales la cadena con AoA, flaps, VS0/VS1 y SimConnect de esta sección. El esquema genérico de motor y efectos FFB es un antecedente de arquitectura, no el origen de este estimador. El filtro de 100 ms, protocolo, reparto por eje, ganancia local 0.24 y conversión PWM pertenecen a la implementación modificada.
+
+La presión dinámica aporta una motivación general para dependencia cuadrática; no justifica por sí sola las fracciones de inicio o la fuerza máxima del yugo. Las fuentes no convierten esos parámetros en datos experimentales de un avión particular.
+
+\subsection{Habilitación y diagnóstico}
+\subsubsection{Qué lo habilita y qué lo anula}
+La Pico calcula buffets con la opción activada por defecto; el puente la desactiva con \code{--no-buffets}. Para este objetivo debe haber vuelo, datos recientes, simulación en marcha y ausencia de pausa/slew. En firmware se requieren habilitación general, \code{SIMCONNECT_STALL_BUFFET_ENABLED}, bit \code{Stall}, ganancia efectiva, DTR y trama armada vigente.
+
+Si una entrada específica de pérdida es inválida, su objetivo se hace cero sin necesidad de anular tren o spoiler válidos. Mientras el conjunto siga armado, el filtro puede dejar una cola. Si la validación global provoca desarme o vence el watchdog de 300 ms, la salida se retira. El menú activo inhibe motores y un update local mayor que 50 ms reinicia amplitudes y fases.
+
+\subsubsection{Cómo comprobar las entradas en CSV}
+Registrar \code{aoa_deg}, \code{stall_alpha_deg}, flaps, VS0/VS1, IAS, estados y marcas del CSV. La envolvente se calcula en la Pico; \code{stall_amp} y \code{Buffet_Perdida} son columnas históricas SC7 que ya no existen en el registro actual.
+
+La envolvente local no confirma PWM ni fuerza física. La cola del filtro y el muestreo del LCD pueden ocultar picos o producir aliasing.
+
+\subsection{Qué se puede ajustar y cómo hacerlo}
+\subsubsection{Ganancias disponibles}
+``Buffet perdida'' cambia $c_s$ de 0 a 1, con paso 0.01; inicio 0.24. ``Ganancia total'' cambia $G$ de 0 a 1, con paso 0.05; inicio 0.90. El interruptor de pérdida apaga ambos ejes. No hay ganancias independientes de este buffet para roll y pitch en el menú.
+
+Antes de saturar, para un pico pitch deseado $P$ a una envolvente conocida, $c_s\simeq P/(255GE_{s,\rm rx})$. En el ejemplo $E=0.6530$, buscar 20 PWM pitch da $c_s\simeq0.13345$, aproximable a 0.13. La ganancia cambia la intensidad de mando, no el ángulo matemático de comienzo $\alpha_0$.
+
+La percepción de comienzo sí puede retrasarse si la ganancia es baja: el primer PWM ideal requiere $E\gtrsim0.5/(255Gc_s)$ en pitch y el doble en roll. Con valores iniciales, aproximadamente 0.00908 y 0.01816. Filtro, fase y fricción agregan otras limitaciones.
+
+\subsubsection{Ajustes del estimador y del renderizado}
+Cambiar 0.5/0.2 modifica el inicio con flaps; cambiar el cap 1.5 altera refuerzo por velocidad; cambiar el uso de IAS, VS0/VS1 o sus validaciones modifica el estimador. Esas decisiones están en \code{BuffetModel.h} y requieren recompilar el firmware.
+
+La frecuencia 13 está en el primer elemento del arreglo de \code{SimEffects.h}; cambiarla requiere firmware nuevo. Los 100 ms son compartidos: conviene separarlos si se pretende modificar sólo buffet de pérdida. El factor roll 0.5 también se aplica a los otros dos buffets; no es una calibración exclusiva de pérdida.
+
+\subsubsection{Ensayo propuesto y mejoras pendientes}
+En el simulador, aislar este buffet y registrar una secuencia de aproximación y salida de la banda con configuración conocida. Comparar flaps retraídos, intermedios y completos, sin asumir que la misma IAS y AoA representan el mismo estado físico. Confirmar la coherencia de unidades y la validez de los datos del add-on. Los ejemplos de este documento no son un procedimiento de operación de una aeronave real.
+
+Para pulir el modelo pueden incorporarse perfiles por avión, umbrales perceptuales medidos, estados adicionales sólo si se justifican y un renderizado menos periódico. También podría separarse intensidad de referencia y profundidad para evitar que saturar demasiado pronto oculte diferencias dentro de la banda. Cualquier cambio debe distinguir el estimador del efecto visual o mecánico que se quiere transmitir.
+
+No se debe calibrar pérdida cambiando el cero del potenciómetro: no entra directamente en su fórmula. La fuerza real requiere medición del motor/transmisión; subir PWM no certifica realismo aerodinámico.
+
+\subsection{Fuentes y alcance}
+El estimador completo está en \code{BuffetModel.h::calculate}. \code{main.cpp} define unidades, estados y transporte; \code{PicoForceModels.h} calcula \code{buffet[0]}; \code{SimEffects.h} filtra y sintetiza; \code{GainSettings.h}/\code{mis_defines.h} aportan ajustes; el sketch y \code{MotorDriver.h} convierten a PWM.
+
+\code{tests/simconnect_checks.cpp} contiene casos de comienzo, flaps, ángulo inválido, velocidad cero, independencia de efectos y comunicación. \code{LEEME md/EFECTOS_SIMCONNECT.md} documenta el antecedente pero conserva ganancias antiguas; el valor vigente usado aquí es 0.24. Las fuentes externas son el SDK, NASA para presión dinámica y TelemFFB enlazados. Las tablas verifican el cálculo de software; no se midieron vibraciones reales ni se verificó la placa cargada.
+\newpage

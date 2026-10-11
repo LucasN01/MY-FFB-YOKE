@@ -1,0 +1,422 @@
+\section{DAMPER}
+\label{sec:damper}
+
+\subsection{Qué representa y qué se siente}
+El damper es una resistencia al movimiento: cuanto más rápido se mueve el yugo, mayor es el comando que intenta frenarlo. Se parece a mover una palanca dentro de un fluido viscoso. Puede reducir el rebote del conjunto al soltarlo, pero el resultado depende del motor, la transmisión, los sensores y los retardos reales.
+
+Su diferencia fundamental con el resorte es la entrada utilizada. El resorte mira \textbf{dónde está} el mando; el damper mira \textbf{qué tan rápido se mueve}. Un mando desplazado y quieto genera centrado, pero, una vez detenida la estimación de velocidad, no genera damper. Un mando que atraviesa el centro puede tener centrado cero y damper distinto de cero.
+
+La idea viscosa básica es $F_d=-b\,\dot{x}$. El signo menos significa oposición al movimiento, y $b$ determina cuánto cuesta moverlo rápidamente. En este firmware se implementa una versión normalizada, con filtrado, zona muerta y límites. \textbf{No se calcula directamente una fuerza en newtons ni un torque en N\,m.} Tampoco se usa la velocidad de rotación del avión: se deriva la posición del yugo seleccionado.
+
+\subsubsection{Alcance y versión analizada}
+Las fórmulas siguientes corresponden a \code{SimEffects.h::motionAdjustedForce}, \code{YokeMotion.h} y el sketch actual. Roll y pitch tienen estados de movimiento independientes, pero comparten los parámetros de filtrado, la ganancia de damper y la de fricción. La intensidad de roll se reduce a la mitad mediante un factor fijo en el código. Los valores indicados son defaults; el menú puede cargar otros desde memoria.
+
+\subsection{Recorrido completo desde la entrada hasta el motor}
+\begin{center}
+\fbox{\begin{minipage}{0.91\linewidth}
+\textbf{Fuente elegida al compilar:} posición de SimConnect, ADC de potenciómetro o cuentas de encoder.
+
+\textbf{Movimiento:} posición normalizada $x\in[-1,1]$ $\rightarrow$ diferencia de posiciones dividida por tiempo real $\rightarrow$ límite de velocidad $\rightarrow$ filtro de 40 ms, tratamiento de inversión y reposo $\rightarrow$ velocidad estimada $\widehat v$.
+
+% [V-realismo]
+\textbf{Resistencia:} quitar 0.02 a la magnitud de velocidad $\rightarrow$ damper con ganancia $Bs_B$ y signo opuesto a velocidad. Con sensor local: recortar damper a 0.40, sumar fricción firmada del ancla y recortar nuevamente a 0.40. En modo racional: sumar magnitudes de damper y fricción, recortar a 0.40 y aplicar signo opuesto a velocidad. Luego ganancia general y factor del eje.
+
+\textbf{Salida:} sumar centrado, ráfagas, buffets y suelo $\rightarrow$ limitar a $\pm220/255$ $\rightarrow$ aplicar polaridad de motor $\rightarrow$ multiplicar por 255, redondear y limitar a $\pm220$ $\rightarrow$ puente H.
+\end{minipage}}
+\end{center}
+El puente del PC \textbf{no transmite una fuerza de damper ni una velocidad de yugo}: cuando corresponde, transmite posiciones. La placa calcula la velocidad para damper y fricción racional, y usa posición con ancla para fricción local. El ciclo de control tiene un mínimo configurado de 2 ms; el cálculo emplea el intervalo real, no supone que todas las iteraciones duren exactamente 2 ms.
+
+% [V-realismo]
+\textit{Actualización (realismo): velocidad para damper y fricción $\rightarrow$ velocidad para damper y posición con ancla para fricción local; adherencia sin derivada (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Variables de SimConnect y condiciones de habilitación}
+\label{sec:damper_simvars}
+\subsubsection{Entradas que participan directamente en el cálculo}
+En \code{YOKE_USE_SIMULATION=1}, se usan las siguientes variables solicitadas por \code{SimConnectBridge/main.cpp} como \code{SIMCONNECT_DATATYPE_FLOAT64}:
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Variable & Unidad pedida & Uso\\
+\midrule
+\code{YOKE X POSITION} & \code{Position} & Posición de roll $x_R$\\
+\code{YOKE Y POSITION} & \code{Position} & Posición de pitch $x_P$\\
+\bottomrule
+\end{tabular}
+\end{center}
+El puente exige valores finitos dentro de $[-1,1]$. Son posiciones de mando del simulador; no son el ángulo de alabeo, el cabeceo del avión, su velocidad angular ni sus aceleraciones. El sentido físico debe contrastarse con el eje realmente asignado; el proyecto propone roll a la derecha positivo y tirar en pitch positivo.
+
+En modo potenciómetros o encoders, \textbf{ninguna SimVar proporciona la posición ni la velocidad utilizadas por damper y fricción}. Sin embargo, el puente sigue solicitando y validando las posiciones de SimConnect y el resto de la trama. Por eso una entrada inválida de esa trama puede desarmar la salida aunque el sensor local funcione.
+
+\subsubsection{Datos que habilitan la salida, pero no multiplican el damper}
+La rama común requiere \code{SIMCONNECT_ADDITIONS_ENABLED}, trama válida y armada con antigüedad menor de 300 ms, y conexión USB CDC comprobada mediante \code{Serial.dtr()}. El puente condiciona el armado a ejecución del simulador, ausencia de pausa, \code{IS SLEW ACTIVE=0}, telemetría reciente y opción de salida habilitada. Los eventos \code{Pause} y \code{Sim} participan en ese estado; no son coeficientes de resistencia.
+
+\code{DYNAMIC PRESSURE}, \code{AIRSPEED INDICATED}, los vientos, flaps, tren y spoilers \textbf{no aparecen en la fórmula de damper}. La presión sí modifica el resorte que se suma con él. \code{SIM ON GROUND} separa otros efectos, pero no exige estar en vuelo para estas resistencias: pueden actuar en tierra y en aire. El menú de calibración anula ambos comandos de motor mientras está activo. En consecuencia, los efectos locales actuales también necesitan la habilitación de SimConnect; no son un modo autónomo de resistencia con el PC desconectado.
+
+\subsection{Adquisición de posición: los tres modos}
+\label{sec:adquisicion_movimiento}
+\subsubsection{Selector común y configuración predeterminada}
+\code{YOKE_USE_SIMULATION}, en \code{mis_defines.h}, selecciona una única fuente para ambos ejes y para los efectos que utilizan movimiento:
+\begin{center}
+\begin{tabular}{cll}
+\toprule
+Valor & Fuente & Característica principal\\
+\midrule
+0 & Encoders & Posición relativa al arranque\\
+1 & SimConnect & Posición del mando virtual recibida por USB\\
+2 & Potenciómetros & Posición absoluta según calibración ADC\\
+\bottomrule
+\end{tabular}
+\end{center}
+El valor predeterminado inspeccionado es \textbf{2}. No es un selector del menú en tiempo de ejecución. El script \code{Build-Pico2.ps1} permite seleccionar encoders o potenciómetros mediante sus opciones correspondientes; el modo 1 depende de la definición de compilación. No hay mezcla automática de un sensor para el resorte y otro para el damper, ni selección independiente de fuente por eje. Tampoco se comprobó qué binario está cargado físicamente.
+
+\subsubsection{Modo 1: SimConnect, paquete y reloj de las muestras}
+La solicitud al simulador se realiza por cuadro de simulación. El puente limita el envío activo a intervalos de al menos 20 ms: como máximo unos 50 envíos por segundo en esa ruta, y menos si no hay cuadros/datos suficientes. No equivale a una garantía de muestreo perfectamente periódico.
+
+Para cada eje, el puente transmite la posición normalizada como float32, en bytes 82--85 para roll y 86--89 para pitch. El receptor valida rango $[-1,1]$, CRC, secuencia y marca temporal.
+
+En SC8, \code{YokeMotion} recibe \code{rx.raw.timeMs*1000UL}: captura de la muestra en Windows, convertida a microsegundos. No es el tiempo de llegada de los bytes a la Pico ni el reloj de física del simulador. Las variaciones de entrega desde SimConnect aún afectan el muestreo, pero agrupar bytes en USB no introduce pasos ficticios. Los protocolos anteriores usan el instante local \code{rx.last}.
+
+Entre paquetes el firmware reutiliza el mismo instante. Entonces $\Delta t=0$ y el estimador no se actualiza. Esto evita interpretar cada iteración local sin paquete nuevo como una muestra de velocidad nula. También implica que, si dejan de llegar paquetes, la velocidad simulada anterior puede mantenerse hasta que una nueva muestra la cambie o la habilitación expire. El contador de reposo no avanza sólo por ejecutar el bucle; necesita nuevos tiempos de muestra. Al perder la habilitación, el estimador de SimConnect se reinicia.
+
+Si falta \code{yokeAvailable}, el modo simulado usa velocidad cero y deshabilita el centrado dependiente de esa posición. \textbf{No cambia automáticamente a un potenciómetro o encoder que pudiera estar conectado.}
+
+La posición virtual puede incorporar curvas, zonas muertas, asignaciones o comportamiento del addon distintos del movimiento físico. No se debe asumir que el movimiento visual producido por trim o piloto automático equivale siempre a movimiento real del eje: hay que comprobar qué publica ese avión. El sketch actual tampoco transmite estos ejes a Prepar3D; la asignación de entrada del simulador es otra parte de la instalación.
+
+\subsubsection{Modo 2: potenciómetros, ADC y promedio}
+En Pico se utilizan GP26 para roll y GP27 para pitch, con ADC de 12 bits: valores enteros de 0 a 4095. Son números GPIO, no posiciones físicas del conector. La electrónica de entrada corresponde a 3.3 V. \code{AxisPotentiometers.h} descarta una primera conversión al cambiar de canal y promedia cuatro conversiones por defecto:
+\begin{equation}
+A=\left\lfloor\frac{a_1+a_2+a_3+a_4+2}{4}\right\rfloor.
+\end{equation}
+Los $a_i$ son lecturas ADC; el $+2$ permite redondear el promedio entero. Estas cuatro conversiones se toman dentro de la actualización del canal: no constituyen un promedio de las últimas cuatro iteraciones del control.
+
+\subsubsection{Histéresis móvil y normalización de los potenciómetros}
+\code{PotentiometerPosition.h} conserva un valor $H$ que sólo se mueve cuando el promedio $A$ se aleja más de $h=4$ cuentas:
+\begin{equation}
+H_n=\begin{cases}
+A_n-h,&A_n>H_{n-1}+h,\\
+A_n+h,&A_n<H_{n-1}-h,\\
+H_{n-1},&\text{en otro caso}.
+\end{cases}
+\end{equation}
+Inicialmente $H=A$. Es una banda que sigue a la señal: reduce pequeñas oscilaciones del ADC, pero introduce holgura al invertir el movimiento. Una deriva lenta acumulada termina saliendo de la banda y sí se detecta. No debe confundirse con una zona muerta exclusivamente alrededor del centro mecánico.
+
+Sean $N$, $C$ y $P$ las lecturas calibradas del extremo negativo, centro y extremo positivo. Si el ADC crece hacia el extremo positivo:
+\begin{equation}
+x=\sat_{[-1,1]}\!\left\{\begin{cases}
+\dfrac{H-C}{P-C},&H\ge C,\\[3pt]
+\dfrac{H-C}{C-N},&H<C.
+\end{cases}\right.
+\end{equation}
+Por ejemplo, con $N=0$, $C=2048$ y $P=4095$, una lectura filtrada $H=2457$ da $x=409/2047\simeq0.1998$. El código también admite ADC decreciente: detecta de qué lado del centro está el extremo positivo y utiliza los denominadores con su signo. No hay que invertir necesariamente el cableado para definir el sentido.
+
+El menú de extremos calcula el centro como el punto medio entero entre los extremos capturados; \textbf{no realiza una tercera captura independiente del centro mecánico}. Por eso un mecanismo asimétrico puede requerir mejorar ese procedimiento. Los defaults son 0/2048/4095, mientras que el punto medio entero de 0 y 4095 es 2047: no hay que confundir default con valor recalculado. La calibración persistida valida un rango de al menos 64 cuentas, pero pasar esa validación no garantiza buena resolución. Un recorrido ADC pequeño amplifica tanto el movimiento como el ruido al normalizarlo.
+
+Al guardar, el sketch detiene las salidas y reinicia los estimadores locales y los efectos. Se evita así interpretar el cambio de calibración o la pausa de escritura como un movimiento físico. La calibración de potenciómetros y las ganancias tienen registros separados.
+
+\subsubsection{Modo 0: encoders y normalización de cuentas}
+\code{AxisEncoders.h} pone ambos contadores en cero al comenzar. Por tanto, el yugo debe estar en el centro de referencia al arrancar: no hay búsqueda de origen ni uso del índice Z. Si se arranca desplazado, se desplaza la referencia del resorte. El damper sólo necesita diferencias de posición, pero también queda afectado cuando esa referencia errónea hace alcanzar el recorte de posición.
+
+Con $c$ cuentas ya corregidas por \code{ROLL_ENCODER_DIRECTION} o \code{PITCH_ENCODER_DIRECTION}, la normalización es:
+\begin{equation}
+x=\sat_{[-1,1]}\!\left\{\begin{cases}
+c/C_+,&c\ge0,\\
+c/|C_-|,&c<0.
+\end{cases}\right.
+\end{equation}
+Los límites actuales son $C_\pm=\pm1000$ en roll y $\pm2546$ en pitch. El comentario del proyecto supone encoder de 1000 PPR leído en cuadratura x4, roll directo de $\pm90^\circ$, y una geometría estimada para pitch. \textbf{Las 2546 cuentas de pitch deben reemplazarse por mediciones del mecanismo}; tampoco se debe confundir PPR del fabricante con cuentas efectivas después de la decodificación.
+
+En Pico, \code{PicoEncoder.h} utiliza los cambios de ambos canales, una tabla de transiciones de cuadratura y lectura protegida del contador. Los GPIO son 0/1 para roll y 2/3 para pitch. Una transición inválida no reconstruye pasos perdidos. En la rama AVR se utiliza la biblioteca PJRC Encoder y otro cableado: roll 0/1 y pitch 7/4; no se debe trasladar sin revisión la configuración de una placa a otra.
+
+El signo del encoder, la escala de cuentas y la polaridad del motor son tres configuraciones distintas. Invertir el motor no corrige un centro o una escala de sensor mal calibrados. En potenciómetros, el sentido se obtiene de los extremos calibrados y no de las macros de dirección del encoder.
+
+\subsubsection{Comparación práctica para damper y fricción}
+\begin{longtable}{p{0.16\linewidth}p{0.36\linewidth}p{0.39\linewidth}}
+\toprule
+Fuente & Ventaja para este cálculo & Limitación que conviene medir\\
+\midrule
+SimConnect & Permite demostrar el algoritmo con el mando virtual; no requiere sensor local en esta rama. & Más etapas y retardo; intervalos variables, posición virtual y posibles curvas; velocidad retenida entre paquetes.\\
+Potenciómetro & Posición local absoluta después de calibrar; no exige centrar al encender. & Ruido ADC, desgaste, rango aprovechado, promedio e histéresis; centro real frente al punto medio.\\
+Encoder & Medición local incremental sin conversión analógica de posición; resolución determinada por cuentas y transmisión. & Centro relativo al arranque, pasos discretos a baja velocidad, posibles cuentas perdidas y escala mecánica.\\
+\bottomrule
+\end{longtable}
+Si se busca resistir el movimiento de la mano, el sensor local mide de forma más directa esa variable. Esto no demuestra automáticamente que cualquier montaje local sea mejor: el ruido, la resolución y la transmisión deben medirse. Cambiar de fuente puede exigir reajustar el filtro y las ganancias aun manteniendo las mismas ecuaciones.
+
+\subsection{Cómo se calcula la velocidad común}
+\label{sec:velocidad_comun}
+\subsubsection{Derivada discreta y unidades}
+Para cada eje y cada nueva muestra:
+\begin{align}
+\Delta t_n&=(t_n-t_{n-1})\,10^{-6},\\
+v_{\rm raw,n}&=\sat_{[-10,10]}\left(\frac{x_n-x_{n-1}}{\Delta t_n}\right).
+\end{align}
+Los tiempos entran en microsegundos y $10^{-6}$ los convierte a segundos. La división es la definición de velocidad media entre dos posiciones. Como $x$ es adimensional, la unidad es \textbf{recorridos centro--extremo por segundo}. Ir del centro a un extremo en un segundo significa velocidad media de magnitud 1; recorrer de $-1$ a $+1$ en un segundo significa 2.
+
+El límite 10 es una elección del firmware para acotar la derivada. No es una velocidad máxima medida del avión. Además, se recorta la posición a $[-1,1]$ \textbf{antes} de derivar. Si el mecanismo continúa fuera del rango calibrado y la posición ya está recortada, puede resultar $\Delta x=0$: el damper no constituye un detector de tope físico.
+
+\subsubsection{Filtro de primer orden e inversión de dirección}
+Con $\tau=0.040$ s se calcula:
+\begin{equation}
+\beta_n=\frac{\Delta t_n}{\tau+\Delta t_n},\qquad
+\widehat v_n=\widehat v_{n-1}+\beta_n(v_{\rm raw,n}-\widehat v_{n-1}).
+\label{eq:damper_filtro}
+\end{equation}
+$\beta$ dice qué parte de la diferencia se incorpora en cada muestra. Esta expresión es la actualización de un filtro de primer orden mediante discretización implícita de $\tau\dot{v}+v=v_{\rm raw}$. Suaviza la derivada ruidosa a costa de retrasar la respuesta. A 2 ms, $\beta=2/42\simeq0.04762$; a 20 ms, $\beta=20/60=1/3$. El coeficiente cambia con el tiempo real.
+
+Antes de aplicar esa ecuación, si $v_{\rm raw,n}\widehat v_{n-1}<0$, el código pone la velocidad anterior en cero. Así, una inversión detectada no conserva una cola del signo anterior. Es un tratamiento especial: el estimador completo no es solamente un filtro lineal. Cuando $v_{\rm raw}=0$, el producto es cero y esta condición de inversión no se activa.
+
+\subsubsection{Reposo, primera muestra y pausas}
+El contador de reposo acumula tiempo cuando $|v_{\rm raw}|\le0.02$ y se pone en cero cuando se supera ese umbral. Al alcanzar 40000 microsegundos, fija $\widehat v=0$. Esto elimina una cola residual que un filtro exponencial puro tardaría en extinguir.
+
+La primera muestra sólo establece posición y tiempo; su velocidad es cero. Una entrada no finita reinicia el estimador. Un intervalo entre muestras superior a 250 ms también vuelve a iniciar con velocidad cero. Un intervalo nulo no hace nada. En la rama simulada, además, \code{Effects.update} reinicia sus estimadores al deshabilitarse, al iniciar y si el intervalo de actualización de efectos supera 50 ms. Los estimadores locales siguen actualizándose desde el bucle aunque la salida de efectos esté desarmada; no se deben atribuirles todos los reinicios de la rama simulada.
+
+\subsubsection{Resolución: por qué un pequeño paso puede importar}
+Con muestras locales separadas 2 ms, una cuenta de roll de $1/1000$ produce $v_{\rm raw}=0.5$. Si la velocidad previa era cero, el primer valor filtrado es $0.5/21\simeq0.02381$, apenas por encima de la zona muerta. Una cuenta de pitch de $1/2546$ da $v_{\rm raw}\simeq0.19639$ y $\widehat v\simeq0.00935$, por debajo de ella.
+
+Un paso ADC de $1/2047$ en el lado positivo, una vez superada la histéresis, produce aproximadamente $v_{\rm raw}=0.24426$ y $\widehat v=0.01163$ en esa primera actualización. En SimConnect, un paso de $0.0001$ en 20 ms equivale a $0.005$ antes del filtro. Estos ejemplos parten de reposo y de un único paso; no son umbrales universales para movimiento continuo.
+
+En un encoder lento, los pasos pueden estar separados por intervalos sin cambios mayores de 40 ms. El reinicio de reposo puede entonces generar pequeñas respuestas intermitentes en vez de una velocidad continua. Aumentar la ganancia no recupera información que el sensor o el estimador eliminaron. Conviene resolver primero resolución y estimación.
+
+\subsection{Fórmula exacta del damper y significado de cada parte}
+\subsubsection{Zona muerta y ganancia del eje}
+Sea $v=\sat_{[-10,10]}(\widehat v)$ la velocidad que recibe la función. Se define:
+\begin{equation}
+m=\max(|v|-v_d,0),\qquad v_d=0.02.
+\label{eq:movimiento_util}
+\end{equation}
+$m$ es la magnitud de movimiento útil. \textbf{Se resta el umbral}: con $|v|=0.10$, se utiliza $m=0.08$, no 0.10. La resistencia empieza continuamente desde cero al superar el umbral.
+
+Sean $G$ la ganancia general y $s_R=0.5$, $s_P=1$. El factor aplicado es $H_a=\sat_{[0,1]}(G s_a)$. Con $G=0.90$, $H_R=0.45$ y $H_P=0.90$. Esta reducción fija no procede de la relación física entre milímetros de pitch y grados de roll.
+
+\subsubsection{Damper aislado}
+% [V-realismo]
+Con centrado habilitado y disponible, \code{YOKE_DAMPER_STIFFNESS_SCALING=1} aplica
+% [V-realismo]
+\begin{equation}s_B=\sat_{[0.5,2]}\sqrt{\frac{\max(k_f,0)}{r+k_a}}.\end{equation}
+% [V-realismo]
+Sin centrado, sin disponibilidad o con flag 0, $s_B=1$. Se usa rigidez filtrada, no objetivo instantáneo. Con $r=0.15$, $k_a=0.85$, en régimen:
+% [V-realismo]
+\begin{center}\begin{tabular}{rrrrr}\toprule $Q$&0&0.25&1&4\\ $s_B$&0.5&0.60208&1&1.88414\\\bottomrule\end{tabular}\end{center}
+% [V-realismo]
+Los ejemplos de velocidad de esta sección suponen $s_B=1$ ($Q=1$ estabilizado o centrado deshabilitado). Si sólo está habilitado el damper:
+\begin{equation}
+\boxed{u_{d,a}=-\operatorname{sgn}(v_a)\,H_a\,\min(Bs_Bm_a,L)}
+\qquad B=0.120,\quad L=0.400.
+\label{eq:damper_aislado}
+\end{equation}
+$B$ es la ganancia efectiva de damper, $L$ limita la resistencia previa a la ganancia general, y $u_{d,a}$ es el comando normalizado adicional. Si el efecto se desactiva desde el menú, su ganancia efectiva es cero. La máscara de compilación también puede excluirlo.
+
+% [V-realismo]
+Para $v>0$ el resultado es negativo; para $v<0$ es positivo. En $v=0$, $m=0$ y el resultado es cero independientemente de cómo se implemente el signo. No depende de $x$ directamente: a igual velocidad y factor $s_B$, dos posiciones distintas generan el mismo damper mientras la medición no esté recortada.
+
+% [V-realismo]
+\textit{Actualización (realismo): $Bm$ $\rightarrow$ $Bs_Bm$, con $s_B=\sat_{[0.5,2]}\sqrt{k_f/(r+0.85)}$; amortiguamiento relativo constante con inercia fija (Ogata); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Límite compartido con fricción}
+Con ambos habilitados, el código realmente ejecuta:
+\begin{align}
+R_d&=Bs_Bm, & R_f&=F_c\frac{m}{v_0+m}\quad\text{(modo por velocidad)},\\
+R&=\min(R_d+R_f,L), &
+u_{\rm mov,a}&=-\operatorname{sgn}(v_a)H_aR,
+\label{eq:movimiento_conjunto}
+\end{align}
+% [V-realismo]
+con $F_c=0.030$ y $v_0=0.200$ para modo 0 o posición simulada. Con sensor local y modelo 1, la fricción firmada es $f=-F_c\sat_{[-1,1]}[(x-w)/z_{\max}]$:
+% [V-realismo]
+\begin{align}
+% [V-realismo]
+f_{d,a}&=-\operatorname{sgn}(v_a)\min(Bs_Bm_a,L),\\
+% [V-realismo]
+u_{\rm mov,a}&=H_a% [V-realismo]
+\sat_{[-L,L]}(f_{d,a}+f_a).
+% [V-realismo]
+\end{align}
+% [V-realismo]
+La suma algebraica permite signos distintos al invertir el movimiento, por la memoria del ancla. \textbf{El límite se aplica a la suma antes de multiplicar por $H_a$.} En modo racional se limita directamente la suma de magnitudes. En modelo local 1, primero se recorta el damper a $L$, se suma la fricción firmada y se recorta de nuevo; por ejemplo, damper bruto $-0.8$ y fricción $+0.03$ dan $(-0.4+0.03)H_a=-0.37H_a$. Por encima del límite ya no hay una contribución independiente observable de cada uno; sólo queda la resistencia total limitada.
+
+% [V-realismo]
+El máximo de esta rama con las ganancias generales actuales es 0.36 en pitch y 0.18 en roll: aproximadamente 92 y 46 cuentas PWM si actúa sola. No es el máximo de todos los efectos juntos, que sigue siendo 220. Con $s_B=1$, el damper aislado alcanza el límite a $|v|=0.02+0.4/0.12\simeq3.3533$. La fricción hace alcanzar antes el límite conjunto.
+
+% [V-realismo]
+\textit{Actualización (realismo): suma con fricción racional $\rightarrow$ suma algebraica con fricción local de ancla y damper escalado; presliding y amortiguamiento relativo constante (Hayward--Armstrong; Ogata); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Procedencia de los valores}
+La dependencia proporcional a velocidad es el modelo viscoso. La diferencia discreta sale de la definición de derivada; el filtro es una aproximación de primer orden. Los números 0.12, 0.02, 40 ms, 10 y 0.40 son \textbf{parámetros del proyecto}, no constantes universales ni valores identificados para un avión concreto. La relación fija roll/pitch también es una elección local. Su presencia se verifica en \code{mis_defines.h}, \code{GainSettings.h} y \code{SimEffects.h}; la comparación histórica se detalla más adelante.
+
+\subsection{Ejemplos numéricos y conversión a PWM}
+\subsubsection{Velocidad ya estabilizada, damper aislado}
+Con $v=+1$, $m=1-0.02=0.98$. Se calcula $R_d=0.12\cdot0.98=0.1176$. Como es menor que 0.4, no se limita:
+\begin{align}
+u_{d,P}&=-0.90\cdot0.1176=-0.10584,& \mathrm{PWM}_P&=-27,\\
+u_{d,R}&=-0.45\cdot0.1176=-0.05292,& \mathrm{PWM}_R&=-13.
+\end{align}
+Para $v=-1$, los mismos valores tienen signo positivo. Los PWM de estos ejemplos suponen polaridad de motor $+1$, ausencia de otros efectos y redondeo del driver.
+
+\begin{center}
+\begin{tabular}{rrrrr}
+\toprule
+$|v|$ & $m$ & $\min(0.12m,0.4)$ & $|\mathrm{PWM}_P|$ & $|\mathrm{PWM}_R|$\\
+\midrule
+0.00 & 0.00 & 0.0000 & 0 & 0\\
+0.02 & 0.00 & 0.0000 & 0 & 0\\
+0.10 & 0.08 & 0.0096 & 2 & 1\\
+0.22 & 0.20 & 0.0240 & 6 & 3\\
+0.50 & 0.48 & 0.0576 & 13 & 7\\
+1.00 & 0.98 & 0.1176 & 27 & 13\\
+2.00 & 1.98 & 0.2376 & 55 & 27\\
+4.00 & 3.98 & 0.4000 & 92 & 46\\
+\bottomrule
+\end{tabular}
+\end{center}
+La tabla usa velocidad \emph{estimada}, no necesariamente la velocidad instantánea real del mecanismo. La zona muerta, el filtro y el redondeo PWM son tres causas diferentes de que un movimiento pequeño no produzca una salida apreciable.
+
+\subsubsection{Ejemplo desde dos muestras de SimConnect}
+Supóngase que la muestra previa es $x=0.10$, la velocidad previa cero y, 20 ms después, llega $x=0.12$. Tras decodificar la trama:
+\begin{align}
+v_{\rm raw}&=(0.12-0.10)/0.020=1,\\
+\widehat v&=0+\frac{0.020}{0.040+0.020}(1-0)=\frac13,\\
+m&=\frac13-0.02\simeq0.313333,\\
+u_{d,P}&=-0.90\cdot0.12\cdot0.313333=-0.03384.
+\end{align}
+El resultado aislado es PWM $-9$ en pitch y $-4$ en roll. No son los $-27/-13$ del ejemplo anterior porque el filtro todavía está comenzando a responder. Si el movimiento continúa a esa velocidad, el valor filtrado se aproxima a 1. Si se detiene, se atenúa y finalmente se anula por el criterio de reposo.
+
+\subsubsection{Suma final, signo eléctrico y ciclo de trabajo}
+El comando que llega al driver es:
+\begin{equation}
+u_a=\sat_{[-220/255,\,220/255]}
+\left(u_{c,a}+u_{t,a}+u_{b,a}+u_{\rm mov,a}+u_{g,a}\right).
+\end{equation}
+Las letras representan centrado, turbulencia, suma de buffets, resistencia conjunta al movimiento y vibración en suelo. Con $d_a\in\{-1,+1\}$ como dirección de motor y \code{PWM_MAX=255}:
+\begin{equation}
+\mathrm{PWM}_a=\sat_{[-220,220]}\!\left(\operatorname{redondeo}_{\rm sim}(255d_au_a)\right).
+\end{equation}
+El redondeo es al entero más cercano, con mitades alejándose de cero. PWM positivo activa la salida derecha y deja la izquierda en cero; PWM negativo activa la izquierda con su magnitud y deja la derecha en cero. En Pico se emplean 6/7 para roll y 8/9 para pitch, con habilitaciones 10 y 11. La frecuencia configurada es 490 Hz. Por ejemplo, una magnitud 27 representa $27/255\simeq10.59\%$ de ciclo de trabajo; \textbf{no representa 27 N ni garantiza 10.59\% del torque nominal}. No hay en esta ruta un lazo de corriente que convierta automáticamente comando en fuerza medida.
+
+\subsection{Relación con el centrado y con los otros efectos}
+\subsubsection{Suma con el resorte: posición frente a velocidad}
+Usando el resorte ya documentado:
+\begin{equation}
+u_{c,a}=-Gg_ak_fx_a,\qquad
+k_{\rm objetivo}=r+k_aQ,
+\end{equation}
+con $g_R=0.4$, $g_P=0.8$, $r=0.15$ y presión normalizada $Q$ filtrada a través de la rigidez con 100 ms. Sin fricción ni saturación, el conjunto se aproxima a un resorte más amortiguador:
+\begin{equation}
+u_a=-Gg_ak_fx_a-H_aBs_B\operatorname{sgn}(v_a)\max(|v_a|-0.02,0).
+\end{equation}
+No es un seguidor de trayectoria con consigna móvil ni un PID completo; no tiene término integral en esta cadena. El centro ideal sigue siendo cero.
+
+\begin{longtable}{p{0.30\linewidth}p{0.29\linewidth}p{0.32\linewidth}}
+\toprule
+Estado del yugo & Centrado & Damper\\
+\midrule
+Quieto fuera del centro & Mantiene comando restaurador. & Se anula al extinguirse la velocidad estimada.\\
+Se aleja del centro: $xv>0$ & Intenta devolverlo. & Se opone al alejamiento: mismo sentido que el resorte.\\
+Regresa al centro: $xv<0$ & Favorece el regreso. & Frena el regreso: sentido opuesto al resorte.\\
+Atraviesa $x=0$ con $v\ne0$ & Es cero en ese instante. & Sigue oponiéndose al movimiento.\\
+\bottomrule
+\end{longtable}
+Con $Q=1$, rigidez estabilizada $k_f=1$, pitch $x=0.20$ y $v=+1$, el resorte da $-0.144$ y el damper $-0.10584$: total $-0.24984$, PWM $-64$. Si el mismo mando regresa con $v=-1$, total $-0.03816$, PWM $-10$. El damper está reduciendo la rapidez del retorno, no cambiando el centro del resorte.
+
+% [V-realismo]
+\textit{Actualización (realismo): damper independiente de rigidez $\rightarrow$ damper multiplicado por $s_B$; conserva amortiguamiento relativo al variar el resorte (Ogata); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Presión y amortiguación: dependencia indirecta}
+% [V-realismo]
+Al aumentar $Q$, el damper ahora escala con $\sqrt{k_f}$, limitado a 0.5--2 y sólo con centrado disponible y habilitado. La relación $\zeta=b/(2\sqrt{kJ})$ motiva mantener amortiguamiento relativo con inercia fija. El flag 0 recupera $s_B=1$.
+
+% [V-realismo]
+$B$ y $k_f$ son adimensionales; faltan transmisión, inercia física y relación comando--torque para calcular un amortiguamiento físico calibrado.
+
+% [V-realismo]
+\textit{Actualización (realismo): presión sin escala directa del damper $\rightarrow$ escala por $\sqrt{k_f}$ cuando el centrado está disponible; amortiguamiento relativo constante (Ogata); ver Sección~\ref{sec:realismo}.}
+
+% [V-realismo]
+\subsubsection{Interacción con turbulencias, buffets y suelo}
+% [V-realismo]
+El damper se suma; no multiplica las ondas por un factor de velocidad ni necesita que haya una fuerza base. Si una vibración mueve físicamente el yugo, ese movimiento genera resistencia y puede atenuar la vibración percibida. Si el mando no se mueve, la velocidad se anula y el damper deja de aportar, aunque el generador de vibraciones siga calculando una señal.
+
+% [V-realismo]
+El código tampoco distingue si el movimiento lo produjo la mano, el resorte o una perturbación del motor: responde a la misma velocidad. La suma final puede saturar y recortar ondas. Aumentar mucho el damper puede hacer menos perceptibles los otros efectos, por oposición mecánica o por saturación compartida, aun cuando sus ganancias no cambien.
+
+
+% [V-realismo]
+\textit{Actualización (realismo): fricción por velocidad en la suma $\rightarrow$ fricción local con memoria de posición junto al damper escalado; presliding y amortiguamiento relativo (Hayward--Armstrong; Ogata); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Qué demuestra la oposición al movimiento}
+% [V-realismo]
+Para ganancias no negativas, en damper y en la rama de fricción por velocidad (modo 0 o posición simulada), $u_{\rm mov}v\le0$: la resistencia calculada se opone a la \textbf{velocidad estimada}. Esto es una propiedad algebraica de esos términos, no de la suma completa con ráfagas o resorte. Tampoco demuestra estabilidad o pasividad física del mecanismo: intervienen retardo, muestreo, polaridad y correspondencia del sensor con el movimiento real. En especial, la velocidad virtual de SimConnect puede diferir de la de la mano.
+
+% [V-realismo]
+La fricción local con ancla no garantiza ese signo instantáneo después de invertir: conserva deformación y puede devolver energía de presliding antes de acomodar el ancla.
+
+% [V-realismo]
+\textit{Actualización (realismo): oposición instantánea por ley de velocidad $\rightarrow$ fricción local capaz de devolver energía al invertir; memoria elástica de presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Procedencia: proyecto actual, original alemán y referencias}
+\label{sec:origen_damper_friccion}
+\subsubsection{Antecedente comprobable en el proyecto alemán}
+Se inspeccionó la copia local en \code{PROEYCTO ORIGINAL/Arduino_FFB_Yoke}, situada fuera de la carpeta modificada. En \code{joystick.ino::UpdateEffects}, calcula diferencias de cuentas y divide por diferencias de tiempo en milisegundos, usando variables enteras. Asigna esas velocidades a \code{damperVelocity} y también a \code{frictionPositionChange}, a pesar del nombre de este último campo.
+
+En \code{src/Joystick.cpp}, los casos \code{USB_EFFECT_DAMPER} y \code{USB_EFFECT_FRICTION} llaman a \code{ConditionForceCalculator} con una métrica normalizada, aplican ganancias y filtros específicos. Es una arquitectura de efectos condicionales HID con parámetros recibidos por ese sistema. \textbf{No es la fórmula actual completa}. No corresponde atribuirle el filtro común de 40 ms, la zona muerta 0.02, los límites actuales ni las ganancias actuales sólo porque ambos proyectos tengan efectos con el mismo nombre.
+
+\subsubsection{TelemFFB: antecedente conceptual, no esta ecuación exacta}
+En la copia local \code{VPforce-TelemFFB-refactor/telemffb/sim/base/FFBForcesMixIn.py}, el método \code{ac_update_ffb_forces} limita intensidades configuradas a $[0,1]$ e inicia efectos mediante \code{damper(force,force)} y \code{friction(force,force)}. Esa rutina de overrides no lee claves de telemetría para calcular una derivada; delega el efecto al dispositivo a través de su interfaz de efectos.
+
+Por tanto, TelemFFB sirve como antecedente de disponibilidad y configuración de esos efectos, pero \textbf{no se ha demostrado que proporcione la ecuación local $F_cm/(0.2+m)$ ni el coeficiente $B=0.12$}. La implementación actual calcula explícitamente las resistencias en la placa y las convierte a PWM.
+
+\subsubsection{Evolución local que explica documentación contradictoria}
+La instantánea \code{tesis/auditoria_c182rg/antes_mejoras/SimEffects.h.txt} ya contiene los términos $Bm$ y $F_cm/(v_0+m)$. Sin embargo, multiplicaba su suma por:
+\begin{equation}
+\min\left(\frac{|u_{\rm base}|}{0.10},1\right)
+\end{equation}
+y evitaba que la corrección invirtiera el signo de la fuerza base. Por ello, si la fuerza base era cero, la corrección también era cero. \code{CAMBIOS_REALISMO.md} documenta el cambio hacia cargas independientes; la función actual resta la resistencia con su signo sin esa dependencia.
+
+El comentario actual que menciona regularización conservada del ``original firmware'' debe interpretarse con cautela: \textbf{se comprobó su presencia en la versión local anterior; no se comprobó su procedencia del proyecto alemán}. No hay evidencia suficiente para asignarle un autor o una página matemática original. Las referencias históricas a \code{YOKE_MOTION_FORCE_BLEND=0.100} describen el modelo anterior: esa constante ya no participa en el cálculo. Asimismo, \code{VELOCITY_FILTER_TAU_S=0.018} y la clase \code{AxisMotion} no son el estimador activo de esta cadena: se utiliza \code{YokeMotion} con 0.040 s.
+
+\subsubsection{Fuentes enlazadas y alcance de la atribución}
+\begin{enumerate}
+\item \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{SDK de Prepar3D: Simulation Variables}. Referencia de nombres y unidades; las solicitudes concretas se verificaron en el puente local.
+\item \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/base/FFBForcesMixIn.py}{TelemFFB: FFBForcesMixIn.py}. Comparación con la copia local de configuración de efectos damper/friction; la rama remota puede evolucionar.
+\item \href{https://github.com/Ultrawipf/OpenFFBoard/blob/master/Firmware/FFBoard/Src/EffectsCalculator.cpp}{OpenFFBoard: EffectsCalculator.cpp}. Distingue posición para resorte y velocidad para damper, y suma efectos antes de recortar la salida. Es la referencia arquitectónica citada por \code{CAMBIOS_REALISMO.md}; no demuestra copia de sus coeficientes o de su ley de fricción.
+\item Código local actual y copias históricas identificadas arriba. Para las fórmulas numéricas del proyecto son la fuente primaria, por encima de documentos descriptivos antiguos.
+\end{enumerate}
+Consulta de las referencias web del SDK y OpenFFBoard: 8 de octubre de 2026. Las comparaciones de TelemFFB y del original alemán se realizaron contra las copias disponibles en el espacio de trabajo.
+
+\subsection{Qué ajustar y cómo interpretar el resultado}
+\subsubsection{Ganancias disponibles sin recompilar}
+En el menú, \code{Damper} ajusta $B$ entre 0 y 1 en pasos de 0.01 y permite desactivar el efecto. \code{Ganancia total} ajusta $G$ entre 0 y 1 en pasos de 0.05; afecta también a los demás efectos. Cambiar $B$ es la forma específica de modificar el damper. No hay dos entradas separadas de damper para roll y pitch: su relación de mando es actualmente 1:2.
+
+\subsubsection{Parámetros que requieren cambiar código y recompilar}
+\begin{longtable}{p{0.29\linewidth}p{0.16\linewidth}p{0.46\linewidth}}
+\toprule
+Parámetro & Default & Consecuencia del ajuste\\
+\midrule
+\code{YOKE_MOTION_FILTER_TAU_S} & 0.040 s & Más alto suaviza más y retrasa; más bajo responde antes y deja pasar más cuantización/ruido. Afecta también a fricción.\\
+\code{YOKE_MOTION_DEAD_SPEED} & 0.02 & Más alto reduce respuesta a movimientos pequeños; también cambia el criterio de reposo.\\
+\code{YOKE_MOTION_MAX_SPEED} & 10 & Acota picos de derivada; no sustituye un sensor bien calibrado.\\
+\code{YOKE_MOTION_CORRECTION_LIMIT} & 0.40 & Límite conjunto de damper y fricción antes de $G$ y del factor de eje.\\
+Reposo en \code{YokeMotion.h} & 40000 $\mu$s & Más tiempo conserva colas/velocidad entre pasos; menos puede cortar movimientos lentos discretos.\\
+Factor roll en \code{SimEffects.h} & 0.5 & Modifica ambos efectos de movimiento en roll respecto de pitch.\\
+\code{YOKE_POT_SAMPLES}, histéresis & 4 y 4 & Modifican el ruido y el movimiento pequeño que llega desde los potenciómetros.\\
+\bottomrule
+\end{longtable}
+Ningún ajuste de \code{YOKE_MOTION_FORCE_BLEND} corrige la sensación actual porque ya no se usa. El límite de salida PWM tampoco es una ganancia específica del damper.
+
+\subsubsection{Orden de calibración propuesto}
+\begin{enumerate}
+\item Medir centro, extremos, sentido y rango útil del sensor elegido. Registrar posición normalizada al mover el mecanismo a puntos conocidos; corregir escala antes de compensarla con ganancia.
+\item Con el mando quieto, observar posición y velocidad. Si existe ruido, resolver ADC, histéresis, resolución o filtrado antes de subir resistencia.
+\item Aislar damper desactivando fricción, centrado y perturbaciones desde el menú. Comparar movimientos lentos y rápidos en ambos sentidos. Debe oponerse al movimiento y desaparecer al detenerse.
+\item Activar el resorte y ensayar retornos desde varias posiciones y presiones. Aumentar $B$ gradualmente si hay rebote; reducirlo si el retorno queda excesivamente lento. Registrar cuándo se alcanza saturación.
+\item Incorporar fricción y, después, perturbaciones. Comprobar que la resistencia no oculta los efectos que se quieren percibir. Repetir por eje: el mismo comando normalizado no implica el mismo esfuerzo físico.
+\end{enumerate}
+Es un procedimiento propuesto, no un ensayo ya realizado. Para movimientos rápidos conviene registrar muestras a mayor frecuencia que el diagnóstico serie actual: éste emite cada 100 ms alternando ejes, por lo que cada eje se observa aproximadamente cada 200 ms. Sirve para tendencias, pero no reconstruye transitorios de 40 ms.
+
+\subsubsection{Mejoras que requieren desarrollo e identificación}
+% [V-realismo]
+Se podrían incorporar ganancias separadas por eje, captura real del centro del potenciómetro, estimación de velocidad de encoder basada en tiempo entre flancos, y marcas de tiempo de adquisición en la telemetría. La escala de $B$ con raíz de rigidez ya está implementada; su sensación y estabilidad requieren validación del mecanismo. Para obtener valores físicos, hacen falta mediciones de fuerza/torque frente a PWM, posición y velocidad, además de la transmisión mecánica. El ajuste empírico actual no demuestra reproducción de un modelo de avión concreto.
+
+\newpage
+
+% [V-realismo]
+\textit{Actualización (realismo): escala del damper por rigidez propuesta $\rightarrow$ implementada con $s_B\propto\sqrt{k_f}$; amortiguamiento relativo constante a validar en hardware (Ogata); ver Sección~\ref{sec:realismo}.}
+

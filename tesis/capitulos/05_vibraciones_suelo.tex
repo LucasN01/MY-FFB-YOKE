@@ -1,0 +1,276 @@
+\section{VIBRACIONES EN SUELO}
+\label{sec:suelo}
+
+\subsection{Actualización: textura suave de rodaje sobre pista}
+% [V-realismo]
+La salida combina baches de P3D con textura sintética siempre presente durante rodaje habilitado, por requisito del usuario. Roll dominante también es un requisito del usuario; pitch usa un décimo. Los baches conservan $E$ de la ecuación~\ref{eq:ground-envelope}; sólo la textura usa $\sqrt E$ (ISO 8608).
+\begin{align*}
+T_n&=\sat_{[-0.12\sqrt E,\,0.12\sqrt E]}\{0.12\sqrt E(0.65N_{7,n}+0.35N_{11.3,n})\},\\
+F_{a,\mathrm{total}}&=\sat_{[-\sqrt E,\sqrt E]}(F_a+T_n).
+\end{align*}
+% [V-realismo]
+$N_7,N_{11.3}$ son ruidos de banda estrecha con RMS 0.7071 antes del recorte. Frecuencias 7/11.3 Hz y $\zeta=0.15$ representan resonancias supuestas. La aclaración del diseño llama a $\sqrt E$ \code{roadLevel}: pico de textura $\pm0.12\,\mathrm{roadLevel}$; techo de suma $\pm\mathrm{roadLevel}$. La textura avanza a 2 ms, sin nuevas aceleraciones; dt=0 conserva la portadora. Parada, vuelo o deshabilitación reinician ruido y salida. Con \code{SIMCONNECT_GROUND_NARROWBAND_TEXTURE=0} se conservan las senoides, ahora con amplitud $\sqrt E$.
+
+% [V-realismo]
+Con suelo 0.450 y total 0.90, el techo aislado es $12.393\sqrt E$ PWM roll y $1.2393\sqrt E$ pitch: en $E=1$ redondea 12/1. Los techos conjuntos siguen 40/4. La referencia de diseño de 1000 pasos a $E=1$ recorta alrededor de 2.5\% de la textura, conservando el pico suave anterior. A 10 kt, $E=0.240506$ y $\sqrt E=0.490414$: la amplitud es 2.04 veces la anterior.
+
+% [V-realismo]
+\code{gr/gp} conserva los baches previos a textura; R/P incluyen la suma. Los 800 casos de suelo y 96\,764 comprobaciones correspondían a la revisión de senoides. Los ejemplos siguientes de aceleraciones excluyen textura salvo indicación expresa.
+
+% [V-realismo]
+\textit{Actualización (realismo): textura sinusoidal proporcional a $E$ $\rightarrow$ banda estrecha 7/11.3 Hz proporcional a $\sqrt E$; RMS del perfil crece con raíz de velocidad (ISO 8608; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Qué hace el efecto en la versión SC8}
+El efecto responde a las \textbf{variaciones de aceleración lateral y vertical que entrega Prepar3D mientras el avión rueda}. La velocidad respecto del terreno conserva exactamente la progresión solicitada: hasta 0.5 kt no hay aporte; entre 0.5 y 40 kt aumenta el multiplicador de intensidad; desde 40 kt ese multiplicador vale uno.
+
+La explicación sencilla es: \emph{``transformar las sacudidas medidas del avión en comandos de motor, y hacer que una misma sacudida se transmita con mayor intensidad cuanto más rápido se rueda, hasta el límite elegido''}. La componente de baches puede cambiar de signo o desaparecer si las aceleraciones se estabilizan; la textura base continúa mientras el avión rueda por encima de 0.5 kt. \textbf{Máxima ganancia desde 40 kt no significa fuerza máxima permanente.}
+
+\subsubsection{Cambio respecto de la implementación anterior}
+% [V-realismo]
+En SC3--SC6 la placa sintetizaba una triangular de 8 Hz y suavizaba su amplitud con 100 ms. Esa ruta permanece para recibir protocolos antiguos, pero \textbf{no se ejecuta para el suelo de SC8}. Ahora la Pico calcula dos señales con signo y aplica ganancias y límites directamente. La componente de aceleraciones no tiene portadora ni suavizado adicional de 100 ms; se suma la textura local descrita arriba. Los buffets aerodinámicos conservan sus filtros de envolvente, pero ahora usan portadoras de banda estrecha (triangulares con flag 0).
+
+A igual velocidad, dos recorridos pueden producir comandos distintos si cambian las aceleraciones. El algoritmo no consulta un mapa de baches, no distingue cada rueda ni lee tipo de superficie: responde al movimiento que el simulador efectivamente publica. Puede responder también a maniobras bruscas en suelo. No hay un efecto separado de touchdown, ni reproducción mecánica calibrada de la transmisión del tren al yugo.
+
+% [V-realismo]
+\textit{Actualización (realismo): textura SC8 sinusoidal $\rightarrow$ ruido de banda estrecha con senoides en flag 0; excitación irregular sin cambiar la ruta de baches (ISO 8608; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Recorrido completo desde SimConnect hasta los motores}
+\begin{center}
+\fbox{\begin{minipage}{0.91\linewidth}
+\textbf{En Windows:} aceleraciones X/Y, velocidad y estado de suelo se recogen y transmiten en sus unidades originales, con marca temporal.
+
+\textbf{En la Pico:} validación, pasaaltos de 3 Hz, pasabajos de 20 ms, mezcla y normalización, saturación y rampa de velocidad; todo una vez por nueva muestra SC8.
+
+\textbf{En la placa:} señales de suelo calculadas localmente $\rightarrow$ ganancia ``Vib. suelo'' y total $\rightarrow$ recorte propio por eje $\rightarrow$ división adicional de pitch por diez $\rightarrow$ suma con otros efectos $\rightarrow$ límite general, polaridad, redondeo y PWM.
+\end{minipage}}
+\end{center}
+El signo de las perturbaciones se calcula en la Pico. Entre paquetes se conserva la componente calculada de aceleraciones; la textura continúa con el reloj local.
+
+\subsection{Entradas y condiciones de ejecución}
+\begin{longtable}{p{0.34\linewidth}p{0.15\linewidth}p{0.43\linewidth}}
+\toprule Variable & Unidad & Uso\\\midrule\endhead
+\code{ACCELERATION BODY X} & ft/s$^2$ & Componente lateral de entrada.\\
+\code{ACCELERATION BODY Y} & ft/s$^2$ & Componente vertical de entrada.\\
+\code{GROUND VELOCITY} & kt & Multiplicador progresivo 0.5--40 kt.\\
+\code{SIM ON GROUND} & Bool & Debe valer exactamente 1.\\
+\code{IS SLEW ACTIVE} & Bool & Debe valer cero.\\
+\bottomrule
+\end{longtable}
+El puente solicita estas entradas como \code{FLOAT64}. Los eventos \code{Sim} y \code{Pause} exigen simulación en marcha y sin pausa. El \href{https://www.prepar3d.com/SDKv4/sdk/references/variables/simulation_variables.html}{SDK de Prepar3D v4, Simulation Variables} documenta ambas aceleraciones en pies por segundo al cuadrado. No enumera la variable \code{CONTACT POINT COMPRESSION} usada por TelemFFB en MSFS; por ello esta adaptación utiliza aceleraciones documentadas y no presupone compatibilidad de esa variable.
+
+No se usan IAS, presión dinámica, posición o velocidad del yugo en la fórmula de suelo. Tampoco se solicitan compresiones de ruedas, RPM de neumáticos, geometría de suspensión ni tipo de superficie. Un avión detenido permanece sin este aporte aunque tenga viento relativo. Las opciones \code{--gusts}, \code{--gust-gain}, \code{--gust-longitudinal}, \code{--reference-knots} y \code{--no-buffets} no modifican este modelo.
+
+La validación compartida sigue pudiendo desarmar el conjunto por presión o posiciones del simulador inválidas, IAS/viento no finitos o estado de suelo inválido. Las comprobaciones particulares de aceleración y velocidad, en cambio, reinician únicamente el modelo de suelo y devuelven sus fuerzas en cero.
+
+\subsection{Símbolos y parámetros implementados}
+\begin{longtable}{p{0.25\linewidth}p{0.67\linewidth}}
+\toprule Símbolo & Significado\\\midrule\endhead
+$V_g$, $E$ & Velocidad en kt y multiplicador de velocidad, entre 0 y 1.\\
+$a_{X,n},a_{Y,n}$ & Aceleraciones de entrada, en ft/s$^2$.\\
+$\Delta t_n$ & Diferencia entre marcas de captura aceptadas, en segundos.\\
+$h_{i,n}$, $\ell_{i,n}$ & Salida del pasaaltos y del pasabajos, respectivamente.\\
+$\tau_H=1/(2\pi\,3)$ s & Constante del pasaaltos; referencia continua de corte 3 Hz.\\
+$\tau_L=0.020$ s & Constante del pasabajos.\\
+$a_*=8.043512$ ft/s$^2$ & Escala aproximada de 0.25 g para normalización.\\
+$s_R,s_P$ & Señales normalizadas y limitadas antes de ponderar velocidad.\\
+$F_R,F_P$ & Señales con signo calculadas por la Pico: $F_a=E s_a$.\\
+$\widehat F_R,\widehat F_P$ & Señales locales de la Pico, sin cuantización USB intermedia.\\
+$c_g=0.18$, $G=0.90$ & Ganancia de suelo y ganancia total iniciales.\\
+$L_g=40/255$, $r_g=10$ & Techo propio y divisor adicional para pitch.\\
+$u_R,u_P$ & Aportes normalizados de suelo a la suma de efectos.\\
+\bottomrule
+\end{longtable}
+Las ganancias pueden ser reemplazadas por ajustes persistidos en la placa. Los tiempos de filtro, pesos de mezcla y escala de aceleración son constantes del firmware; no son parámetros del menú ni valores identificados mediante mediciones del avión.
+
+\subsection{Paso 1: conservar la progresión con velocidad}
+\code{GroundModel.h::envelope} conserva la ley:
+\begin{equation}
+E=\begin{cases}
+0,&\text{si no está activo, no está en suelo o }V_g\text{ no es finita},\\
+0,&V_g\le0.5\ {\rm kt},\\
+\displaystyle\frac{V_g-0.5}{39.5},&0.5<V_g<40\ {\rm kt},\\[3pt]
+1,&V_g\ge40\ {\rm kt}.
+\end{cases}
+\label{eq:ground-envelope}
+\end{equation}
+``Activo'' identifica la habilitación del modelo; en la ruta SC8 de producción requiere telemetría armada y vigente, además de conexión USB. El modo monitor SC8 sólo registra las entradas y no ejecuta el modelo.
+
+El denominador es $40-0.5=39.5$ kt. A 10 kt resulta $E\simeq0.240506$; a 20.25 kt, $E=0.5$; a 40 y 60 kt, $E=1$. Una velocidad negativa da cero: no se toma su valor absoluto. No se implementa histéresis alrededor de 0.5 kt.
+
+Esta rampa es una decisión local de sensación. No se deriva de un modelo de suspensión ni de TelemFFB. Multiplica la perturbación después de filtrarla y limitarla, de modo que el máximo normalizado disponible por eje es $E$.
+
+\subsection{Paso 2: validar e inicializar las aceleraciones}
+El modelo devuelve cero y borra su memoria si $E=0$, si alguna aceleración no es finita o tiene magnitud mayor que 640 ft/s$^2$, o si $\Delta t$ no es finito, es negativo o alcanza 0.25 s. La cota 640 es una validación de sanidad, no un límite operativo del avión.
+
+La primera muestra válida después de un reinicio establece las dos referencias previas:
+\begin{equation}
+a_{i,\rm prev}=a_{i,n},\qquad h_i=\ell_i=0,\qquad F_R=F_P=0.
+\end{equation}
+No se interpreta el nivel inicial de aceleración como un golpe. Esto evita un impulso artificial al arrancar o reanudar, pero también significa que la primera muestra válida tras un contacto con suelo no constituye un efecto de impacto separado. Sólo los cambios posteriores generan respuesta.
+
+El tiempo se obtiene de la marca de captura de la muestra seleccionada por el puente. Los lotes se reducen a su último dato antes del envío. La Pico procesa una vez cada nueva marca; ante $\Delta t=0$ conserva estado y salida en lugar de reiniciar. No se supone un período exacto de 50 Hz ni se asigna artificialmente 20 ms a datos simultáneos.
+
+\subsection{Paso 3: filtrar las variaciones de movimiento}
+Para cada componente $i\in\{X,Y\}$, en una actualización válida posterior a la inicialización:
+\begin{align}
+\alpha_n&=\frac{\tau_H}{\tau_H+\Delta t_n}, & \tau_H&=\frac{1}{2\pi\,3}\simeq0.053052\ {\rm s},\\
+h_{i,n}&=\alpha_n\bigl(h_{i,n-1}+a_{i,n}-a_{i,n-1}\bigr),\\
+\beta_n&=\frac{\Delta t_n}{0.020+\Delta t_n},\\
+\ell_{i,n}&=\ell_{i,n-1}+\beta_n(h_{i,n}-\ell_{i,n-1}).
+\label{eq:ground-filter}
+\end{align}
+Después se guarda $a_{i,n}$ como referencia para la siguiente muestra. El pasaaltos elimina la componente constante y atenúa variaciones lentas; el pasabajos suaviza los cambios rápidos. Sus referencias continuas son 3 Hz y aproximadamente 7.958 Hz, respectivamente. \textbf{No son frecuencias de osciladores ni cortes ideales}; la respuesta digital depende también del intervalo de muestreo.
+
+Con $\Delta t=0.020$ s, $\alpha\simeq0.726221$ y $\beta=0.5$. Si una aceleración cambia y después queda constante, la salida presenta un transitorio y tiende a cero. Si permanece constante desde la inicialización, el modelo permanece silencioso. No se resta explícitamente 1 g: cualquier nivel constante se elimina por el filtrado.
+
+El suavizado pertenece al modelo de la Pico. Cambiar los 100 ms que aún aparecen en \code{Effects::update} modifica centrado y buffets, pero no suaviza las fuerzas de suelo de SC8.
+
+\subsection{Paso 4: obtener dos señales y ponderarlas por velocidad}
+La mezcla implementada es:
+\begin{align}
+s_R&=\sat_{[-1,1]}\left(\frac{0.3\ell_X+0.7\ell_Y}{8.043512}\right),\\
+s_P&=\sat_{[-1,1]}\left(\frac{\ell_Y}{8.043512}\right),\\
+F_R&=E\,s_R, & F_P&=E\,s_P.
+\label{eq:ground-signals}
+\end{align}
+La componente vertical también excita roll para conservar el carácter predominante de ese eje en este equipo. Los pesos 0.3/0.7 y la escala aproximada de 0.25 g son un \textbf{mapeo háptico elegido}, no una transformación geométrica del tren al mando ni una fórmula copiada de TelemFFB.
+
+La saturación se aplica antes de $E$. A 20.25 kt las mismas señales filtradas producen la mitad de señal local que a 40 kt; a partir de 40 kt no aumenta ese multiplicador. Esto no garantiza que dos recorridos reales a velocidades diferentes produzcan la misma aceleración de entrada. Tampoco garantiza una fuerza física proporcional después de saturación, redondeo y transmisión mecánica.
+
+Las componentes de aceleraciones pueden diferir en magnitud y signo y no tienen fase común. La textura agregada sí comparte fase entre ejes. La suma no impone una relación instantánea obligatoria 10:1. Un transitorio puede producir fuerza de un solo signo durante un intervalo.
+
+\subsection{Paso 5: procesar la telemetría SC8 en la Pico}
+% [V-realismo]
+La trama transporta aceleraciones X/Y en bytes 90--93 y 94--97, velocidad de suelo en 78--81 y estado de suelo en 30--33, todos float32. La marca temporal ocupa 6--9. Envolvente y fuerzas se calculan en la placa. Antes de ganancias, \code{SimEffects.h} suma la textura y limita: $\widehat F_a=\sat_{[-\sqrt E,\sqrt E]}(F_a+T_n)$. No existe cuantización intermedia con escala 10000 ni corte por envolvente codificada cero.
+
+La rampa se aplica una sola vez dentro del modelo. El modelo de aceleraciones se consume una vez por revisión del receptor y se mantiene entre tramas, sin triangular ni interpolación. La textura se actualiza en cada ciclo de motores. El paso cero no borra los filtros. Al detenerse hasta 0.5 kt o abandonar suelo, las fuerzas se anulan en la siguiente muestra válida, junto con la textura.
+
+El receptor valida CRC, secuencia, banderas, datos y avance de marca. Exige trama armada con menos de 300 ms y DTR. El puente desarma por pausa, simulación detenida, slew o pérdida de datos; exige datos de menos de 250 ms para armar. Permanecen rutas históricas para SC1--SC7, pero el puente actual sólo emite SC8.
+
+% [V-realismo]
+\textit{Actualización (realismo): techo de baches más textura $\pm E$ $\rightarrow$ $\pm\sqrt E$; permite la nueva escala RMS de textura (ISO 8608); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Paso 6: ganancias, límites y suma con otros efectos}
+La etapa de suelo en \code{Effects::command} aplica:
+\begin{align}
+g_R&=\sat_{[-L_g,L_g]}(\widehat F_R c_g G),\\
+g_P&=\sat_{[-L_g,L_g]}(\widehat F_P c_g G),\\
+u_R&=g_R, & u_P&=g_P/10, & L_g&=40/255.
+\label{eq:ground-gains}
+\end{align}
+Hay \textbf{dos señales y dos recortes}, seguidos de la reducción adicional de pitch. El divisor 10 limita su sensibilidad, pero ya no significa que pitch sea siempre un décimo de roll. Los máximos aislados con escala PWM 255 siguen siendo 40 cuentas roll y 4 pitch.
+
+Con ganancias iniciales $c_gG=0.18\times0.90=0.162$, un eje se recorta cuando $|\widehat F_a|$ supera aproximadamente 0.968289. No existe una velocidad de saturación universal: también depende de la perturbación filtrada. Sólo en el caso extremo $|s_a|=1$, ignorando cuantización, se obtiene la referencia $V_g\simeq38.7474$ kt para comenzar ese recorte.
+
+El suelo se suma después del damper y la fricción; esas resistencias no multiplican su señal. Para cada eje, con $u_{{\rm otros},a}$ como suma de los demás aportes:
+\begin{align}
+u_{{\rm total},a}&=\sat_{[-220/255,220/255]}(u_{{\rm otros},a}+u_a),\\
+p_a&=\sat_{[-220,220]}\left(\operatorname{round}_{\rm sim}(255\,d_a u_{{\rm total},a})\right).
+\end{align}
+$d_a$ es la polaridad de motor, inicialmente $+1$ para ambos ejes. El redondeo es simétrico, con mitades alejándose de cero. Ver más de 40 PWM durante rodaje no contradice el techo propio: pueden sumarse centrado u otras cargas.
+
+PWM positivo activa RIGHT y anula LEFT; negativo hace lo contrario. Roll usa GP6/GP7, pitch GP8/GP9, con habilitaciones GP10/GP11. La frecuencia eléctrica configurada sigue siendo 490 Hz; \textbf{la componente de baches no tiene frecuencia impuesta; la textura utiliza 7 y 11.3 Hz}. Un PWM 40 equivale a $40/255\simeq15.69\%$ de duty, no a 40 N ni a una corriente medida. Si \code{PWM_MAX} cambia, la conversión usa esa escala en lugar de 255, mientras el techo normalizado sigue referido a 255.
+
+\subsection{Ejemplos numéricos de la nueva cadena}
+\subsubsection{Una variación vertical a 20.25 kt}
+Supuestos: filtros inicializados y sin transitorio previo, entrada lateral sin cambio, incremento vertical de 8 ft/s$^2$, $\Delta t=20$ ms, avión en suelo, tramas válidas y ganancias predeterminadas. Los valores redondeados son:
+\begin{enumerate}
+\item La velocidad da $E=0.5$.
+\item El pasaaltos vertical produce $h_Y=0.726221\times8\simeq5.809768$ ft/s$^2$.
+\item El pasabajos produce $\ell_Y=0.5h_Y\simeq2.904884$ ft/s$^2$; $\ell_X=0$.
+\item La mezcla da $s_R\simeq0.252802$ y $s_P\simeq0.361146$.
+\item La Pico obtiene $F_R\simeq0.126401$ y $F_P\simeq0.180573$.
+\item Estos valores se usan directamente en coma flotante, sin codificarlos de nuevo por USB.
+\item Roll: $u_R\simeq0.126401\times0.162=0.02047696$; pitch: $u_P\simeq0.180573\times0.162/10=0.00292528$.
+\item El aporte aislado redondea a 5 PWM roll y 1 PWM pitch.
+\end{enumerate}
+No se consultó una fase triangular. Si la aceleración queda en el nuevo nivel, los filtros evolucionan y finalmente las señales tienden a cero. Si el cambio inicial fuera negativo, las señales tendrían signo opuesto bajo estos mismos supuestos.
+
+\subsubsection{Misma señal filtrada a distintas velocidades}
+Para comparar sólo la rampa, se fijan hipotéticamente $s_R=0.6$ y $s_P=0.4$. Se incluyen valores redondeados de fuerza y redondeo final, con ganancias iniciales y sin otros efectos:
+\begin{center}
+\begin{tabular}{rrrrrr}
+\toprule
+$V_g$ (kt) & $E$ & $\widehat F_R$ & $\widehat F_P$ & PWM roll & PWM pitch\\\midrule
+0.5 & 0 & 0 & 0 & 0 & 0\\
+10 & 0.240506 & 0.1443 & 0.0962 & 6 & 0\\
+20.25 & 0.500000 & 0.3000 & 0.2000 & 12 & 1\\
+40 & 1.000000 & 0.6000 & 0.4000 & 25 & 2\\
+60 & 1.000000 & 0.6000 & 0.4000 & 25 & 2\\
+\bottomrule
+\end{tabular}
+\end{center}
+La tabla no predice la aceleración de una pista real. Si $s_R=s_P=0$, toda la tabla de fuerzas sería cero aunque $E=1$. Si ambos alcanzaran magnitud uno, los máximos a 40 kt quedarían recortados a 40 y 4 PWM. Una señal lateral y una vertical opuestas pueden incluso producir signos distintos entre ejes.
+
+\subsection{Parada, pausa, vuelo y reinicios}
+Al parar hasta 0.5 kt, salir del suelo, entrar en pausa o slew, perder continuidad o recibir datos particulares inválidos, el modelo devuelve cero y reinicia sus filtros. No conserva la cola del pasabajos al volver a una condición inactiva. La primera muestra válida de la reanudación establece una nueva referencia sin golpe inicial.
+
+En la placa, la pérdida de habilitación, el primer update activo o un intervalo local mayor que 50 ms borran \code{groundSignal}. En el siguiente update normal puede volver a copiarse la última señal fresca del receptor: no hay una rampa local de arranque de 100 ms. El watchdog de 300 ms, el desarme y DTR completan la retirada de fuerza. Los tiempos describen procesamiento y comunicación, no latencia eléctrica absolutamente nula.
+
+Se mantienen las banderas \code{SIMCONNECT_ADDITIONS_ENABLED} y \code{SIMCONNECT_GROUND_VIBRATION_ENABLED}, la máscara \code{Ground}, el menú y las ganancias persistentes. Mientras el menú está activo se inhiben los motores; guardar configuración también los detiene. La ganancia e interruptor de suelo siguen siendo comunes a ambos ejes.
+
+\subsection{Relación con TelemFFB y procedencia de las ecuaciones}
+En la copia local de \code{MotionEffectsMixIn.py}, \code{ac_update_runway_rumble} procesa compresión de rueda central y diferencia izquierda--derecha:
+\begin{align}
+v_1&=\operatorname{HPF}(W_0)I, & v_2&=\operatorname{HPF}(W_1-W_2)I.
+\end{align}
+Los pasaaltos tienen corte configurado de 3 Hz; los resultados se limitan a $\pm0.5$ y se aplican como efectos de fuerza con dirección modulada aleatoriamente y envolvente de ataque. BMS utiliza una ruta distinta de telemetría de golpes.
+
+SC8 adopta la idea de responder a \emph{variaciones de telemetría}, pero usa aceleraciones del avión en Prepar3D. No reproduce compresión individual, dirección aleatoria ni envolvente de ataque de TelemFFB. Tampoco puede garantizar sensación equivalente entre mecanismos. La rampa 0.5--40 kt, mezcla 0.3/0.7, escala 0.25 g, pasabajos de 20 ms y reparto de ganancias son decisiones locales.
+
+El filtro pasaaltos y el pasabajos son discretizaciones de primer orden. La normalización y la saturación convierten la señal a un comando limitado; no constituyen identificación de rigidez, amortiguación o fuerza del tren. El accionamiento con dos PWM según signo conserva el antecedente del proyecto alemán original, pero no se atribuye a ese original este modelo de rodaje por SimConnect.
+
+\subsection{Ajustes y diagnóstico}
+``Vib. suelo'' ajusta $c_g$ de 0 a 1, inicialmente 0.18, en pasos de 0.01. ``Ganancia total'' ajusta $G$, inicialmente 0.90, y afecta todos los efectos. El menú no ofrece ganancias de suelo separadas por eje. Modificar un valor inicial del código no reemplaza necesariamente una configuración persistida válida.
+
+Para una muestra sin recorte, $|p_R|$ antes de redondear es $255Gc_g|\widehat F_R|$. Una estimación de ganancia para un comando deseado $P_R$ es:
+\begin{equation}
+c_g\simeq\frac{P_R}{255G|\widehat F_R|},\qquad |\widehat F_R|>0.
+\end{equation}
+Ahora se necesita conocer la perturbación, no sólo la velocidad. Con $G=0.90$ y $|\widehat F_R|=0.3$, un objetivo de 10 cuentas da $c_g\simeq0.14524$. No es una calibración de fuerza física. Para evitar el recorte propio incluso con señal unitaria debe cumplirse $c_gG\le40/255$.
+
+Los filtros, mezcla y escala se modifican en \code{GroundModel.h} y requieren recompilar el firmware. El divisor \code{SIMCONNECT_GROUND_ROLL_PITCH_RATIO} y techo \code{SIMCONNECT_GROUND_MAX_PWM} están en el firmware. El literal 8 que aún figura en el arreglo de frecuencias sólo gobierna la compatibilidad con suelo anterior a SC7; cambiarlo no altera esta nueva señal.
+
+\subsubsection{CSV y límites de observación}
+El CSV actual registra \code{ground_speed_knots}, \code{ground_accel_x_ft_s2}, \code{ground_accel_y_ft_s2}, \code{on_ground}, \code{sample_time_ms} y los estados de envío. No contiene \code{ground_amp}, \code{ground_roll}, \code{ground_pitch} ni \code{Vibracion_Tierra}: esas magnitudes ya no se calculan en Windows.
+
+En \code{pico.log}, \code{gr}/\code{gp} son las señales de suelo de la Pico por 10000, mientras \code{R}/\code{P} son PWM totales aplicados. Se debe aislar el efecto para compararlos directamente. LCD y diagnóstico son muestras cercanas a 100 ms, pueden omitir impulsos breves y no miden fuerza física.
+
+\subsubsection{Procedimiento práctico de verificación}
+\begin{enumerate}
+\item Verificar firmware \code{YOKE17SC8} y puente nuevo. El lanzador apunta a \code{SimConnectBridge/bin/Win32/RealismoSC8}.
+\item En monitor, registrar aceleraciones y velocidad; las fuerzas se observan en el diagnóstico de la Pico durante una prueba habilitada. Para registrar sin ordenar motores puede usarse \code{YokeSimConnectBridge.exe --seconds 60 --no-buffets} sin puerto ni \code{--enable}.
+\item Comprobar cero hasta 0.5 kt y al despegar; contrastar pista lisa y terreno irregular por sus señales, no sólo por el nombre de superficie.
+\item Para evaluar el mecanismo, aislar ``Vib. suelo'' mediante el menú con pausa reconocida y usar ganancia reducida. Comparar registros de comando con la sensación.
+\item Confirmar retirada en pausa y pérdida de comunicación. A partir de 40 kt la envolvente debe permanecer en uno, pero las sacudidas pueden seguir cambiando.
+\end{enumerate}
+Si no se siente vibración, comprobar velocidad de suelo, habilitación, ganancias y PWM. La textura debe aportar señal aunque las aceleraciones sean constantes; las sacudidas adicionales dependen de sus variaciones. El rozamiento mecánico puede ocultar comandos pequeños. Si hay fuerza parado, revisar otros efectos y la velocidad informada. No se debe corregir la calibración de posición para ajustar este modelo: la posición no interviene en él.
+
+\subsection{Validación, archivos y límites del alcance}
+Se compilaron el puente Win32 y el firmware Pico 2 ARM/TinyUSB para potenciómetros. La suite con reproducción del CSV ejecutó 96\,764 comprobaciones correctas. El firmware ocupa 99\,748 bytes de programa y 18\,408 bytes de RAM global. Con ganancia de suelo 0.450 y total 90\%, la reproducción generó 1129 paquetes, 800 muestras con PWM de suelo no nulo y picos roll/pitch de 40/4. Son comandos calculados por software, no mediciones de hardware. \textbf{No se cargó el firmware ni se comprobó físicamente el rodaje o el tiempo de ejecución en la Pico.}
+
+Las pruebas cubren rampa, mitad de señal a 20.25 kt respecto de 40 kt para las mismas entradas, saturación del multiplicador, respuesta a cambios y rechazo de carga constante, reinicios, signo por eje, CRC, rangos, límites de comando, textura de pista con aceleración constante, watchdog, pausa, desconexión y recepción de protocolos anteriores. No demuestran una equivalencia perceptual con TelemFFB.
+
+\begin{longtable}{p{0.40\linewidth}p{0.52\linewidth}}
+\toprule Archivo & Elementos a consultar\\\midrule\endhead
+\code{GroundModel.h} & Rampa, validación, filtros, mezcla y fuerzas con signo.\\
+\code{SimConnectBridge/main.cpp} & 22 variables crudas, selección de muestras, trama SC8 y CSV.\\
+\code{SimTelemetry.h} & Datos crudos SC8, validación de reloj, compatibilidad y watchdog.\\
+\code{SimEffects.h} & Selección SC8, ganancias, recortes por eje y suma.\\
+\code{mis_defines.h} & Ganancia inicial, divisor, límites y banderas.\\
+\code{GainSettings.h} & Menú y valores efectivos persistentes.\\
+\code{MiYoke_PD_V2.4.ino} & Identificación SC8, ciclo, inhibiciones y salida.\\
+\code{MotorDriver.h} & Redondeo y accionamiento PWM.\\
+\code{tests/ground_checks.h} & Pruebas del modelo y de compatibilidad SC7; SC8 en \code{tests/raw_checks.h}.\\
+\code{tests/simconnect_checks.cpp} & Invocación y regresión del resto de efectos.\\
+\bottomrule
+\end{longtable}
+Las rutas son relativas a MiYoke\_PD\_V2.4. \code{LEEME md/CALCULO_PICO_SC8.md} documenta la puesta en uso; \code{SUELO_REALISTA_SC7.md} es histórico. Las explicaciones antiguas de triangular de suelo describen protocolos anteriores, no la componente de aceleraciones SC8.
+
+% [V-realismo]
+Quedan como mejoras futuras una fuente válida de compresión por rueda, un efecto separado de contacto, histéresis de velocidad, ganancias independientes y calibración de fuerza. Se incorporó textura aleatoria de banda estrecha, con senoides disponibles mediante flag 0; no se incorporaron eventos por distancia ni clasificación de superficie. La respuesta disponible depende del modelo de vuelo, del muestreo y de la sensibilidad elegida.
+\newpage
+
+% [V-realismo]
+\textit{Actualización (realismo): textura aleatoria pendiente $\rightarrow$ banda estrecha implementada con senoides en flag 0; excitación irregular de pista sin eventos por distancia (ISO 8608; Newland); ver Sección~\ref{sec:realismo}.}
+

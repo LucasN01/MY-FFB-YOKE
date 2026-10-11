@@ -1,0 +1,37 @@
+\section{Arquitectura vigente SC8: cálculo en Raspberry Pi Pico 2}
+El programa de Windows solicita las 22 variables originales de SimConnect, selecciona la muestra más reciente y la transmite. No calcula presión normalizada, ráfagas, envolventes de buffet ni fuerzas de suelo. La Pico 2 ejecuta esas operaciones en \code{PicoForceModels.h}, los modelos \code{GroundModel.h}, \code{GustModel.h} y \code{BuffetModel.h}, y después aplica \code{SimEffects.h}, ganancias, sensores locales y límites de PWM. Los archivos del mismo nombre dentro de \code{SimConnectBridge} son inclusiones de compatibilidad para pruebas; no son modelos ejecutados por el puente.
+
+El simulador continúa calculando la física del avión en la PC. La placa calcula toda la respuesta háptica del dispositivo a partir de esa telemetría. La selección del COM, la conexión con SimConnect, el permiso de armado y los registros siguen en Windows. Los parámetros de referencia y opciones del lanzador se transmiten como configuración; sus fórmulas se evalúan en la Pico.
+
+\subsection{Contrato de transporte}
+SC8 transmite 113 bytes, con enteros y flotantes en orden little endian. Los datos del simulador se solicitan como \code{FLOAT64} y se convierten a \code{float32}; se conservan sus unidades originales. Ya no se transmiten fuerzas ni envolventes cuantizadas con escala 10000.
+\begin{longtable}{p{0.18\linewidth}p{0.74\linewidth}}
+\toprule Bytes & Contenido\\\midrule\endhead
+0--1 & Cabecera A5 5A.\\
+2--3 & Versión 8 y banderas: bit 0 armado, bit 1 pausa; mutuamente excluyentes.\\
+4--5 & Secuencia de 16 bits.\\
+6--9 & Marca de captura de 32 bits, en milisegundos del reloj de Windows.\\
+10--97 & 22 valores float32, en el orden definido en \code{RawTelemetry.h}.\\
+98--109 & Referencia en kt, ganancia previa de ráfagas y mezcla longitudinal: tres float32.\\
+110 & Opciones: bit 0 ráfagas, bit 1 buffets.\\
+111--112 & CRC16 de los primeros 111 bytes.\\\bottomrule
+\end{longtable}
+El orden de los 22 valores es: presión en psf, IAS, vientos X/Y/Z, estado de suelo, slew, AoA, ángulo de pérdida, flaps izquierdo/derecho, VS0/VS1, extensión de tren, tren retráctil, spoilers izquierdo/derecho, velocidad de suelo, yugo roll/pitch y aceleraciones X/Y. Para un campo de índice $i$ (desde cero), el desplazamiento es $10+4i$.
+
+El receptor conserva compatibilidad SC1--SC7, pero el lanzador y puente actuales exigen \code{YOKE17SC8}. Se deben actualizar juntos firmware y ejecutable. La identidad USB usada para detectar la Pico y los ajustes persistidos del menú se conservan.
+
+\subsection{Relojes, lotes y corrección de suelo}
+El registro del vuelo contenía 5670 filas en 1152 instantes de recepción. En SC7, 4518 de los 5669 intervalos eran cero y reiniciaban el filtro. Sólo ocho filas tenían señal de suelo distinta de cero. No era un problema que se solucionara aumentando la ganancia.
+
+Ahora el puente guarda la última muestra de cada despacho y transmite como máximo cada 20 ms. La marca enviada corresponde a la recepción de esa muestra en Windows, no a la escritura USB ni a un reloj físico del simulador. La Pico calcula los modelos una vez por nueva muestra aceptada, con la diferencia entre marcas. El bucle de motores continúa nominalmente cada 2 ms, manteniendo las salidas de los modelos entre muestras; la textura de pista y las portadoras avanzan con el reloj local. Una marca repetida o que retrocede no renueva el watchdog; un desarme o pausa puede llegar con la misma marca. El modelo de suelo conserva su memoria ante $\Delta t=0$ y no inventa un intervalo positivo.
+
+Esta selección evita procesar como muestras independientes los datos entregados juntos, pero puede omitir picos dentro del lote. No recupera la cronología original del simulador. La prueba con CSV reproduce los lotes por igualdad de marca en milisegundos; no reconstruye exactamente la planificación de Windows ni mide los motores.
+
+\subsection{Notación y registros actuales}
+En las fórmulas siguientes, los subíndices $\mathrm{rx}$ identifican la entrada disponible para la etapa local; en SC8 las envolventes, presión normalizada y fuerzas se calculan en la Pico y no se decodifican de enteros. Los ejemplos tabulados de generaciones anteriores se conservan redondeados para explicar las leyes; el cálculo actual no aplica su antiguo escalón USB de 0.0001. Las ganancias del menú sí siguen almacenadas en diezmilésimas.
+
+\code{telemetry.csv} contiene 34 columnas de datos crudos, configuración y estado. \code{sent=1} identifica un envío USB completado; las filas de recepción tienen \code{sent=0} y \code{armed=0}, lo cual no significa por sí solo que los motores se hayan desarmado. Ya no incluye fuerzas calculadas ni indicadores de efectos. El monitor sin placa sólo registra entradas.
+
+\code{pico.log} guarda el diagnóstico recibido desde la placa. La línea \code{SC8 t=... gr=... gp=... R=... P=... us=...} muestra marca de muestra, señales de suelo multiplicadas por 10000 antes de ganancias, PWM total aplicado a cada eje y máximo tiempo observado de \code{Effects::update} en microsegundos. Se intenta registrar cada 100 ms sin bloquear; puede omitir picos. R/P incluyen todos los efectos activos. El tiempo medido no incluye el resto del bucle ni demuestra por sí solo que se cumpla siempre el período de 2 ms.
+
+% [V-realismo]

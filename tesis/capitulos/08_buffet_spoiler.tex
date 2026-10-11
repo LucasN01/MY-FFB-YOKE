@@ -1,0 +1,312 @@
+\section{BUFFET POR SPOILER}
+\label{sec:buffet-spoiler}
+
+\subsection{Qué hace el efecto}
+% [V-realismo]
+Genera una vibración en ambos ejes cuando el avión está en vuelo, los spoilers están desplegados e IAS supera 80 kt. La amplitud aumenta desde 80 kt con el promedio de despliegue y el exceso de presión dinámica hasta intensidad plena en 140 kt. La placa produce banda estrecha de 15 Hz (triangular con flag 0); pitch recibe el doble de comando que roll.
+
+La idea sencilla es: \emph{``cuanto más spoiler expuesto y mayor velocidad dentro de la banda, más vibración''}. Se trata de una señal háptica aproximada, no del cálculo del arrastre, la sustentación perdida o la fuerza real transmitida desde las superficies al yugo.
+
+% [V-realismo]
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Qué se entiende por spoiler en esta implementación}
+Se leen las posiciones izquierda y derecha publicadas por el simulador. No se lee solamente la palanca de aerofrenos ni la bandera de armado. Si el avión utiliza esas superficies para ayudar al alabeo y lo publica en las variables estándar, ese despliegue puede alimentar el efecto.
+
+No distingue despliegue simétrico de aerofrenado y despliegue asimétrico de asistencia lateral. No simula golpes de movimiento del actuador ni vibraciones de extensión/retracción como efectos separados. Tampoco requiere que la superficie esté cambiando: puede continuar vibrando mientras permanece desplegada a IAS constante.
+
+\subsection{Recorrido y variables utilizadas}
+\subsubsection{Cadena completa}
+\begin{center}
+\fbox{\begin{minipage}{0.91\linewidth}
+% [V-realismo]
+Spoiler izquierdo/derecho e IAS $\rightarrow$ comprobar vuelo y datos $\rightarrow$ promedio de despliegue $\times$ factor $\sat[(IAS^2-80^2)/(140^2-80^2)]$ $\rightarrow$ envolvente $0\ldots1$ $\rightarrow$ filtro local 100 ms $\rightarrow$ banda estrecha 15 Hz $\rightarrow$ ganancias $\rightarrow$ roll mitad de pitch $\rightarrow$ suma y límite general $\rightarrow$ polaridad y PWM.
+\end{minipage}}
+\end{center}
+
+% [V-realismo]
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Variables de SimConnect}
+\begin{longtable}{p{0.37\linewidth}p{0.18\linewidth}p{0.37\linewidth}}
+\toprule Variable & Unidad solicitada & Uso\\\midrule\endhead
+\code{SPOILERS LEFT POSITION} & percent over 100 & $s_L$, despliegue izquierdo 0--1.\\
+\code{SPOILERS RIGHT POSITION} & percent over 100 & $s_R$, despliegue derecho 0--1.\\
+\code{AIRSPEED INDICATED} & knots & $V$, rampa de velocidad.\\
+\code{SIM ON GROUND} & Bool & Objetivo sólo si es 0.\\
+\code{IS SLEW ACTIVE} & Bool & Debe ser 0 para habilitar.\\
+\bottomrule
+\end{longtable}
+Los nombres se verifican en el \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{SDK de Prepar3D}; las unidades solicitadas se ven en \code{main.cpp}. El puente usa fracciones 0--1, no porcentajes 0--100. Un valor 0.4 representa 40\% de despliegue.
+
+No se solicitan \code{SPOILERS HANDLE POSITION} o \code{SPOILERS ARMED} para esta fórmula. Presión dinámica, viento, posición del yugo, velocidad del mando, flaps y estado del tren no multiplican su amplitud. La integridad del paquete compartido y los eventos de actividad/pausa sí condicionan la salida.
+
+\subsubsection{Rangos admitidos}
+IAS debe ser finita entre 0 y 1000 kt; ambos spoilers, finitos entre 0 y 1. Si un spoiler es inválido, se anula este objetivo completo: no se reemplaza por el otro ni se hace promedio de un único dato. Una IAS fuera de rango anula los tres buffets. Otros campos opcionales inválidos pueden afectar sólo a sus respectivos efectos.
+
+\subsection{Paso 1: promedio y rampa en la Pico}
+\subsubsection{Promedio de despliegue}
+\begin{equation}
+\bar s=\frac{s_L+s_R}{2}.
+\end{equation}
+Se obtiene 0 con ambos retraídos y 1 con ambos completos. Un spoiler al máximo y otro retraído producen 0.5, igual que ambos a mitad. El modelo no conserva información de qué lado está desplegado después de este promedio.
+
+% [V-realismo]
+Por tanto, el roll resultante no es una fuerza dirigida al lado del spoiler. Es la misma vibración del otro eje con menor ganancia. El signo alternante lo determina la portadora, no por $s_L-s_R$.
+
+% [V-realismo]
+\textit{Actualización (realismo): promedio de despliegue excitando triangular $\rightarrow$ el mismo promedio excitando AR(2); respuesta irregular sin dirección por asimetría (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Rampa con velocidad indicada}
+% [V-realismo]
+\begin{align}
+R_{sp}(V)&=\sat[(V^2-80^2)/(140^2-80^2)],\\
+E_{sp}&=\bar s R_{sp}(V).
+\label{eq:spoiler-env}
+\end{align}
+% [V-realismo]
+Hasta 80 kt el factor es cero; a 110 kt, 0.431818; desde 140 kt, uno. Los umbrales 80/140 kt coinciden con TelemFFB, que interpola linealmente (\code{utils.scale}); MiYoke usa crecimiento con la presión dinámica excedente, fundado en $qSC_p'$ (Mabey). 140 kt calibra intensidad plena, sin relación automática con límites del avión. \code{--reference-knots} no ajusta este efecto; 15 Hz es la frecuencia central fija.
+
+% [V-realismo]
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Umbral de despliegue y continuidad}
+% [V-realismo]
+MiYoke permite despliegue continuo desde cero, sin condición $\bar s>0.1$. Con IAS 140 kt y ambos spoilers 0.05, $E_{sp}=0.05$. La condición de TelemFFB no se copió.
+
+% [V-realismo]
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Paso 2: cálculo en el microcontrolador}
+% [V-realismo]
+SC8 transmite posiciones de spoilers, IAS y estados, como flotantes. \code{PicoForceModels.h} calcula $E_{sp}$ y lo guarda en \code{buffet[2]}. $E_{sp,\rm rx}=E_{sp}$ salvo precisión de flotantes. La entrada se renueva por muestra aceptada; la portadora de banda estrecha de 15 Hz (triangular con flag 0) y el filtro se calculan localmente en ciclos nominales de 2 ms. No hay entero de envolvente ni resolución USB de 0.0001.
+
+% [V-realismo]
+\textit{Actualización (realismo): Pico con rampa lineal y triangular $\rightarrow$ envolvente cuadrática y AR(2) de 15 Hz; carga de flujo separado y excitación irregular (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Paso 3: filtro, frecuencia y cola}
+\subsubsection{Amplitud suavizada}
+\begin{equation}
+A_{sp,n}=A_{sp,n-1}+\frac{\Delta t_{\rm ms}}{100+\Delta t_{\rm ms}}
+(E_{sp,\rm rx,n}-A_{sp,n-1}).
+\end{equation}
+La variable $A_{sp}$ sigue al objetivo con un filtro de primer orden de constante 100 ms. Con un ciclo de 2 ms se corrige aproximadamente el 1.96\% de la diferencia pendiente; partiendo de cero, llega al 62.85\% a 100 ms y al 94.87\% a 300 ms. El origen de la ecuación es $\tau\dot A+A=E$, discretizada, no un modelo medido del actuador.
+
+
+% [V-realismo]
+\textit{Actualización (realismo): objetivo de spoiler con rampa lineal $\rightarrow$ objetivo cuadrático con el mismo filtro de 100 ms; carga de flujo separado (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Portadora de banda estrecha y modo triangular}
+% [V-realismo]
+La portadora predeterminada es el resonador AR(2) de la Sección~\ref{sec:realismo}, con frecuencia 15 Hz, $\zeta=0.15$ y RMS 0.45 antes de recortar:
+% [V-realismo]
+\begin{equation}w_{sp,n}=A_{sp,n}\sat_{[-1,1]}(N_{15,n}).\end{equation}
+% [V-realismo]
+Los coeficientes se precalculan antes de setup; cada update de tiempo positivo ejecuta un paso a período nominal de 2 ms. dt=0 conserva la portadora. La excitación irregular modela flujo separado; frecuencia y amortiguamiento son hipótesis pendientes de ensayo.
+
+% [V-realismo]
+Con \code{SIMCONNECT_BUFFET_NARROWBAND=0} se conserva $T(\phi)=0.004\phi-1$ para $\phi<500$ y $3-0.004\phi$ en el resto; $\phi=(\phi+15\Delta t_{\rm ms})\bmod1000$, inicio 250. Sólo ese modo usa fase triangular periódica. Al reiniciar amplitudes y portadoras se limpian ambos modos.
+
+% [V-realismo]
+\textit{Actualización (realismo): triangular de 15 Hz $\rightarrow$ AR(2) de 15 Hz, $\zeta=0.15$, RMS 0.45 y recorte $\pm1$; respuesta irregular de banda estrecha (Mabey; Newland; Box); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Retirada de spoilers y contacto con suelo}
+% [V-realismo]
+Al retraer, llegar a IAS cero o quedar en suelo, la Pico lleva $E_{sp}$ a cero. Mientras el conjunto siga habilitado, $A_{sp}$ decae con el filtro y deja una cola. No se reinicia la fase sólo por pasar el objetivo a cero. El suelo SC8, en cambio, se anula al parar o quedar en vuelo sin conservar una cola de su filtro en la Pico; no comparte esta envolvente de spoilers.
+
+Pausa, desarme, DTR perdido, timeout de telemetría o reinicio por intervalo local mayor que 50 ms sí retiran o reinician la salida general. Por ello un touchdown puede dejar una breve cola de este buffet mientras comienza el efecto de suelo; no significa que la Pico siga calculando un objetivo de spoiler en tierra.
+
+% [V-realismo]
+\textit{Actualización (realismo): cola de amplitud con triangular $\rightarrow$ cola con AR(2), conservando el filtro; excitación irregular de buffet (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Paso 4: ganancias y conversión a PWM}
+\subsubsection{Roll y pitch}
+Con ``Buffet spoiler'' $c_{sp}=0.16$ y ganancia total $G=0.90$:
+\begin{align}
+u_{P,sp}&=Gc_{sp}A_{sp}T=0.144A_{sp}T,\\
+u_{R,sp}&=0.5Gc_{sp}A_{sp}T=0.072A_{sp}T.
+\end{align}
+% [V-realismo]
+Ambos ejes comparten portadora (fase en el modo triangular). La relación de comando roll/pitch es 1:2 antes de redondear y de aplicar polaridades. No depende del desplazamiento del yugo ni usa la zona muerta 0.02 de turbulencias. La ganancia de centrado o la de suelo tampoco se aplica a este aporte.
+
+% [V-realismo]
+\textit{Actualización (realismo): triangular común a ambos ejes $\rightarrow$ ruido de banda estrecha común, manteniendo 1:2; respuesta irregular (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Saturación y driver}
+En modo aislado se limita el comando a $\pm220/255$, se aplica signo de motor $s_a$, se limita a $[-1,1]$ y se convierte mediante
+\begin{equation}
+p_a=\sat_{[-220,220]}\left[\operatorname{round}_{\rm sim}
+\left(255\,\sat_{[-1,1]}\left(s_a\sat_{[-220/255,220/255]}(u_{a,sp})\right)\right)\right].
+\end{equation}
+El 255 es \code{PWM_MAX} predeterminado, no la ganancia del efecto. El redondeo simétrico produce enteros con igual tratamiento de signos. Los máximos ideales aislados, con $A=|T|=1$, son 36.72 cuentas pitch y 18.36 roll: \textbf{37 y 18 PWM}. No hay un tope especial de 40 como en suelo.
+
+Con PWM positivo se activa RIGHT y LEFT queda en cero; negativo activa LEFT y anula RIGHT. Roll usa GP6/GP7 y pitch GP8/GP9 en Pico. La portadora de 15 Hz modula salidas PWM configuradas a 490 Hz. Duty cycle es $|p|/255$; no es una medición de torque. Si otros efectos están activos, el límite general corresponde a la suma.
+
+\subsection{Ejemplos numéricos completos}
+\subsubsection{IAS 110 kt, spoilers a 80\% y 40\%}
+% [V-realismo]
+Vuelo válido, filtro estabilizado y ganancias de fábrica. $\bar s=(0.8+0.4)/2=0.6$, $R_{sp}=(110^2-80^2)/(140^2-80^2)=0.431818$ y $E_{sp}=0.259091$. Con portadora recortada $T=0.8$, $w_{sp}=0.207273$, $u_P=0.029847$, $u_R=0.014924$: PWM 8/4 pitch/roll. Signo opuesto de portadora invierte las salidas. En pico unitario, máximos 10/5. La asimetría de spoilers no impone signo de roll.
+
+% [V-realismo]
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Tabla de picos ideales}
+% [V-realismo]
+Régimen estabilizado, portadora recortada en $|T|=1$, ganancias de fábrica.
+% [V-realismo]
+\begin{center}\begin{tabular}{rrrrrr}
+\toprule IAS (kt)&$s_L$&$s_R$&$E_{sp}$&PWM roll&PWM pitch\\\midrule
+80&1&1&0.000000&0&0\\
+95&1&1&0.198864&4&7\\
+110&1&1&0.431818&8&16\\
+125&1&1&0.698864&13&26\\
+140&1&1&1.000000&18&37\\
+180&1&1&1.000000&18&37\\
+110&0.8&0.4&0.259091&5&10\\
+140&1&0&0.500000&9&18\\
+140&0.05&0.05&0.050000&1&2\\
+\bottomrule\end{tabular}\end{center}
+% [V-realismo]
+La saturación de envolvente desde 140 kt no es saturación del driver.
+
+% [V-realismo]
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+% [V-realismo]
+\subsubsection{Arranque con objetivo de prueba 0.3 (sólo flag 0)}
+% [V-realismo]
+La tabla conserva el objetivo artificial 0.3 para explicar el filtro y la fase anterior; no es la envolvente nueva del ejemplo a 110 kt.
+Desde amplitud cero, fase 250 y ciclos exactos de 2 ms:
+\begin{center}\begin{tabular}{rrrrrr}
+\toprule ms&Fase&$A_{sp}$&$T$&PWM roll&PWM pitch\\\midrule
+2&280&0.005882&0.12&0&0\\10&400&0.028281&0.60&0&1\\20&550&0.053896&0.80&1&2\\50&0&0.117141&$-1.00$&$-2$&$-4$\\74&360&0.155817&0.44&1&3\\100&750&0.188542&0&0&0\\300&750&0.284615&0&0&0\\\bottomrule
+\end{tabular}\end{center}
+La amplitud crece aunque las muestras elegidas a 100 y 300 ms den cero. La fase determina cuándo se ve el pico, no sólo la extensión del spoiler.
+
+% [V-realismo]
+\textit{Actualización (realismo): arranque triangular como modo general $\rightarrow$ tabla sólo con flag 0; AR(2) sustituye la periodicidad por excitación irregular (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Procedencia y diferencias con TelemFFB}
+\subsubsection{Promedio y umbrales}
+La copia local de \code{MotionEffectsMixIn.py::ac_update_spoilers} promedia una lista de posiciones, pondera por velocidad y utiliza umbrales definidos como $80\,\code{kt2ms}$ y $140\,\code{kt2ms}$. % [V-realismo]
+% [V-realismo]
+MiYoke toma de TelemFFB sólo los umbrales 80/140 kt, incluido el inicio en 80 kt. TelemFFB interpola linealmente entre ellos (\code{utils.scale}); MiYoke usa una forma cuadrática sobre el inicio, fundada en la carga $qSC_p'$ (Mabey).
+
+La velocidad de esa ruta de TelemFFB es IAS si está disponible y TAS como alternativa. MiYoke exige IAS válida. También se omite la condición de despliegue $>0.1$ de la referencia, por decisión local de permitir una entrada continua desde cero.
+
+% [V-realismo]
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Generación de la vibración}
+% [V-realismo]
+TelemFFB combina senoides de 15 y 16 Hz en una dirección, y de 14 y 18 Hz en otra, además de una ruta separada de movimiento de superficies. MiYoke usa una única portadora de banda estrecha de 15 Hz para los dos ejes (triangular con flag 0), con factor roll 0.5 y filtro local de 100 ms. No copia las cuatro ondas ni el efecto del actuador.
+
+% [V-realismo]
+La triangular del flag 0 da sensación periódica y contenido armónico distinto; la portadora nueva reproduce excitación irregular alrededor de 15 Hz. Que una frecuencia coincida no significa que las señales ni el RMS sean iguales. No se ha calibrado una equivalencia perceptual automática entre ambos equipos.
+
+% [V-realismo]
+\textit{Actualización (realismo): triangular periódica $\rightarrow$ AR(2) alrededor de 15 Hz; reproduce excitación irregular de banda estrecha (Mabey; Newland; Box); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Original alemán y decisiones propias}
+En las fuentes originales locales no se identificó esta cadena SimConnect de despliegue e IAS. El accionamiento por dos PWM conserva un antecedente del original; el estimador simplificado y su integración corresponden al proyecto modificado. Las ganancias 0.16, factor roll 0.5, filtro, protocolo y límites del driver son decisiones locales, no coeficientes aerodinámicos medidos.
+
+Fuente pública para localizar el antecedente: \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/base/MotionEffectsMixIn.py}{TelemFFB, MotionEffectsMixIn.py}. Las afirmaciones se contrastaron con la copia local inspeccionada.
+
+\subsection{Habilitación y diagnóstico}
+\subsubsection{Banderas, datos y apagado}
+La Pico calcula este buffet con la opción activada por defecto; \code{--no-buffets} pone en cero los tres objetivos. No se necesita \code{--gusts}. Se requiere vuelo, simulación en marcha sin pausa/slew y datos recientes. Para actuar, además puerto reconocido y \code{--enable}.
+
+En la placa intervienen habilitación general, \code{SIMCONNECT_SPOILER_BUFFET_ENABLED}, máscara \code{Spoiler}, ganancia efectiva, DTR y trama armada de menos de 300 ms. El menú inhibe motores. Una entrada de spoiler inválida pone su objetivo a cero, con posible cola filtrada si sigue armado; un desarme global retira la salida. No se debe confundir ese comportamiento con una vibración persistente de actuador, que no está implementada.
+
+\subsubsection{CSV y pantalla}
+Registrar IAS, spoilers izquierdo/derecho, estado de suelo y armado. Las columnas históricas \code{spoiler_amp} y \code{Buffet_Spoilers} no existen en SC8; la Pico calcula el objetivo y su cola filtrada.
+
+% [V-realismo]
+La pantalla de 10 Hz no reconstruye una señal de 15 Hz. Sólo con flag 0, fase inicial 250 y muestreo exacto cada 100 ms, la fase observada alterna entre 250 y 750, ambos cruces por cero: puede mostrar siempre cero en un caso ideal sincronizado. En otras sincronizaciones puede parecer una oscilación más lenta. El diagnóstico debe usar una tasa adecuada o medidas de pico/RMS; una única lectura no evalúa la vibración.
+
+% [V-realismo]
+\textit{Actualización (realismo): cruces de cero sincronizados como caso general $\rightarrow$ caso sólo con flag 0; AR(2) no tiene la repetición de fase triangular (Newland; Box); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Ajustes, calibraciones y mejoras}
+\subsubsection{Controles existentes}
+``Buffet spoiler'' admite 0--1 con paso 0.01, inicio 0.16. Su interruptor apaga ambos ejes. ``Ganancia total'' admite 0--1 con paso 0.05, inicio 0.90, y afecta todo el conjunto. Los ajustes guardados prevalecen si son válidos; recompilar defaults no garantiza que los sustituya.
+
+No existe una ganancia de spoiler independiente por eje ni un balance izquierdo/derecho en el menú. El factor 0.5 de roll se comparte con los tres buffets. Cambiar la calibración ADC del mando no modifica esta amplitud.
+
+\subsubsection{Rampa, frecuencia y filtro}
+% [V-realismo]
+El inicio de 80 kt y la intensidad plena de 140 kt están en \code{BuffetModel.h}: ajustarlos requiere recompilar y mantener $140>80$. La frecuencia 15 es el tercer elemento del arreglo en \code{SimEffects.h}; se cambia en firmware. Los 100 ms son compartidos con otras envolventes y rigidez, por lo que modificar el literal no afecta únicamente spoiler.
+
+Si la rampa ya saturó por velocidad, subir IAS no aumenta la señal. Si la suma está saturada por otros efectos, subir ganancia puede no aumentar el pico final. Son dos saturaciones distintas. Antes de cambiar parámetros hay que identificar cuál está actuando.
+
+% [V-realismo]
+\textit{Actualización (realismo): $\bar s\min[(V/140)^2,1]$ $\rightarrow$ $\bar s\sat[(V^2-80^2)/(140^2-80^2)]$; umbrales 80/140 kt de TelemFFB (interpolación lineal), forma cuadrática de MiYoke por $qSC_p'$ (Mabey); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Ejemplo de ajuste de ganancia}
+En régimen y antes de recorte, $P_P\simeq255Gc_{sp}E_{sp}$ es el pico pitch ideal. Despejando, $c_{sp}\simeq P_P/(255GE_{sp})$. Para $E_{sp}=0.3$, $G=0.9$ y pico deseado de 8 cuentas, da aproximadamente 0.11619; el menú permite 0.12 como aproximación.
+
+La primera cuenta de PWM ideal requiere envolvente aproximadamente mayor que 0.01362 en pitch y 0.02723 en roll con ganancias iniciales. Redondeo PWM, fase y mecánica pueden impedir percibir señales algo mayores. No es la zona muerta explícita de turbulencia, sino cuantización y respuesta del sistema.
+
+\subsubsection{Ensayo y ampliaciones propuestas}
+En el simulador, aislar este efecto con pausa reconocida al editar el menú. Comprobar primero posiciones publicadas y rampa en CSV; comparar despliegues simétricos y asimétricos para confirmar que el promedio se comporta como se espera. Registrar varios ciclos de PWM y esperar unos 0.5 s para comparar valores de régimen.
+
+Se puede mejorar con perfiles por aeronave, separación entre aerofrenos y asistencia al alabeo, ganancias por eje y un renderizado menos periódico. También se podría conservar información de asimetría, pero asignarle una fuerza lateral requeriría una justificación específica del avión y transmisión: no basta con convertir automáticamente $s_L-s_R$ en un empuje del yugo.
+
+Medir fuerza o aceleración real del mecanismo permite ajustar percepción. Los números de la referencia TelemFFB no calibran por sí solos un motor distinto. No se implementó ninguna de estas ampliaciones durante el análisis.
+
+\subsection{Cómo conviven los tres buffets}
+\subsubsection{Suma implementada y frecuencias}
+En \code{SimEffects.h}, antes de la ganancia general, la vibración común es
+\begin{equation}
+% [V-realismo]
+v_b=c_sA_sT_s+c_gA_gT_g+c_{sp}A_{sp}T_{sp}.
+\end{equation}
+% [V-realismo]
+Cada $T_j=\sat_{[-1,1]}(N_j)$ es la portadora aleatoria recortada correspondiente. Sólo con flag 0, $T_j=T(\phi_j)$.
+
+Pitch recibe $Gv_b$ y roll $0.5Gv_b$. Las frecuencias vigentes son respectivamente 13, 10 y 15 Hz. Las portadoras son aleatorias por defecto; con flag 0 sus fases arrancan en 250 y avanzan a ritmos diferentes. Por eso pueden reforzarse o cancelarse en algunos instantes; no se suman siempre sus valores absolutos.
+
+No hay un limitador vectorial conjunto como en turbulencia. Después se suman centrado, turbulencia y cargas de movimiento según la ruta del código; el total por eje se recorta a $\pm220/255$. El suelo tiene su propio límite antes de agregarse. Los tres buffets no reciben el techo de 40 de suelo.
+
+% [V-realismo]
+\textit{Actualización (realismo): suma de tres triangulares $\rightarrow$ suma de tres portadoras AR(2), con triangulares en flag 0; excitación irregular de buffet (Mabey; Newland); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Cota de los tres juntos}
+Con amplitudes no mayores que uno y ganancias iniciales, una cota del comando de los tres buffets es
+\begin{align}
+|u_{P,b}|&\le0.90(0.24+0.16+0.16)=0.504,\\
+|u_{R,b}|&\le0.252.
+\end{align}
+Equivale a cotas redondeadas de 129 PWM pitch y 64 roll. Son cotas por suma de magnitudes; no se afirma que las fases y condiciones reales permitan alcanzar esos picos simultáneamente. Con otros efectos o ganancias mayores sí puede intervenir el límite general 220.
+
+Una lectura de PWM total no permite atribuir intensidad a cada buffet. Para evaluar cada fórmula hay que aislarlo o agregar un diagnóstico de aportes independientes. Retirar el argumento \code{--no-buffets} habilita el cálculo de los tres; el menú o las banderas individuales seleccionan cuáles llegan a la fuerza.
+
+\subsubsection{Qué tendría sentido registrar}
+Para cada efecto: entradas crudas, objetivo calculado en la Pico, amplitud filtrada, fase, portadora y aporte por eje antes de la suma. Agregar máximo, mínimo y RMS por ventana evitaría depender de una lectura sincronizada con un cruce por cero. El filtro de cada buffet y la tasa de pantalla deben distinguirse del ritmo de la telemetría.
+
+\subsection{Fuentes, pruebas y alcance de las tres secciones}
+\subsubsection{Mapa de implementación}
+\begin{longtable}{p{0.39\linewidth}p{0.53\linewidth}}
+\toprule Archivo & Papel en los tres buffets\\\midrule\endhead
+\code{BuffetModel.h} & Validaciones y las tres envolventes: pérdida, tren y spoiler.\\
+\code{SimConnectBridge/main.cpp} & SimVars, unidades, estados, argumento \code{--no-buffets}, codificación y columnas CSV.\\
+\code{SimTelemetry.h} & Telemetría cruda SC8, rangos, CRC, secuencia y watchdog.\\
+\code{SimEffects.h} & Filtros, portadoras 13/10/15 Hz, ganancias, proporción por eje y mezcla.\\
+\code{mis_defines.h} & Ganancias iniciales, frecuencia configurable de tren y banderas.\\
+\code{GainSettings.h} & Menú, ganancias efectivas e interruptores persistidos.\\
+\code{MiYoke_PD_V2.4.ino} & Ciclo nominal 2 ms, inhibición por menú, polaridad y diagnóstico.\\
+\code{MotorDriver.h} & Conversión $[-1,1]$ a PWM, redondeo y techo 220.\\
+\code{tests/simconnect_checks.cpp} & Pruebas existentes de envolventes, validez, síntesis, estados y límites.\\
+\bottomrule
+\end{longtable}
+
+\subsubsection{Referencias de consulta}
+\begin{enumerate}
+\item \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{SDK de Prepar3D v3, Simulation Variables}: nombres y unidades. Las peticiones concretas de conversión se verificaron en \code{main.cpp}.
+\item \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/base/MotionEffectsMixIn.py}{TelemFFB, MotionEffectsMixIn.py}: métodos de tren y spoilers; comparación contra copia local.
+\item \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/base/BuffetingEffectMixIn.py}{TelemFFB, BuffetingEffectMixIn.py}: estimador y renderizado de pérdida; comparación contra copia local.
+\item \href{https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/dynamic-pressure-2/}{NASA Glenn, Dynamic Pressure}: fundamento general de dependencia cuadrática usado para explicar la motivación del factor de flujo de pérdida, no para justificar las rampas lineales de tren/spoiler.
+\item Fuentes locales del proyecto alemán original y \code{LEEME md/EFECTOS_SIMCONNECT.md}: antecedentes de arquitectura y adaptación. La documentación histórica contiene ganancias/protocolo/frecuencias que se contrastaron con el código vigente.
+\end{enumerate}
+\textbf{Alcance de la comprobación:} se reconstruyeron fórmulas y tablas numéricas y se distinguió objetivo, filtro, señal normalizada y PWM. No se modificaron los modelos de fuerza, no se cargó firmware y no se midió vibración física. Los defaults utilizados son 0.24/0.16/0.16 con ganancia general 0.90; los ajustes reales guardados pueden ser diferentes.
+\newpage

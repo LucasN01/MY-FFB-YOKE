@@ -43,7 +43,7 @@ Para repetir la reproducción, compilar `tests/simconnect_checks.vcxproj` y ejec
 .\tests\bin\simconnect_checks.exe .\backups\antes-sc8\SimConnectBridge__bin__Win32__RealismoSC7__telemetry.csv
 ```
 
-Los modelos vigentes están en la raíz: `PicoForceModels.h`, `GroundModel.h`, `GustModel.h`, `BuffetModel.h`; transporte en `RawTelemetry.h` y `SimTelemetry.h`. La explicación extensa está actualizada en `tesis/explicacion_efectos_proyecto_ffb_yoke.tex`.
+Los modelos vigentes están en la raíz: `PicoForceModels.h`, `GroundModel.h`, `GustModel.h`, `BuffetModel.h`; transporte en `RawTelemetry.h` y `SimTelemetry.h`. La explicación extensa está actualizada en `tesis/main.tex` (capítulos en `tesis/capitulos/`).
 
 ## Actualización de textura sobre pista lisa
 

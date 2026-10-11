@@ -1,0 +1,546 @@
+\section{TURBULENCIAS}
+\label{sec:turbulencias}
+
+\subsection{Qué hace este efecto}
+El proyecto convierte las \textbf{variaciones del viento del simulador} en empujes variables de roll y pitch. Separa el viento sostenido de sus cambios, combina las tres componentes del viento, pondera el resultado por presión dinámica y lo suaviza antes de enviarlo a la placa. La placa elimina señales muy pequeñas, aplica ganancias y obtiene el PWM.
+
+Una forma sencilla de entenderlo es: \emph{``detectar cuánto cambió el viento respecto de su valor reciente y transformar ese cambio en un empuje del mando''}. No hay una tabla de posiciones a las que deba ir el yugo. El resultado es una orden de fuerza normalizada, no una posición objetivo.
+
+% [V-realismo]
+\textit{Actualización (realismo): ponderación por $\min(Q,1)$ $\rightarrow$ por $\sqrt Q\le2$; la carga de ráfaga crece como $\rho Vw$ (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Diferencia con el centrado}
+El centrado necesita el desplazamiento del mando para calcular su fuerza. La turbulencia aislada no multiplica por posición ni velocidad del yugo: puede actuar con el mando centrado y quieto. Potenciómetros, encoders y posición de SimConnect no determinan su amplitud en la fórmula. En la integración general sí se validan datos y pueden coexistir cargas de otros efectos; eso no convierte la turbulencia en un resorte.
+
+\subsubsection{Qué representa y qué no representa}
+Se trata de una \textbf{aproximación háptica basada en telemetría}. No calcula fuerzas de bisagra, no utiliza una geometría aerodinámica del avión ni devuelve newtons. Tampoco genera ruido aleatorio, una senoide fija o un campo atmosférico Dryden/Von Kármán. Si las componentes de viento permanecen constantes en los ejes del avión, la perturbación termina desapareciendo.
+
+El nombre ``turbulencia'' debe interpretarse con ese alcance: el algoritmo detecta cambios de viento en coordenadas del avión. Una maniobra puede modificar esas componentes aun con viento atmosférico constante, porque cambian los ejes con los que se mide. El algoritmo actual no separa inequívocamente ráfaga atmosférica y cambio de orientación.
+
+\subsection{Recorrido completo de roll y pitch}
+\begin{center}
+\fbox{\begin{minipage}{0.91\linewidth}
+\textbf{En Windows:} SimConnect entrega viento X/Y/Z y presión; el puente selecciona la muestra más reciente, añade marca y configuración y transmite por USB SC8.
+
+\textbf{En la Pico:} seguimiento del viento lento, extracción de variaciones, mezcla, escala de 5 kt, presión, ganancia, límite vectorial y filtro de 80 ms; luego zona muerta, ganancias de cada eje y PWM.
+
+\textbf{En la placa:} zona muerta continua del 2\% $\rightarrow$ ganancia de turbulencia del eje $\rightarrow$ ganancia general $\rightarrow$ suma de efectos y límite $220/255$ $\rightarrow$ polaridad del motor $\rightarrow$ escala 255, redondeo y techo PWM 220 $\rightarrow$ puente H.
+\end{minipage}}
+\end{center}
+El cálculo de viento y sus filtros se ejecutan en la Pico 2, en \code{GustModel.h}, invocado por \code{PicoForceModels.h}. \code{SimEffects.h} usa directamente sus salidas locales.
+
+\subsection{Variables de SimConnect utilizadas}
+\subsubsection{Entradas de la fórmula}
+\begin{longtable}{p{0.30\linewidth}p{0.13\linewidth}p{0.49\linewidth}}
+\toprule Variable & Unidad & Papel en el efecto\\\midrule\endhead
+\code{AIRCRAFT WIND X} & knots & Componente lateral $w_X$; sus variaciones alimentan roll.\\
+\code{AIRCRAFT WIND Y} & knots & Componente vertical $w_Y$; sus variaciones son el aporte principal a pitch.\\
+\code{AIRCRAFT WIND Z} & knots & Componente longitudinal $w_Z$; sus variaciones agregan un aporte regulable a pitch.\\
+\code{DYNAMIC PRESSURE} & psf & Ponderación de la perturbación según presión dinámica.\\
+\bottomrule
+\end{longtable}
+Los nombres, unidades y ejes se verifican en el \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{SDK de Prepar3D, Simulation Variables}. El código solicita los datos como \code{FLOAT64}. Las componentes ya se reciben en ejes del avión: MiYoke no aplica una matriz de rotación adicional.
+
+La tabla del SDK identifica los ejes, pero no basta por sí sola para certificar el sentido de fuerza que debe sentir el piloto. En el código actual una variación X positiva produce comando roll positivo; una Y positiva produce pitch positivo. Para convertir ese signo en movimiento físico hay que considerar el cableado y la polaridad del motor.
+
+\subsubsection{Estados necesarios}
+\code{SIM ON GROUND} debe ser cero: \textbf{el modelo de turbulencias se desactiva y reinicia en tierra}. \code{IS SLEW ACTIVE} debe ser cero, el evento \code{Sim} debe indicar actividad y \code{Pause} ausencia de pausa. También se exige continuidad de muestras y la opción \code{--gusts}. Estos estados no multiplican gradualmente la fuerza: habilitan o reinician el modelo.
+
+\subsubsection{Entradas compartidas que no forman la turbulencia}
+La presión usada es la que informa el simulador. \code{AIRSPEED INDICATED} no se utiliza directamente en la ecuación de turbulencia. Tampoco se utilizan trim, actitud, aceleraciones, RPM, flaps, tren, spoilers ni posiciones del yugo para calcular los dos empujes de viento.
+
+Hay una dependencia indirecta de la validación global del paquete: una posición \code{YOKE X/Y POSITION} no finita o fuera de $[-1,1]$, una IAS no finita o un estado de suelo inválido pueden desarmar la salida completa, aunque esos datos no formen parte de la mezcla de viento. Conviene diferenciar \emph{variable que calcula la intensidad} de \emph{variable cuya invalidez impide ejecutar el conjunto}.
+
+\subsection{Símbolos para seguir las fórmulas}
+\begin{longtable}{p{0.18\linewidth}p{0.74\linewidth}}
+\toprule Símbolo & Significado y unidad\\\midrule\endhead
+$w_i$ & Viento recibido en el eje $i=X,Y,Z$, en kt.\\
+$m_i$ & Estimación del viento lento o sostenido, en kt.\\
+$h_i=w_i-m_i$ & Variación respecto de esa estimación, en kt.\\
+$\Delta t$ & Diferencia entre marcas de captura procesadas por la Pico, en segundos.\\
+$\tau_H=\sat_{[0.25,1.5]}(29.5/V_e)$ s & Seguimiento variable; $V_e=\sqrt{2q/1.225}$ en m/s; con $V_e=0$ toma 1.5 s.\\
+$W=5$ kt & Escala de normalización de las variaciones de viento.\\
+$k_Z=0.25$ & Peso longitudinal hacia pitch; regulable entre $-1$ y $+1$.\\
+$S_V=\sat_{[0,2]}(\sqrt Q)$ & Factor de velocidad equivalente relativo a la referencia.\\
+$\gamma=1$ & Ganancia configurada en el puente y aplicada en la Pico, \code{--gust-gain}; admite $0\ldots10$.\\
+$(v_R,v_P)$ & Objetivo bruto antes de saturación vectorial; adimensional.\\
+$(t_R,t_P)$ & Objetivo después de saturación vectorial; norma no mayor que 1.\\
+$(o_R,o_P)$ & Salida suavizada del modelo de la Pico.\\
+$z_R,z_P$ & Componentes normalizadas calculadas localmente en la Pico.\\
+$c_R,c_P$ & Ganancias de turbulencia de la placa: 0.35 y 0.70 inicialmente.\\
+$G=0.90$ & Ganancia general de la placa; compartida con los demás efectos.\\
+$u_R,u_P$ & Comandos de turbulencia tras zona muerta y ganancias.\\
+\bottomrule
+\end{longtable}
+Se usan nombres distintos para evitar confundir la ganancia previa $\gamma$, las ganancias por eje $c_a$ y la ganancia general $G$. Actúan en puntos distintos de la cadena y no siempre producen resultados intercambiables.
+
+% [V-realismo]
+\textit{Actualización (realismo): $Q_T$ y $\tau_H=1$ s $\rightarrow$ $S_V=\sqrt Q\le2$ y $\tau_H$ variable; carga lineal en velocidad y decaimiento por plunge (Pratt--Walker; Hoblit); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Paso 1: extraer las variaciones del viento}
+\subsubsection{Promedio temporal y resta}
+Para cada muestra y cada componente, \code{Model::update} calcula:
+\begin{align}
+a_n&=e^{-\Delta t_n/\tau_H},\qquad \tau_H=\sat_{[0.25,1.5]}(29.5/V_e)\ {\rm s},\\
+m_{i,n}&=m_{i,n-1}+(1-a_n)(w_{i,n}-m_{i,n-1}),\\
+h_{i,n}&=w_{i,n}-m_{i,n}.
+\label{eq:turb-hp}
+\end{align}
+$m$ sigue al viento con cierta lentitud. Al restarlo del viento actual, queda la parte transitoria $h$. \textbf{La resta usa la media ya actualizada} $m_{i,n}$, no la del ciclo anterior: ese detalle importa para reproducir los números.
+
+% [V-realismo]
+Con $\Delta t=0.02$ s y $V_e=120$ kt ($\tau_H=0.47786$ s), $a=e^{-0.02/0.47786}\simeq0.959011$ y $1-a\simeq0.040989$. En cada muestra la media avanza aproximadamente el 4.10\% de la diferencia con el viento recibido. Una ráfaga brusca no es absorbida inmediatamente por esa media y aparece en $h$.
+
+% [V-realismo]
+\textit{Actualización (realismo): $\tau_H=1$ s $\rightarrow$ $\tau_H=\sat_{[0.25,1.5]}(29.5/V_e)$ s; adapta el decaimiento por plunge a la velocidad (Hoblit); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{De dónde sale el filtro}
+El seguimiento de media responde a la ecuación de primer orden
+\begin{equation}
+\tau_H\frac{dm}{dt}+m=w.
+\end{equation}
+Al resolverla en un intervalo con entrada constante se obtiene el factor exponencial anterior. También se puede escribir la salida de variaciones como
+\begin{equation}
+h_{i,n}=a_n(h_{i,n-1}+w_{i,n}-w_{i,n-1}).
+\label{eq:turb-hp-equiv}
+\end{equation}
+Esta es una estructura de filtro pasaaltos: atenúa el nivel sostenido y deja responder a cambios. La fórmula equivalente permite compararla directamente con el pasaaltos de TelemFFB. No es una derivada pura, porque no divide el cambio de viento por $\Delta t$.
+
+\subsubsection{Inicialización, viento constante y regreso del viento}
+La primera muestra activa después de un reinicio hace $m_i=w_i$ y devuelve cero. Así, conectarse con viento ya existente no produce por sí solo un golpe. Si el viento queda constante en esos mismos ejes, $h$ tiende a cero.
+
+% [V-realismo]
+Si se parte de viento cero estabilizado y el vertical salta a 5 kt, en la primera muestra de 20 ms se obtiene $m_Y\simeq0.204946$ kt y $h_Y\simeq4.795054$ kt (a 120 kt EAS). Si permanece en 5 kt, ese $h_Y$ va decayendo. Si posteriormente el viento baja, puede aparecer una perturbación de signo contrario: también se detecta la salida de la ráfaga. El filtro de salida puede demorar el cambio de signo efectivo del comando.
+
+% [V-realismo]
+\textit{Actualización (realismo): ejemplo con $\tau_H=1$ s $\rightarrow$ ejemplo recalculado a 120 kt EAS con $\tau_H=29.5/V_e$; decaimiento por plunge (Hoblit); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Paso 2: mezclar viento hacia roll y pitch}
+Antes de aplicar presión y ganancia, se calculan las siguientes señales:
+\begin{align}
+b_R&=0.70\,\frac{h_X}{5},\\
+b_P&=\frac{h_Y+k_Zh_Z}{5},\qquad k_Z=0.25\text{ inicialmente}.
+\label{eq:turb-mix}
+\end{align}
+El divisor tiene unidades de kt, igual que $h$, por lo que el resultado es adimensional. La denominación $b_R,b_P$ se utiliza aquí sólo para explicar este paso intermedio.
+
+\subsubsection{Roll: componente lateral}
+Un valor $h_X=5$ kt produce $b_R=0.70$; $h_X=-5$ produce $-0.70$. El 0.70 es un peso perceptual de mezcla, no una medición del torque de alabeo del avión. No se utiliza Y o Z directamente en la fórmula de roll, aunque el límite vectorial posterior puede hacer que pitch influya en la amplitud disponible para roll.
+
+\subsubsection{Pitch: componente vertical y longitudinal}
+La componente vertical tiene peso 1. La longitudinal tiene peso $k_Z$. Con valores iniciales, $h_Y=5$ kt da $b_P=1$ y $h_Z=5$ kt, por sí solo, da $b_P=0.25$. Variaciones del mismo signo se suman; de signos opuestos pueden cancelarse. Por ejemplo, $h_Y=1$ kt y $h_Z=-4$ kt dan $b_P=0$ con $k_Z=0.25$.
+
+\code{--gust-longitudinal 0} elimina solamente el aporte Z. Un valor negativo invierte ese aporte sin invertir Y. Este ajuste no cambia el signo de todo pitch y tampoco afecta directamente el roll.
+
+\subsubsection{Qué significa la escala de 5 kt}
+$W=5$ kt establece cuánta variación se necesita para una señal de cierta amplitud. Bajar $W$ aumenta sensibilidad; subirlo la reduce, antes de saturar. \textbf{No significa que 5 kt de viento constante generen fuerza máxima}: se divide la variación filtrada $h$, no el viento absoluto, y luego siguen presión, ganancia, límite y suavizado. El valor está escrito directamente en \code{GustModel.h}; no se modifica con el menú de la placa.
+
+\subsection{Paso 3: presión dinámica y ganancia previa}
+\subsubsection{Presión utilizada por turbulencia}
+La conversión es la misma base física utilizada para el centrado:
+\begin{align}
+q_{\rm Pa}&=47.88025898\,q_{\rm psf},\\
+q_{\rm ref}&=\tfrac12(1.225)(0.514444444\,V_{\rm ref,kt})^2,\\
+Q&=\sat_{[0,4]}(q_{\rm Pa}/q_{\rm ref}),\\
+S_V&=\sat_{[0,2]}(\sqrt Q).
+\label{eq:turb-q}
+\end{align}
+% [V-realismo]
+La Pico conserva $Q\le4$ y la turbulencia usa $S_V\le2$. Con referencia 120 kt, $q_{\rm ref}\simeq2334.24$ Pa y $Q=2$ da $S_V=\sqrt2$. La ponderación lineal en velocidad equivalente procede de $q\Delta\alpha$ con $\Delta\alpha=w/V$; la referencia sigue siendo un ajuste háptico, no una Vne certificada.
+
+% [V-realismo]
+\textit{Actualización (realismo): $Q_T=\min(Q,1)$ $\rightarrow$ $S_V=\sqrt Q\le2$; la carga de ráfaga es $\propto\rho Vw$ (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Ganancia previa al límite}
+La señal bruta es
+\begin{align}
+v_R&=\gamma S_V\,0.70\frac{h_X}{5},\\
+v_P&=\gamma S_V\,\frac{h_Y+k_Zh_Z}{5}.
+\label{eq:turb-raw}
+\end{align}
+\code{--gust-gain} fija $\gamma$, con valor inicial 1 y rango permitido $0\ldots10$. No modifica las ganancias guardadas en la placa. Aumentarla intensifica las señales pequeñas, pero puede hacer que el límite vectorial actúe con más frecuencia y que las diferencias entre ráfagas fuertes se compriman.
+
+% [V-realismo]
+Si $S_V$ o $\gamma$ se vuelven cero, el objetivo bruto es cero. \textbf{Una salida previa no desaparece necesariamente en ese instante}: decae por el filtro de 80 ms mientras el modelo continúe activo. La pausa, el suelo o un reinicio sí limpian directamente el estado del modelo.
+
+% [V-realismo]
+\textit{Actualización (realismo): ganancia previa $\gamma Q_T$ $\rightarrow$ $\gamma S_V$; ponderación lineal en velocidad equivalente de la carga de ráfaga (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Paso 4: limitar conjuntamente los dos ejes}
+\subsubsection{Norma del vector y recorte radial}
+Se calcula la longitud del vector de fuerza bruta:
+\begin{align}
+\ell&=\sqrt{v_R^2+v_P^2},\\
+(t_R,t_P)&=\frac{(v_R,v_P)}{\max(1,\ell)}.
+\label{eq:turb-limit}
+\end{align}
+Si $\ell\le1$, no cambia nada. Si $\ell>1$, ambos valores se dividen por la misma longitud. Por ejemplo, $(v_R,v_P)=(0.9,1.2)$ tiene longitud 1.5 y se convierte en $(0.6,0.8)$. Se conserva la proporción y el signo del objetivo instantáneo.
+
+\subsubsection{Consecuencia para ajustar roll y pitch}
+El modelo impone $t_R^2+t_P^2\le1$, no dos máximos simultáneos independientes. No puede producir el objetivo $(1,1)$. Una ráfaga vertical fuerte puede reducir el roll disponible aunque $h_X$ no cambie, porque aumenta $\ell$ y se divide todo el vector.
+
+Apagar ``Turbul. pitch'' en el menú no elimina ese efecto de reparto: la placa anula pitch \emph{después} de que el modelo de la Pico haya limitado ambos ejes. Para ensayar lateral sin esa interacción, la entrada vertical/longitudinal debe ser pequeña o el objetivo no debe saturarse. Esto es una consecuencia de la ubicación de los ajustes.
+
+\subsubsection{Condición para evitar saturación}
+Antes del suavizado, el objetivo no se recorta si
+\begin{equation}
+\frac{\gamma S_V}{5}
+\sqrt{(0.70h_X)^2+(h_Y+k_Zh_Z)^2}\le1.
+\end{equation}
+% [V-realismo]
+Con $S_V=\gamma=1$, una variación exclusivamente lateral alcanza el límite alrededor de $|h_X|=7.143$ kt; una exclusivamente vertical, a 5 kt; una exclusivamente longitudinal con $k_Z=0.25$, a 20 kt. Son umbrales de \emph{variaciones filtradas}, no del viento meteorológico absoluto. Con viento mixto se puede saturar antes.
+
+% [V-realismo]
+\textit{Actualización (realismo): condición de saturación con $Q_T$ $\rightarrow$ con $S_V=\sqrt Q$; umbrales coherentes con la carga $\propto\rho Vw$ (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Paso 5: suavizar el objetivo}
+\subsubsection{Filtro de salida de 80 ms}
+Después del límite vectorial:
+\begin{align}
+\beta_n&=1-e^{-\Delta t_n/\tau_L},\qquad \tau_L=0.08\ {\rm s},\\
+o_{a,n}&=o_{a,n-1}+\beta_n(t_{a,n}-o_{a,n-1}),\quad a=R,P.
+\label{eq:turb-lp}
+\end{align}
+$o_a$ es la salida anterior corregida una fracción de la distancia al nuevo objetivo. El código usa \code{-expm1(-dt/0.08)}, una forma numéricamente conveniente de calcular $1-e^{-dt/0.08}$. Con 20 ms, $\beta\simeq0.221199$: se recorre el 22.12\% de la diferencia pendiente por muestra.
+
+La fórmula procede del mismo tipo de ecuación de primer orden que el seguimiento de media. El valor de 80 ms es un ajuste del proyecto. Si el objetivo fuese constante, desde cero alcanzaría el 63.2\% en 80 ms y el 95.0\% en 240 ms. Ante un escalón de viento, el objetivo no es constante porque el pasaaltos ya está decayendo; no deben confundirse ambas respuestas.
+
+\subsubsection{Por qué la salida sigue dentro de $\pm1$}
+El filtro combina la salida anterior y un objetivo dentro del disco de radio 1, con pesos positivos que suman uno. Como parte desde cero, conserva $o_R^2+o_P^2\le1$, salvo diferencias numéricas. Por lo tanto, cada componente queda entre $-1$ y $+1$ sin necesidad de usar toda esa escala en cada instante.
+
+El límite radial conserva la dirección del objetivo en una muestra, pero el filtro combina historia de distintas direcciones. Luego, la zona muerta y las ganancias diferentes por eje también cambian la proporción final. No corresponde afirmar que toda la cadena hasta los motores conserve siempre la dirección del vector de viento.
+
+\subsubsection{Qué sensaciones favorecen ambos filtros}
+% [V-realismo]
+La referencia continua del pasaaltos tiene corte aproximado $f_H=1/(2\pi\tau_H)$, entre 0.106 y 0.637 Hz (0.333 Hz a 120 kt EAS); el pasabajos, $f_L\simeq1.989$ Hz. Favorecen perturbaciones transitorias y reducen variaciones extremadamente lentas o muy rápidas. No crean una vibración de frecuencia fija ni anulan bruscamente todo lo situado fuera de esos valores.
+
+Subir $\tau_H$ hace que el viento sostenido tarde más en ser absorbido por la media y prolonga el transitorio; baja la frecuencia de corte del pasaaltos. Subir $\tau_L$ suaviza más y retrasa la respuesta de salida. Los cortes son orientativos para la cadena lineal; muestreo, saturación y zona muerta modifican la respuesta completa.
+
+% [V-realismo]
+\textit{Actualización (realismo): corte pasaaltos fijo $\rightarrow$ corte dependiente de $\tau_H=29.5/V_e$ limitado; duración de ráfaga ligada al plunge (Hoblit); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Paso 6: datos USB y ejecución en la placa}
+La trama SC8 lleva viento X/Y/Z y presión en sus unidades originales, además de los parámetros de configuración. La Pico calcula $(o_R,o_P)$ en \code{GustModel.h}; el comando usa directamente esos flotantes como $z_R,z_P$, sin cuantización intermedia a enteros.
+
+Los datos se solicitan por frame, el puente selecciona la última muestra y limita envíos a uno cada 20 ms, y los motores se actualizan nominalmente cada 2 ms. Los filtros de viento sólo avanzan una vez por nueva marca aceptada. Su salida se retiene entre muestras y se reinicia al deshabilitar o interrumpir el cálculo local.
+
+\subsection{Paso 7: zona muerta y ganancias de la placa}
+\subsubsection{Zona muerta continua del 2\%}
+\code{SimTelemetry.h::gustCommand} aplica, con $d=0.02$:
+\begin{equation}
+D(z)=\begin{cases}
+0,&|z|\le d,\\[2pt]
+\displaystyle\operatorname{sgn}(z)\frac{|z|-d}{1-d},&|z|>d.
+\end{cases}
+\label{eq:turb-dead}
+\end{equation}
+Primero recorta $z$ a $[-1,1]$. Luego elimina las señales pequeñas; por encima del umbral resta la zona eliminada y divide por 0.98 para mantener $D(1)=1$. Ejemplo: $z=0.10$ produce $D=0.08/0.98\simeq0.081633$, no 0.10. Al cruzar 0.02 no hay salto finito: la función empieza desde cero.
+
+El 2\% es un ajuste local de rechazo de señal pequeña, no un porcentaje de viento en kt ni una propiedad aerodinámica. Un valor de 0.02 en roll y otro en pitch se evalúan individualmente, aunque el modelo previo aplique un límite conjunto.
+
+\subsubsection{Fórmulas por eje y valores actuales}
+Después de esa transformación:
+\begin{align}
+u_R&=D(z_R)\,c_R\,G=0.315\,D(z_R),\\
+u_P&=D(z_P)\,c_P\,G=0.630\,D(z_P).
+\label{eq:turb-firmware}
+\end{align}
+Se usaron $c_R=0.35$, $c_P=0.70$ y $G=0.90$, definidos inicialmente por \code{SIMCONNECT_GUST_ROLL}, \code{SIMCONNECT_GUST_PITCH} y \code{SIMCONNECT_TOTAL_GAIN}. Las ganancias guardadas pueden reemplazarlos. ``Turbul. roll'' y ``Turbul. pitch'' permiten habilitar/deshabilitar cada aporte por separado.
+
+No hay otro factor automático 0.5 en esta ruta: la diferencia de eje ya está en las ganancias 0.35/0.70 y en la mezcla lateral 0.70 del modelo. Los factores de otros efectos presentes en \code{SimEffects.h} no deben multiplicarse otra vez por la turbulencia.
+
+\subsubsection{Por qué roll no es siempre la mitad de pitch}
+Si llegan $z_R=z_P$, las ganancias iniciales dan comandos en relación 1:2. Pero para variaciones iguales $h_X=h_Y$ y $h_Z=0$, el modelo de la Pico produce roll con factor 0.70. Lejos de la zona muerta y sin otras distorsiones, la relación final es aproximadamente $u_R/u_P\simeq0.70(0.35/0.70)=0.35$. Cerca de la zona muerta la relación cambia aún más. No existe una proporción fija para todas las ráfagas.
+
+\subsection{Paso 8: del comando de turbulencia al PWM}
+\subsubsection{Cadena eléctrica para el efecto aislado}
+La ruta es común con el centrado, pero se explicita aquí para poder leer esta sección de forma independiente. Si los demás efectos aportan cero:
+\begin{align}
+u_{{\rm out},a}&=\sat_{[-L,L]}(u_a),\qquad L=220/255,\\
+z_{{\rm motor},a}&=\sat_{[-1,1]}(s_a u_{{\rm out},a}),\\
+p_a&=\sat_{[-220,220]}\left(
+\operatorname{round}_{\rm sim}(M z_{{\rm motor},a})\right),\quad M=255.
+\end{align}
+$s_a$ es la polaridad del motor, inicialmente $+1$; $M$ es \code{PWM_MAX}. El redondeo suma 0.5 a los positivos, resta 0.5 a los negativos y convierte a entero. Un comando 0.10 da 26 PWM y uno $-0.10$ da $-26$. No se multiplica por 220: se multiplica por 255 y se recorta después.
+
+Con otros efectos activos, el límite $L$ se aplica a la suma de sus comandos. La turbulencia puede quedar parcial o totalmente ocultada por esa saturación, o reducir la salida si tiene signo contrario al resto. Amortiguación y fricción se suman como cargas independientes; no modifican aquí la fórmula de viento.
+
+\subsubsection{Máximos con valores predeterminados}
+Como $|D(z)|\le1$, los máximos individuales teóricos son
+\begin{equation}
+|u_R|\le0.315\Rightarrow |p_R|\le80,\qquad
+|u_P|\le0.630\Rightarrow |p_P|\le161.
+\end{equation}
+Son límites individuales, no una afirmación de que ambos se alcancen juntos: el vector del modelo tiene norma no mayor que uno. La turbulencia aislada, con ganancias iniciales, no alcanza el techo 220. Con ganancias de menú mayores puede hacerlo; para un eje hace falta aproximadamente $G c_a\ge L$ y suficiente señal de entrada.
+
+\subsubsection{Activación de pines}
+Con $p\ge0$, LEFT queda en cero y RIGHT recibe $p$; con $p<0$, RIGHT queda en cero y LEFT recibe $|p|$. Para Pico: roll GP6/GP7, pitch GP8/GP9, enable GP10/GP11. Los signos físicos dependen del montaje y de \code{ROLL_MOTOR_DIRECTION}/\code{PITCH_MOTOR_DIRECTION}.
+
+La frecuencia PWM configurada es 490 Hz y el rango 0--255. El duty cycle activo es $|p|/255$. Un PWM de 14 equivale a 5.49\%; uno de 161, a 63.14\%. No mide la fuerza real: la corriente, el motor y la transmisión determinan cuánto siente el piloto. El límite duro de 220 no regula corriente.
+
+\subsection{Ejemplos numéricos desde viento hasta PWM}
+\subsubsection{Ráfaga vertical de 5 kt, primera muestra}
+% [V-realismo]
+Supuestos: vuelo, viento cero ya inicializado, $\Delta t=20$ ms, $Q=0.5$, referencia 120 kt, $V_e=84.853$ kt, $S_V=0.707107$, $\tau_H=0.675799$ s, $\gamma=1$ y ganancias de fábrica. Llega $(0,5,0)$ kt.
+\begin{enumerate}
+\item $a=e^{-0.02/\tau_H}=0.9708390$; $m_Y=0.1458049$ kt; $h_Y=4.8541951$ kt.
+\item $v_P=S_V h_Y/5=0.6864869$; roll cero; no actúa el límite vectorial.
+\item $\beta=1-e^{-0.02/0.08}=0.2211992$ y $o_P=0.1518504$.
+\item $D(o_P)=0.1345412$; $u_P=0.70\times0.90D=0.0847609$.
+\item PWM pitch $\operatorname{round}(255u_P)=22$; roll cero. Polaridad positiva activa RIGHT.
+\end{enumerate}
+
+% [V-realismo]
+\textit{Actualización (realismo): ejemplo con pasaaltos de 1 s $\rightarrow$ ejemplo recalculado con $\tau_H=0.47786$ s a 120 kt EAS; decaimiento por plunge (Hoblit); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Qué ocurre si ese viento de 5 kt permanece constante}
+% [V-realismo]
+Mismos supuestos: $V_e=84.853$ kt, $\tau_H=0.675799$ s, $S_V=0.707107$, viento vertical fijo y pasos de 20 ms. Son cuentas del modelo, sin cuantización USB intermedia.
+% [V-realismo]
+\begin{center}\begin{tabular}{rrrr}
+\toprule Tiempo (s)&$h_Y$ (kt)&$o_P=z_P$&PWM pitch\\\midrule
+0.02&4.85420&0.151850&22\\
+0.08&4.44180&0.411559&64\\
+0.20&3.71914&0.523259&82\\
+0.50&2.38589&0.375793&58\\
+1.00&1.13849&0.180045&26\\
+2.00&0.25923&0.040997&3\\
+4.00&0.01344&0.002126&0\\
+\bottomrule\end{tabular}\end{center}
+% [V-realismo]
+La media absorbe el viento constante; presión fija y ejes fijos son supuestos del ejemplo.
+
+% [V-realismo]
+\textit{Actualización (realismo): tabla de viento constante con $\tau_H=1$ s $\rightarrow$ tabla recalculada con $29.5/V_e$ a 120 kt EAS; decaimiento por plunge (Hoblit); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Ráfaga mixta: el límite vectorial sí interviene}
+% [V-realismo]
+Se parte nuevamente de viento y salida cero ya inicializados. Ahora llegan $w_X=w_Y=5$ kt, $w_Z=0$, con $Q=S_V=\gamma=1$, referencia y EAS 120 kt, $\tau_H=0.47786$ s y $\Delta t=20$ ms. Las variaciones X/Y son $4.795054$ kt:
+\begin{align*}
+v_R&=0.6713076,&v_P&=0.9590108,\\
+\ell&\simeq1.170622,&(t_R,t_P)&\simeq(0.5734623,0.8192319),\\
+(o_R,o_P)&\simeq(0.1268494,0.1812135),&
+(z_R,z_P)&=(0.1268,0.1812).
+\end{align*}
+Tras zona muerta y ganancias: $u_R\simeq0.0343286$ y $u_P\simeq0.1036286$. Se aplican aproximadamente \textbf{9 PWM roll y 26 PWM pitch}. No salen dos valores iguales ni una relación 1:2: intervinieron la mezcla lateral 0.70, el reparto vectorial y la zona muerta.
+
+% [V-realismo]
+\textit{Actualización (realismo): ejemplo de ráfaga mixta con filtro fijo $\rightarrow$ ejemplo recalculado con $\tau_H=29.5/V_e$; transitorio de plunge previo al recorte vectorial (Hoblit); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Conversión rápida de señal recibida a PWM}
+Esta tabla parte de $z$ ya recibido, por lo que no especifica una ráfaga única capaz de producirlo. Cada eje se evalúa por separado, con sus ganancias iniciales y polaridad positiva:
+\begin{center}
+\begin{tabular}{rrrrr}
+\toprule
+$z$ & $u_R$ & PWM roll & $u_P$ & PWM pitch\\
+\midrule
+0.02 & 0 & 0 & 0 & 0\\
+0.03 & 0.003214 & 1 & 0.006429 & 2\\
+0.05 & 0.009643 & 2 & 0.019286 & 5\\
+0.10 & 0.025714 & 7 & 0.051429 & 13\\
+0.25 & 0.073929 & 19 & 0.147857 & 38\\
+0.50 & 0.154286 & 39 & 0.308571 & 79\\
+1.00 & 0.315000 & 80 & 0.630000 & 161\\
+\bottomrule
+\end{tabular}
+\end{center}
+Para $z<0$ cambian los signos del comando y PWM; las magnitudes se conservan. Las dos columnas no implican que $z_R=z_P=1$ sea posible simultáneamente desde el modelo vectorial.
+
+\subsection{Habilitación, cortes y reinicios}
+\subsubsection{Condiciones del puente}
+El modelo se calcula si \code{--gusts} está presente, la simulación corre sin pausa ni slew, las muestras son recientes y \code{SIM ON GROUND=0}. \code{--gusts} es falso por defecto en el ejecutable; el lanzador \code{Iniciar-Simulador.ps1} sí lo agrega junto con \code{--gust-gain 1}.
+
+Para enviar telemetría armada se necesita \code{--enable} y puerto reconocido como \code{YOKE17SC8}. El modo monitor sin placa sólo registra las entradas; no calcula efectos.
+
+\subsubsection{Validación específica del modelo}
+\code{GustModel.h} reinicia y devuelve cero si hay una entrada no finita, $\Delta t<0$ o $\Delta t\ge0.25$ s, presión normalizada fuera de $[0,1]$, ganancia fuera de $[0,10]$, $|k_Z|>1$ o alguna componente de viento mayor que 1000 kt en módulo. Los 1000 kt son un filtro de sanidad de datos, no un umbral meteorológico de turbulencia.
+
+Con $\Delta t=0$ y el modelo ya inicializado, conserva la salida anterior y no inventa tiempo transcurrido. Tras un reinicio, la primera muestra inicializa la media y devuelve cero. Si llega un salto temporal largo, no se interpreta todo ese salto como una ráfaga continua.
+
+Un viento finito pero mayor que 1000 kt puede reiniciar sólo el modelo de ráfagas sin que necesariamente se desarme todo el puente; en cambio una entrada no finita interceptada por la validación global produce desarme. No todas las comprobaciones tienen idéntico alcance.
+
+\subsubsection{Condiciones de la placa y latencia de corte}
+La placa exige \code{SIMCONNECT_ADDITIONS_ENABLED}, máscara de turbulencias, ganancia efectiva del eje, telemetría armada de menos de 300 ms y DTR activo. El menú de calibración fuerza los comandos de motor a cero. Al guardar, también se detienen antes de escribir memoria.
+
+El suelo o una pausa reinician el modelo en la Pico; la retirada física depende de que llegue y se procese la trama correspondiente. Ante ausencia de tramas, interviene el watchdog. No debe interpretarse ``reinicio inmediato del modelo'' como latencia eléctrica absolutamente nula.
+
+El reinicio de \code{Effects::update} por pérdida de habilitación o intervalo local mayor que 50 ms limpia todos los modelos SC8, incluyendo turbulencia, además de centro y portadoras. La siguiente muestra dinámica inicializa referencias sin crear un impulso artificial.
+
+\subsection{Procedencia de las fórmulas y constantes}
+\subsubsection{Qué aporta TelemFFB}
+Se compararon las copias locales de \code{TurbulenceModulator.py}, \code{TurbulenceMixIn.py} y la definición de \code{RelWind} en \code{SimConnectManager.py}. El comentario de \code{GustModel.h} señala expresamente a TelemFFB como referencia para filtrado, mezcla y limitación vectorial.
+
+El pasaaltos de TelemFFB usa $\alpha=\alpha_{\rm ref}^{\Delta t/\Delta t_{\rm ref}}$ y $h_n=\alpha(h_{n-1}+w_n-w_{n-1})$. Se relaciona con MiYoke mediante
+\begin{equation}
+\tau_H=-\frac{\Delta t_{\rm ref}}{\ln\alpha_{\rm ref}},
+\qquad \alpha=e^{-\Delta t/\tau_H}.
+\end{equation}
+% [V-realismo]
+La equivalencia es de estructura matemática; no implica que se hayan usado los mismos tiempos. Con los argumentos predeterminados del método de TelemFFB, $\alpha_{\rm ref}=0.95$ a 60 Hz equivale aproximadamente a 0.325 s, mientras MiYoke usa $\tau_H=\sat_{[0.25,1.5]}(29.5/V_e)$ s. Los ajustes efectivos de TelemFFB pueden reemplazar esos argumentos.
+
+TelemFFB utiliza pesos vertical 1, longitudinal 0.25 y lateral 0.70. Para roll aplica signo negativo; MiYoke usa \textbf{positivo}, según su comentario para conservar la convención del puente existente. La comparación no valida qué polaridad física es correcta para este mecanismo.
+
+También hay límite conjunto de pitch/roll y suavizado exponencial en la referencia. TelemFFB ajusta sensibilidad mediante un divisor entre 10 y 1 y una intensidad posterior al límite de magnitud. MiYoke usa 5 kt, presión normalizada y ganancia \emph{antes} del límite unitario. Por tanto, \code{--gust-gain} no equivale exactamente al parámetro de intensidad de TelemFFB.
+
+% [V-realismo]
+\textit{Actualización (realismo): pasaaltos fijo de la adaptación anterior $\rightarrow$ $29.5/V_e$ limitado; se distingue el decaimiento por plunge del antecedente TelemFFB (Hoblit); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{La entrada de viento no es la misma}
+\code{SimConnectManager.py} de TelemFFB define \code{RelWind} con \code{RELATIVE WIND VELOCITY BODY X/Y/Z} en m/s. Este proyecto usa \code{AIRCRAFT WIND X/Y/Z} en kt. No son nombres intercambiables: cambiar de familia de variables modifica el significado de la entrada, y cambiar a m/s exige revisar la escala de 5 kt.
+
+TelemFFB convierte los resultados en magnitud y dirección para un efecto de fuerza constante del dispositivo FFB; ``constante'' describe el tipo de orden enviado, no que su magnitud no varíe con el tiempo. MiYoke transmite entradas crudas por USB serie; la Pico calcula las componentes y las convierte a PWM. No utiliza la conversión angular ni el firmware Rhino para generar esta salida.
+
+\subsubsection{Qué procede del proyecto alemán original}
+En las fuentes inspeccionadas de \code{../../PROEYCTO ORIGINAL/Arduino_FFB_Yoke} no se identificó una cadena con \code{AIRCRAFT WIND}, SimConnect y estos filtros de ráfagas. El original aporta antecedentes de lectura de ejes, manejo FFB y accionamiento de motor; no se le atribuyen las ecuaciones de viento actuales.
+
+La arquitectura de dos PWM según signo tiene un antecedente concreto en \code{AxisCalibration.cpp::MoveMotor}. Como se explicó en centrado, el original contiene también otra conversión de fuerza en \code{Arduino.ino}, por lo que no debe afirmarse identidad completa entre todos los mapas de PWM del original y los actuales.
+
+\subsubsection{Ajustes propios, fundamentos y trazabilidad}
+\begin{longtable}{p{0.43\linewidth}p{0.49\linewidth}}
+\toprule Parte & Procedencia y alcance\\\midrule\endhead
+Variables de viento y presión & SDK de Prepar3D; describe telemetría, no una ley de fuerza de mando.\\
+$q=\rho V^2/2$ & Fundamento físico general, referencia NASA; no fija ganancias hápticas.\\
+Pasaaltos, mezcla y límite vectorial & Estructura comparable con TelemFFB y antecedente declarado en el código local.\\
+Pesos 1, 0.25 y 0.70 & Presentes en TelemFFB; adaptación local con signo roll positivo y $k_Z$ regulable. No son mediciones de un avión concreto.\\
+$29.5/V_e$ s (0.25--1.5), 80 ms y 5 kt & Plunge aproximado para C182RG; suavizado y escala háptica locales.\\
+Referencia 120 kt y producto $\gamma S_V$ & Normalización local; $S_V=\sqrt Q$ por carga de ráfaga lineal en velocidad.\\
+Zona muerta 0.02 y ganancias 0.35/0.70 & Ajustes locales vigentes de la placa.\\
+SC8, watchdog y menú persistente & Implementación local de comunicación y control.\\
+Redondeo, escala 255 y techo 220 & Ruta eléctrica de MiYoke; no calibración de fuerza física.\\
+\bottomrule
+\end{longtable}
+\code{SimConnectBridge/GustGain.h} contiene \code{scaleGust}, pero no está incluido ni llamado por el puente actual: aparece en pruebas. No se agregó su fórmula como una etapa extra, porque hacerlo duplicaría un cálculo que no está en la ruta de ejecución analizada.
+
+% [V-realismo]
+\textit{Actualización (realismo): $\min(Q,1)$ y 1 s $\rightarrow$ $\sqrt Q\le2$ y $29.5/V_e$ limitado; se documentan carga de ráfaga y plunge (Pratt--Walker; Hoblit); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Qué puede ajustarse y cómo cambia la sensación}
+\subsubsection{Ganancias disponibles en la placa}
+\begin{longtable}{p{0.25\linewidth}p{0.13\linewidth}p{0.54\linewidth}}
+\toprule Ajuste & Inicio & Resultado esperado\\\midrule\endhead
+Turbul. roll, $c_R$ & 0.35 & Escala sólo roll después de recibir y transformar la señal.\\
+Turbul. pitch, $c_P$ & 0.70 & Escala sólo pitch después de recibir y transformar la señal.\\
+Ganancia total, $G$ & 0.90 & Escala ambos ejes y el resto de efectos.\\
+\bottomrule
+\end{longtable}
+El rango es $0\ldots1$ y el paso de botones 0.05. Las ganancias se guardan en memoria; sus valores efectivos pueden ser distintos de los \code{define}. Los interruptores por eje hacen efectiva una ganancia cero sin cambiar el número guardado. Subir estas ganancias aumenta PWM, pero no recupera variaciones que el modelo ya saturó o que la zona muerta ya eliminó.
+
+\subsubsection{Ajustes del puente}
+\begin{longtable}{p{0.34\linewidth}p{0.58\linewidth}}
+\toprule Parámetro & Efecto y límite de interpretación\\\midrule\endhead
+\code{--gust-gain}, $0\ldots10$ & Amplifica antes del límite vectorial y del filtro. Puede hacer visibles ráfagas pequeñas y saturar las grandes.\\
+\code{--gust-longitudinal}, $-1\ldots1$ & Peso de Z sobre pitch. Cero sirve para evaluar sólo aporte vertical; un valor negativo invierte sólo Z.\\
+\code{--reference-knots}, 40--250 & Regula $q_{\rm ref}$. Más referencia reduce $S_V$ a presión fija, salvo el recorte superior. También afecta centrado.\\
+\code{--gusts} & Habilita el cálculo de ráfagas; no sustituye a \code{--enable} para actuar.\\
+\bottomrule
+\end{longtable}
+% [V-realismo]
+Subir referencia de 120 a 150 kt multiplica $Q$ sin recortar por 0.64 y $S_V$ por 0.8. El pasaaltos usa la presión física para $V_e$, por lo que su constante temporal no depende de esa referencia. El recorte superior de $Q$ puede alterar estas proporciones.
+
+% [V-realismo]
+\textit{Actualización (realismo): cambiar referencia escalaba por $Q_T$ $\rightarrow$ escala por $S_V=\sqrt Q$; la carga es lineal en velocidad y el plunge usa $V_e$ físico (Pratt--Walker; Hoblit); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Cambios que requieren editar y recompilar}
+% [V-realismo]
+La escala 5 kt, el peso lateral 0.70 y los 80 ms están en \code{GustModel.h}; $\tau_H=29.5/V_e$ s, limitado a 0.25--1.5 s, se calcula en \code{PicoForceModels.h}. Cambiarlos requiere recompilar el firmware. La zona muerta 0.02 se encuentra en \code{SimTelemetry.h::gustCommand}: requiere recompilar y cargar firmware. Si se cambia $d$, se debe cambiar coherentemente el divisor $1-d$, actualmente 0.98.
+
+Las polaridades de motor y límites PWM requieren revisar \code{mis_defines.h}. Invertir la polaridad de un motor invierte todos sus efectos, incluido el centrado. No conviene usar ese ajuste para corregir exclusivamente el signo de una turbulencia cuando el resorte ya restaura correctamente: en ese caso hay que revisar el mapeo del viento del modelo.
+
+% [V-realismo]
+\textit{Actualización (realismo): constante pasaaltos fija $\rightarrow$ cálculo $29.5/V_e$ en firmware; parámetros de decaimiento por plunge requieren recompilación (Hoblit); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Umbral efectivo por cuantización PWM}
+Superar $d=0.02$ genera un comando matemático, pero puede seguir redondeando a cero. Para un eje aislado con $M=255$ y $Gc_a>0$, la primera cuenta aparece aproximadamente cuando
+\begin{equation}
+|z_a|\gtrsim d+(1-d)\frac{0.5}{255Gc_a}.
+\end{equation}
+Con valores iniciales resulta 0.02610 para roll y 0.02305 para pitch. Además intervienen la precisión de flotantes y las pérdidas del mecanismo. Una cuenta de PWM no garantiza movimiento o una fuerza perceptible. Por eso, observar una señal pequeña en el CSV no implica necesariamente sentirla en la mano.
+
+\subsection{Procedimiento para calibrar y pulir el efecto}
+\subsubsection{Primero comprobar que existe señal de viento}
+Usar el modo monitor permite registrar las entradas sin armar motores. Por ejemplo, desde la carpeta del ejecutable:
+\begin{quote}\small
+\code{YokeSimConnectBridge.exe --seconds 60 --gusts --gust-gain 1}
+\end{quote}
+Comparar viento sostenido, cambios de viento y maniobras con viento sostenido, manteniendo avión y velocidad de simulación. Si las tres componentes no varían, subir ganancias no crea turbulencia. Si varían sólo al maniobrar, hay que considerar el efecto de las coordenadas del avión antes de atribuirlo a la meteorología.
+
+\subsubsection{Ensayo de fuerzas aisladas}
+\begin{enumerate}
+\item Registrar modo de firmware, ganancias guardadas, avión, meteorología y argumentos del puente. El efecto requiere vuelo: una prueba en tierra no reproduce la ruta activa.
+\item Con pausa reconocida o comunicación desconectada, dejar en el menú sólo las turbulencias que se ensayarán; apagar centrado, otras vibraciones, damper y fricción. \code{--no-buffets} no apaga por sí solo todos esos aportes.
+\item Retomar el ensayo con ganancias pequeñas, un eje por vez, comprobando correspondencia entre signo de señal, comando y PWM. Para actuar se necesitan puerto real, \code{--enable} y \code{--gusts}; el comando de monitor anterior no lo hace.
+\item Ajustar primero el balance con $c_R$ y $c_P$. Después evaluar $\gamma$ para sensibilidad general a ráfagas pequeñas y comprobar que no mantenga el objetivo casi siempre saturado.
+\item Comparar $k_Z=0$ y $k_Z=0.25$ con las mismas condiciones, para distinguir cuánto aporta el viento longitudinal a pitch.
+\end{enumerate}
+Mantener una configuración de referencia entre ensayos evita confundir cambios de meteorología con cambios del algoritmo. La reproducibilidad exige capturar la serie de viento; dos vuelos diferentes no son automáticamente la misma entrada.
+
+\subsubsection{Qué cambiar ante cada síntoma}
+\begin{longtable}{p{0.29\linewidth}p{0.63\linewidth}}
+\toprule Síntoma & Comprobación o ajuste relacionado\\\midrule\endhead
+No aparece fuerza & Revisar vuelo, \code{--gusts}, armado, frescura, DTR y ganancias. Confirmar variaciones reales del viento y señal por encima de zona muerta.\\
+Ráfagas fuertes se sienten iguales & Inspeccionar si el objetivo vectorial satura o si la suma llega a 220. Bajar $\gamma$ puede recuperar diferencias antes del límite.\\
+Pitch domina demasiado & Ajustar $c_P$ y evaluar $k_Z$, diferenciando contribución vertical y longitudinal.\\
+Respuesta demasiado lenta & Revisar frecuencia de muestras, $\tau_L$ y presión; cambiar $\tau_H$ afecta también la duración del transitorio.\\
+Fuerza asociada a giros en viento estable & Revisar cambios de coordenadas del avión; no atribuirlo automáticamente a un problema de ganancia.\\
+CSV indica señal pero no se siente & Comparar señal recuperada, zona muerta, redondeo PWM y fricción del mecanismo.\\
+Turbulencia cambia al mover el yugo & Aislar centrado y cargas de movimiento; la ley de viento no utiliza directamente esa posición.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Diagnóstico: qué observar y qué puede inducir a error}
+\subsubsection{CSV del puente}
+El CSV conserva viento X/Y/Z, presión original \code{pressure_psf}, configuración de ráfagas, estados y marcas de captura/envío. SC8 no registra \code{gust_roll}, \code{gust_pitch}, \code{q_ratio} ni \code{Turbulencia} calculados en la PC. Para reconstruir una prueba fuera de línea deben ejecutarse los modelos de la Pico con las marcas de las muestras enviadas. El monitor sólo recoge telemetría.
+
+\subsubsection{Datos de la placa y mejoras de registro}
+El diagnóstico local \code{f=} muestra la suma de comandos multiplicada por 10000 y \code{p=} el PWM aplicado. Sólo con el efecto aislado se puede comparar esa suma directamente con $u_R/u_P$. El LCD y las líneas de depuración no sustituyen un registro a la frecuencia del control y pueden omitir picos breves.
+
+% [V-realismo]
+Una ampliación útil sería registrar $h_X,h_Y,h_Z$, $S_V$, $\ell$, señal antes/después del límite, $o_a$, $z_a$ y aporte aislado de turbulencia. Así se distinguiría una ráfaga eliminada por el filtro de una señal recortada, una zona muerta o un techo de la suma. Este análisis no añadió esas variables al firmware ni al puente.
+
+% [V-realismo]
+\textit{Actualización (realismo): diagnóstico referido a $Q_T$ $\rightarrow$ propuesta de registro de $S_V$; permitiría distinguir la ponderación de carga $\propto\rho Vw$ del recorte (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Mejoras posibles, todavía no implementadas}
+\subsubsection{Separar causas atmosféricas y maniobras}
+Para reducir respuesta a cambios de actitud en viento terrestre constante se puede estudiar viento en coordenadas terrestres y una transformación coherente al cuerpo del avión, con actitud y tiempos alineados. Esa mejora exige nuevas variables y validación; sustituir nombres de SimVars sin revisar unidades y referencias no la resuelve.
+
+\subsubsection{Hacer explícitos los parámetros y los límites}
+Se podrían exponer $\tau_H$, $\tau_L$, $W$ y pesos de mezcla como parámetros con rangos validados y guardarlos junto al registro del ensayo. Conviene distinguir una sensibilidad previa al límite y una intensidad posterior: actualmente $\gamma$ modifica cuánto se satura el modelo, mientras $c_R/c_P$ regulan la salida final por eje.
+
+También sería útil diagnosticar saturación vectorial aunque un eje esté apagado en la placa. Cambiar a límites independientes o hacer que el modelo respete los interruptores por eje antes del límite modifica el comportamiento; debe hacerse como decisión de diseño, no como si ya estuviera implementado.
+
+\subsubsection{Calibrar sensación y fuerza física}
+Para calibrar magnitud real hay que medir fuerza/torque frente a PWM en el mecanismo y verificar ambos sentidos. Los coeficientes de TelemFFB no sustituyen esa identificación. Una regulación de corriente sería otra ampliación distinta del modelo de viento.
+
+La calibración ADC del yugo sigue siendo importante para centrado y cargas de movimiento, pero no es una ganancia de turbulencia. No conviene desplazar el centro del sensor para corregir una turbulencia excesiva o asimétrica; se debe revisar la serie de viento, mezcla, signo y ganancias específicas.
+
+\subsection{Mapa de fuentes y verificación}
+\subsubsection{Implementación vigente}
+\begin{longtable}{p{0.39\linewidth}p{0.53\linewidth}}
+\toprule Archivo & Elementos comprobados\\\midrule\endhead
+\code{SimConnectBridge/main.cpp} & Variables originales, unidades, validación de transporte, argumentos, trama y CSV.\\
+\code{GustModel.h} & \code{Model::update}: inicialización, media, mezcla, presión, ganancia, límite vectorial y suavizado.\\
+\code{SimTelemetry.h} & Decodificación cruda, watchdog y \code{gustCommand}: zona muerta y ganancias.\\
+\code{SimEffects.h} & Aplicación por eje, habilitación, convivencia con otras cargas y saturación total.\\
+\code{mis_defines.h} & Ganancias iniciales 0.35/0.70/0.90, banderas, polaridades y límites.\\
+\code{GainSettings.h} & Ganancias efectivas, pasos del menú y estado por eje.\\
+\code{MiYoke_PD_V2.4.ino} & Lazo de control, menú, aplicación de polaridad y diagnóstico.\\
+\code{MotorDriver.h} & Escala, redondeo, límite duro y salidas PWM.\\
+\code{Iniciar-Simulador.ps1} & Invocación habitual con \code{--gusts --gust-gain 1}.\\
+\code{tests/simconnect_checks.cpp} & Casos existentes de viento constante, mezcla, saturación, reinicio, zona muerta, tasa de muestras y comunicación.\\
+\bottomrule
+\end{longtable}
+Las rutas son relativas a MiYoke\_PD\_V2.4. Se verificaron numéricamente las tablas aplicando las ecuaciones en el mismo orden; no son medidas de motores. Las constantes y estructuras se contrastaron con el código, no únicamente con los documentos explicativos anteriores.
+
+\subsubsection{Documentación histórica y referencias públicas}
+\code{LEEME md/MODELO_TURBULENCIA.md} describe el fundamento y las ecuaciones del modelo, pero conserva pasajes antiguos sobre protocolo SC2, FFB HID y ganancias 0.10/0.20. Esos detalles no describen la integración actual. Esta sección usa SC8, ganancias 0.35/0.70 y suma exclusivamente generada por la ruta actual de SimConnect.
+
+\begin{enumerate}
+\item \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{Prepar3D SDK v3, Simulation Variables}: componentes \code{AIRCRAFT WIND X/Y/Z} y presión. Consultado el 7 de octubre de 2026.
+\item \href{https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/dynamic-pressure-2/}{NASA Glenn, Dynamic Pressure}: fundamento de presión dinámica, ya utilizado en la sección de centrado.
+\item \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/utils/TurbulenceModulator.py}{TelemFFB, TurbulenceModulator.py}: referencia pública para localizar filtros, mezcla y saturación; comparación realizada contra la copia local.
+\item \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/msfs_xp/TurbulenceMixIn.py}{TelemFFB, TurbulenceMixIn.py}: uso de componentes y envío de fuerza FFB; copia local inspeccionada.
+\item \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/telem/SimConnectManager.py}{TelemFFB, SimConnectManager.py}: definición de \code{RelWind} con viento relativo en m/s; copia local inspeccionada.
+\end{enumerate}
+Las ramas públicas pueden evolucionar. Los tiempos, ganancias y conclusiones de esta sección corresponden a los archivos locales inspeccionados. No se presentan como identificaciones experimentales de una aeronave ni como una validación del firmware efectivamente cargado.
+\newpage

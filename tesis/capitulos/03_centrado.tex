@@ -1,0 +1,444 @@
+\section{CENTRADO DINÁMICO (RESORTE)}
+
+\subsection{Qué hace y qué significa que sea dinámico}
+El efecto intenta devolver el yugo a su centro. Cuanto más se aparta el mando del centro, mayor es el comando restaurador. Además, cuando aumenta la presión dinámica del aire, el resorte se endurece. En este proyecto el centro permanece fijo: lo que cambia con la telemetría es la \textbf{rigidez}, no la posición de equilibrio.
+
+La idea se expresa como un resorte lineal:
+\begin{equation}
+u_a=-G\,g_a\,k_f\,x_a,\qquad a\in\{R,P\}.
+\label{eq:resorte}
+\end{equation}
+Aquí $R$ es roll y $P$ es pitch. $x_a$ es cuánto se desplazó el mando, $k_f$ es la rigidez variable suavizada, $g_a$ ajusta la intensidad de ese eje y $G$ es la ganancia general. El signo menos hace que el motor tienda a volver al centro. $u_a$ es un \textbf{comando adimensional}: todavía no es PWM, newtons ni torque medido.
+
+\subsubsection{Tres cantidades diferentes que no hay que confundir}
+\begin{itemize}
+\item \textbf{Posición normalizada} $x$: $0$ es el centro; $-1$ y $+1$ son los extremos calibrados. Es una entrada al cálculo.
+\item \textbf{Presión normalizada} $Q$: relaciona la presión del simulador con una presión de referencia. En el protocolo vigente puede llegar a $4$.
+\item \textbf{Comando normalizado} $u$: indica sentido e intensidad de la salida. La interfaz del motor admite $[-1,1]$, pero este firmware limita antes la suma a aproximadamente $\pm0.862745$.
+\end{itemize}
+Por lo tanto, ``generar un valor de $\pm1$'' significa trabajar en una escala normalizada. No significa que siempre se produzcan exactamente $-1$ o $+1$, ni que la presión esté limitada a uno.
+
+\subsection{Recorrido completo en la versión actual}
+\begin{center}
+\fbox{\begin{minipage}{0.91\linewidth}
+\textbf{Rama de rigidez:} Prepar3D/SimConnect $\rightarrow$ presión en psf $\rightarrow$ USB SC8 $\rightarrow$ conversión local a Pa $\rightarrow$ división por $q_{\rm ref}$ $\rightarrow$ límite $0\ldots4$ $\rightarrow$ rigidez de reposo y filtro de 100 ms.
+
+\textbf{Rama de posición actual:} potenciómetro roll/pitch $\rightarrow$ ADC de 12 bits $\rightarrow$ promedio e histéresis $\rightarrow$ calibración de extremos y centro $\rightarrow$ posición $-1\ldots1$.
+
+\textbf{Unión:} $-\text{posición}\times\text{rigidez}\times\text{ganancia del eje}\times\text{ganancia total}$ $\rightarrow$ límite de comando $\rightarrow$ polaridad $\rightarrow$ multiplicación por 255 y redondeo $\rightarrow$ límite PWM 220 $\rightarrow$ puente H.
+\end{minipage}}
+\end{center}
+
+\textbf{Hallazgo importante:} \code{mis_defines.h} define \code{YOKE_USE_SIMULATION=2}. Por defecto, la fuerza depende de la presión de SimConnect y de la posición de los \textbf{potenciómetros locales}. No depende de la posición de SimConnect, aunque el puente siga solicitándola, validándola y transmitiéndola. Las opciones son:
+\begin{center}
+\begin{tabular}{cll}
+\toprule
+Valor & Posición utilizada & Procedencia\\
+\midrule
+0 & Encoders & Cuentas relativas al centro al arrancar\\
+1 & SimConnect & \code{YOKE X POSITION} / \code{YOKE Y POSITION}\\
+2 & Potenciómetros & ADC0/ADC1; opción predeterminada\\
+\bottomrule
+\end{tabular}
+\end{center}
+Una definición de compilación puede cambiar esa opción. \code{Build-Pico2.ps1 -Encoders} fuerza el modo 0 y \code{-Potentiometers} fuerza el modo 2. Analizar el archivo fuente no permite certificar el modo del binario ya cargado. El firmware actual no transmite ejes HID al simulador: el código prevé que otra placa envíe los mandos.
+
+\subsection{Variables de SimConnect que intervienen}
+\subsubsection{Datos que entran directamente en la fórmula}
+\begin{longtable}{p{0.31\linewidth}p{0.18\linewidth}p{0.43\linewidth}}
+\toprule Variable & Unidad solicitada & Uso concreto\\\midrule
+\endhead
+\code{DYNAMIC PRESSURE} & \code{psf} & Presión dinámica común a roll y pitch. Determina la rigidez en los tres modos.\\
+\code{YOKE X POSITION} & \code{Position} & Posición de roll, entre $-1$ y $+1$. Se usa en la fuerza solamente con modo 1.\\
+\code{YOKE Y POSITION} & \code{Position} & Posición de pitch, entre $-1$ y $+1$. Se usa en la fuerza solamente con modo 1.\\
+\bottomrule
+\end{longtable}
+El SDK describe X como desplazamiento izquierda/derecha e Y como mando hacia dentro/fuera. Son posiciones de mandos, no los ángulos de alabeo o cabeceo del avión. La unidad psf es libra-fuerza por pie cuadrado. Fuente: \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{SDK de Prepar3D, Simulation Variables}.
+
+\subsubsection{Datos que habilitan o invalidan la salida}
+\code{IS SLEW ACTIVE} debe valer cero. Los eventos de sistema \code{Sim} y \code{Pause} indican simulación en marcha y pausa; son eventos, no factores multiplicativos del resorte. También se necesitan \code{--enable}, un puerto identificado y muestras recientes.
+
+El paquete de entrada es compartido con otros efectos. Su validación global exige además valores finitos para \code{AIRSPEED INDICATED}, \code{AIRCRAFT WIND X}, \code{AIRCRAFT WIND Y}, \code{AIRCRAFT WIND Z}, \code{SIM ON GROUND} y slew; el estado de suelo debe ser 0 o 1. Un valor inválido de estas entradas puede desarmar también el centrado, aunque no participe en su ecuación. La presión debe estar entre 0 y 5000 psf y ambas posiciones del simulador entre $-1$ y $1$, incluso en modo de potenciómetros.
+
+\subsubsection{Datos que no calculan la rigidez}
+La velocidad indicada no se eleva al cuadrado para calcular este resorte. El puente recibe directamente \code{DYNAMIC PRESSURE}. No intervienen como factores del centrado los flaps, tren, spoilers, ángulo de ataque, pérdida, velocidad sobre suelo, trim, RPM ni aceleraciones. Estar en tierra no anula el resorte. Si el simulador informa presión dinámica con el avión quieto, el modelo responde a esa presión; ``en reposo'' no es una condición equivalente a $q=0$.
+
+\subsection{Paso 1: presión dinámica y referencia}
+\subsubsection{Fundamento físico}
+La presión dinámica se representa mediante
+\begin{equation}
+q=\frac12\rho V^2.
+\end{equation}
+$\rho$ es la densidad del aire en kg/m$^3$ y $V$ la velocidad relativa al aire en m/s; el resultado se expresa en Pa. A igual densidad, duplicar $V$ cuadruplica $q$. Esta relación física está explicada por \href{https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/dynamic-pressure-2/}{NASA Glenn, Dynamic Pressure}. Justifica que el resorte se endurezca con la presión; no determina por sí sola las ganancias del yugo ni reproduce el momento de bisagra de un avión concreto.
+
+\subsubsection{Conversión que hace la Pico}
+En \code{PicoForceModels.h}, dentro de \code{update}:
+\begin{align}
+q_{\rm Pa}&=47.88025898\,q_{\rm psf},\\
+V_{\rm ref}&=0.514444444\,V_{\rm ref,kt},\\
+q_{\rm ref}&=\frac12(1.225)V_{\rm ref}^2,\\
+Q&=\sat_{[0,4]}\left(\frac{q_{\rm Pa}}{q_{\rm ref}}\right).
+\label{eq:q}
+\end{align}
+Definimos $\sat_{[a,b]}(z)=\min(b,\max(a,z))$: deja pasar el valor dentro del rango y lo recorta si se sale.
+
+El factor 47.88025898 convierte psf a Pa; 0.514444444 convierte nudos a m/s, a partir de $1852/3600$. El valor 1.225 es una densidad estándar de referencia, fijada en el código; no es una lectura de la densidad actual. La presión real de entrada ya proviene del simulador.
+
+\code{referenceKnots} vale 120 por defecto y puede modificarse con \code{--reference-knots}. El puente admite 40 a 250 kt. Con 120 kt:
+\begin{equation}
+V_{\rm ref}\simeq61.7333\ {\rm m/s},\qquad
+q_{\rm ref}\simeq2334.24\ {\rm Pa}\simeq48.752\ {\rm psf}.
+\end{equation}
+$Q=1$ significa que la presión iguala esa referencia; $Q=0.5$, que es la mitad; $Q=4$, cuatro veces la referencia. \textbf{Los 120 kt son un ajuste del sistema, no la Vne del avión.} El tope de 4, introducido en SC6 y conservado en SC8, es una decisión de implementación, no una ley aerodinámica.
+
+\subsection{Paso 2: transporte del dato a la placa}
+\subsubsection{Codificación y recuperación}
+La trama SC8 lleva presión original en psf y posición del yugo como float32. \code{Receiver::feed} comprueba CRC, secuencia, rangos y reloj; \code{PicoForceModels::update} convierte la presión y calcula $Q$. La presión ocupa bytes 10--13 y las posiciones roll/pitch 82--85 y 86--89. No se truncan a diezmilésimas. Véase el contrato SC8 al comienzo.
+
+\subsubsection{Compatibilidad y tiempos de corte}
+Las versiones 6 y 7 permiten $Q\le4$; las versiones 1--5 admitidas por el receptor limitan $Q\le1$. El receptor habilita disponibilidad de centrado desde v3 y posiciones de simulador desde v4. En modo 1 no hay reemplazo automático por sensores locales si falta la posición simulada.
+
+El puente exige que la muestra seleccionada tenga menos de 250 ms para enviarla armada. La placa requiere trama válida y armada de menos de 300 ms y \code{Serial.dtr()} activo. Al arrancar el efecto, al perder habilitación o si el intervalo de actualización supera 50 ms, se reinicia la rigidez filtrada a cero. La desconexión o pausa retiran el resorte de reposo también: no existe un centrado autónomo permanente sin telemetría válida. El menú activo y el guardado de ajustes también fuerzan PWM cero.
+
+\subsection{Paso 3: obtener la posición normalizada}
+\subsubsection{Modo actual: potenciómetros}
+Roll se lee en GP26/ADC0 y pitch en GP27/ADC1. \code{AxisPotentiometers.h} descarta la primera conversión al cambiar canal y promedia cuatro lecturas de 12 bits:
+\begin{equation}
+A=\left\lfloor\frac{a_1+a_2+a_3+a_4+2}{4}\right\rfloor.
+\end{equation}
+$a_i$ son las lecturas individuales de 0 a 4095; $A$ es la lectura promedio redondeada. Antes de normalizar, \code{PotentiometerPosition.h} utiliza una lectura retenida $H$ con banda móvil $h=4$ cuentas:
+\begin{equation}
+H_n=\begin{cases}
+A_n-h,&A_n>H_{n-1}+h,\\
+A_n+h,&A_n<H_{n-1}-h,\\
+H_{n-1},&\text{en otro caso}.
+\end{cases}
+\end{equation}
+Al inicializar se toma $H=A$. Esta histéresis reduce pequeñas fluctuaciones. No es una zona muerta fija del resorte: sigue desplazamientos lentos acumulados y puede dejar un pequeño error residual al volver al centro.
+
+Para un sensor cuyo ADC aumenta hacia el lado positivo, la normalización es:
+\begin{equation}
+x=\sat_{[-1,1]}\begin{cases}
+\displaystyle\frac{H-C}{P-C},&H\ge C,\\[4pt]
+\displaystyle\frac{H-C}{C-N},&H<C.
+\end{cases}
+\label{eq:pot}
+\end{equation}
+$N$ es el ADC del extremo mecánico negativo; $C$, el centro; y $P$, el extremo positivo. Así, $H=N$ da $-1$, $H=C$ da 0 y $H=P$ da $+1$. El código admite también sensores invertidos, con $N>C>P$: selecciona el lado según el signo de $P-C$ y usa $(H-C)/(P-C)$ en el lado positivo y $-(H-C)/(N-C)$ en el negativo.
+
+Los valores iniciales de ambos ejes son $N=0$, $C=2048$, $P=4095$: deben sustituirse por la calibración real. \code{YokeMotion} conserva la posición limitada y calcula también velocidad, pero el resorte no utiliza esa velocidad ni el filtro de velocidad.
+
+\textbf{Detalle importante del menú:} la calibración actual captura cuatro extremos, primero pitch negativo/positivo y después roll negativo/positivo. Calcula el centro como
+\begin{equation}
+C=\left\lfloor\frac{N+P}{2}\right\rfloor.
+\end{equation}
+No captura un tercer punto central. Rechaza recorridos ADC menores que 64 cuentas. Si el centro mecánico no coincide con el promedio eléctrico de los extremos, conviene implementar una calibración de tres puntos. El normalizador ya admite ese centro independiente, pero la rutina del menú no lo mide.
+
+\subsubsection{Modo 0: encoders}
+Las cuentas se refieren al centro establecido al arrancar y se dividen por el recorrido de cada lado:
+\begin{equation}
+x=\sat_{[-1,1]}\begin{cases}
+c/c_{\max},&c\ge0,\\
+c/(-c_{\min}),&c<0.
+\end{cases}
+\end{equation}
+$c$ son las cuentas con su dirección configurada. Los límites actuales son $\pm1000$ para roll y $\pm2546$ para pitch; los comentarios consideran el de pitch una estimación. Corresponde medirlos. Esta opción no está activa por defecto.
+
+\subsubsection{Modo 1: posición de SimConnect}
+Se usa directamente $x_{{\rm rx},R}$ o $x_{{\rm rx},P}$, limitada a $[-1,1]$. Una muestra cero anula inmediatamente el aporte de centrado al procesarse, aunque la rigidez tarde en cambiar. En este modo la respuesta de posición depende del simulador y de la comunicación; ejecutar el lazo de placa cada 2 ms no produce nuevas muestras de SimConnect cada 2 ms.
+
+\subsection{Paso 4: rigidez mínima y suavizado}
+\subsubsection{Rigidez objetivo}
+En \code{SimEffects.h::Effects::update}:
+\begin{equation}
+k^*=r+k_aQ_{\rm rx},\qquad r=0.15,\quad k_a=0.85\text{ por defecto}.
+\label{eq:rigidez}
+\end{equation}
+% [V-realismo]
+$r$ es \code{CenterRest}, mostrado como ``Centro reposo''. $r$ agrega resistencia al desplazamiento incluso con presión cero. $k_aQ_{\rm rx}$ es el aporte que cambia con la presión. Ambos son adimensionales. La tabla conserva sus valores porque $k_a=0.85=1-0.15$ para el ajuste de fábrica.
+\begin{center}
+\begin{tabular}{rrrrr}
+\toprule
+$Q_{\rm rx}$ & 0 & 0.25 & 1 & 4\\
+$k^*$ con $r=0.15$ & 0.15 & 0.3625 & 1 & 3.55\\
+\bottomrule
+\end{tabular}
+\end{center}
+% [V-realismo]
+La descripción antigua ``15\% del máximo'' resulta imprecisa para SC8: es el 15\% de la rigidez a $Q=1$, no el 15\% del máximo $3.55$. $k^*$ no está limitado a uno. Con $r=0$ queda $k^*=0.85Q$; con $r=1$ resulta $k^*=1+0.85Q$.
+
+Una consecuencia poco evidente:
+\begin{equation}
+\frac{\partial k^*}{\partial r}=1.
+\end{equation}
+% [V-realismo]
+Subir ``Centro reposo'' endurece igual en todo $Q$: el aporte mecánico y el crecimiento aerodinámico están separados.
+
+% [V-realismo]
+\textit{Actualización (realismo): $k=r+(1-r)Q$ $\rightarrow$ $k=r+0.85Q$; separa rigidez mecánica y aerodinámica (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Filtro de primer orden}
+El código suaviza la rigidez, guardándola en una variable llamada \code{centerPressure}:
+\begin{align}
+\alpha_n&=\frac{\Delta t_{\rm ms}}{100+\Delta t_{\rm ms}},\\
+k_{f,n}&=k_{f,n-1}+\alpha_n(k^*_n-k_{f,n-1}).
+\label{eq:filtro}
+\end{align}
+Aunque el nombre diga ``pressure'', esta variable ya representa \textbf{rigidez normalizada filtrada}, no presión en Pa. $\Delta t$ es el tiempo real entre actualizaciones en milisegundos. Con 2 ms, $\alpha=2/102\simeq0.019608$: en cada ciclo se corrige aproximadamente el 1.96\% de la diferencia pendiente.
+
+Esta forma corresponde a una discretización de $\tau\dot{k}_f+k_f=k^*$ con $\tau=0.1$ s. A entrada constante, partiendo de cero y con ciclos de 2 ms, $k_{f,n}=k^*[1-(100/102)^n]$. A los 100 ms alcanza aproximadamente 62.8\% del objetivo y a los 300 ms, 94.9\%. No es una espera fija de 100 ms: empieza a responder desde el primer ciclo posterior al reinicio.
+
+El filtro evita cambios bruscos al variar presión, pero no retrasa deliberadamente la posición. La posición de potenciómetros sí tiene promedio e histéresis propios. El valor 100 ms es un ajuste local en \code{SimEffects.h}, no una constante física tomada de NASA ni una exigencia de TelemFFB.
+
+\subsection{Paso 5: cálculo separado para roll y pitch}
+Con las ganancias iniciales, después del filtro:
+\begin{align}
+u_R&=-x_R\,k_f\,(0.40)(0.90)=-0.36\,k_f\,x_R,\\
+u_P&=-x_P\,k_f\,(0.80)(0.90)=-0.72\,k_f\,x_P.
+\end{align}
+\code{CenterRoll} y \code{CenterPitch} son independientes en \code{GainSettings.h}. El valor inicial de roll se define como la mitad del de pitch en \code{mis_defines.h}, pero al ajustar el menú la relación no se mantiene automáticamente. El cociente 2:1 solamente describe los valores iniciales, a igual posición normalizada, antes de saturar.
+
+\subsubsection{Signo y centro}
+Si $x>0$, $u<0$; si $x<0$, $u>0$; si $x=0$, $u=0$. No hay un término de trim ni un centro móvil $x_0$: equivale a usar $x_0=0$ en $u=-Ggk_f(x-x_0)$. Al mantener el mando desplazado, el centrado persiste aunque la velocidad del mando sea cero.
+
+\subsubsection{Qué significa la pendiente}
+Antes de saturar, la pendiente es $\partial u_a/\partial x_a=-Gg_ak_f$. Duplicar la posición duplica el comando; duplicar una ganancia también lo duplica. Esta es una ley proporcional de posición. No tiene integrador, derivada ni medición de torque en esta cadena. El damper es otro efecto y no forma parte de la ecuación del resorte.
+
+\subsection{Paso 6: del comando al PWM}
+\subsubsection{Límite de la salida de efectos}
+\code{Effects::command} limita la suma de efectos. Para analizar solamente centrado, suponiendo los demás aportes nulos:
+\begin{equation}
+L=\frac{220}{255}\simeq0.862745,\qquad
+u_{\rm out,a}=\sat_{[-L,L]}(u_a).
+\end{equation}
+Con otros efectos activos se limita la \emph{suma}, no el resorte por separado. Por eso el PWM observado en funcionamiento normal puede no coincidir con una tabla de centrado aislado. Aquí no se desarrollan las fórmulas de los otros efectos.
+
+\subsubsection{Polaridad, escala y redondeo}
+En el sketch se aplica $s_R=\code{ROLL_MOTOR_DIRECTION}$ y $s_P=\code{PITCH_MOTOR_DIRECTION}$, ambos inicialmente $+1$. \code{MotorDriver.h::setCommand} hace:
+\begin{align}
+z_a&=\sat_{[-1,1]}(s_a u_{\rm out,a}),\\
+M&=\sat_{[0,255]}(\code{PWM_MAX})=255,\\
+p_a^*&=\operatorname{round}_{\rm sim}(Mz_a),\\
+p_a&=\sat_{[-220,220]}(p_a^*).
+\label{eq:pwm}
+\end{align}
+El redondeo simétrico suma 0.5 si el valor es positivo o resta 0.5 si es negativo y convierte a entero truncando hacia cero. Por ejemplo, $45.9\to46$ y $-45.9\to-46$. Cero produce exactamente cero. $M$ es el factor de escala; 220 es el techo duro, aplicado después. \textbf{No se multiplica por 220: por defecto se multiplica por 255 y se limita a 220.}
+
+Al reducir \code{PWM_MAX}, se reduce además la escala disponible. Por ejemplo, con $M=200$, el límite previo $L$ deja como máximo aproximadamente $\operatorname{round}(200L)=173$ cuentas, no 200. Ambos límites se acumulan.
+
+\subsubsection{Pines del puente H y duty cycle}
+Si $p\ge0$, la salida LEFT queda en 0 y RIGHT recibe $p$. Si $p<0$, RIGHT queda en 0 y LEFT recibe $|p|$. En Pico: roll GP6/GP7 y enable GP10; pitch GP8/GP9 y enable GP11. La dirección mecánica debe verificarse porque depende del cableado y de la transmisión.
+
+El setup configura \code{analogWriteRange(255)} y \code{analogWriteFreq(490)}. El duty cycle comandado en la salida activa es
+\begin{equation}
+D=\frac{|p|}{255};\qquad |p|=220\Longrightarrow D\simeq86.27\%.
+\end{equation}
+Los 490 Hz son la frecuencia PWM configurada; los 500 Hz son la frecuencia nominal del lazo de cálculo y los 50 Hz el máximo aproximado de envío de telemetría. Son tres tiempos diferentes.
+
+PWM indica cuánto tiempo se activa una salida. No certifica corriente ni fuerza: motor, alimentación, velocidad, resistencia, pérdidas y transmisión intervienen en la fuerza real. El límite 220 no es un limitador de corriente y la conversión mostrada no constituye un lazo de control de corriente.
+
+\subsection{Ejemplos numéricos completos}
+\subsubsection{Media carrera a presión de referencia}
+Supongamos $q_{\rm Pa}=q_{\rm ref}$, telemetría válida, rigidez estabilizada y $x_R=x_P=+0.5$. Entonces $Q=1$, $k_f=0.15+0.85=1$ y:
+\begin{align*}
+u_R&=-(0.5)(1)(0.40)(0.90)=-0.18, &p_R&=\operatorname{round}(-45.9)=-46,\\
+u_P&=-(0.5)(1)(0.80)(0.90)=-0.36, &p_P&=\operatorname{round}(-91.8)=-92.
+\end{align*}
+Con polaridades $+1$, roll activa LEFT con 46 y pitch LEFT con 92; las otras salidas quedan en cero. Los duty cycles son aproximadamente 18.04\% y 36.08\%. Para posición $-0.5$ se invierten los signos y las salidas activas.
+
+\subsubsection{Tabla a media carrera}
+Los valores siguientes usan ganancias predeterminadas, $x=+0.5$, $M=255$, polaridad $+1$ y filtro estabilizado. Se omite el pequeño error de cuantización de la presión.
+\begin{center}
+\begin{tabular}{rrrrrr}
+\toprule
+$Q$ & $k_f$ & $u_R$ bruto & PWM roll & $u_P$ bruto & PWM pitch\\
+\midrule
+0 & 0.1500 & $-0.02700$ & $-7$ & $-0.05400$ & $-14$\\
+0.25 & 0.3625 & $-0.06525$ & $-17$ & $-0.13050$ & $-33$\\
+1 & 1.0000 & $-0.18000$ & $-46$ & $-0.36000$ & $-92$\\
+2 & 1.8500 & $-0.33300$ & $-85$ & $-0.66600$ & $-170$\\
+4 & 3.5500 & $-0.63900$ & $-163$ & $-1.27800$ & $-220$\\
+\bottomrule
+\end{tabular}
+\end{center}
+La última fila muestra por qué hay que distinguir el cálculo bruto de la salida: pitch pide $-1.278$, pero el efecto entrega $-L$ y el driver aplica $-220$.
+
+\subsubsection{Ejemplo de potenciómetro y arranque del filtro}
+Con calibración inicial $N=0$, $C=2048$, $P=4095$, una lectura retenida $H=3072$ representa $x=1024/2047\simeq0.50024$. Si $Q=1$, una vez estabilizado resulta aproximadamente $-46$ PWM roll y $-92$ PWM pitch. $H$ es la lectura \emph{después} de la histéresis, no necesariamente el ADC bruto que se imprime.
+
+Al habilitar desde $k_f=0$, el primer update de arranque conserva cero. En el siguiente update de 2 ms, con $k^*=1$, $k_f=0.019608$. Para $x=0.5$ se obtienen aproximadamente $u_R=-0.003529$ y $u_P=-0.007059$, que redondean a $-1$ y $-2$ PWM. La salida crece luego hacia el valor de régimen.
+
+\subsubsection{Dónde empieza la saturación}
+El límite previo aparece cuando $Gg_ak_f|x_a|\ge L$. Para $Gg_ak_f>0$:
+\begin{equation}
+|x_a|_{\rm sat}=\frac{L}{Gg_ak_f}.
+\end{equation}
+Si el resultado supera uno, el recorrido calibrado no alcanza la saturación. Con $Q=4$ y ganancias iniciales, roll satura cerca de $|x_R|=0.675$ y pitch de $|x_P|=0.338$. Desde allí, alejar más el mando ya no aumenta el PWM del resorte aislado. El redondeo puede producir la última cuenta algo antes de ese umbral ideal.
+
+En el extremo $|x|=1$, pitch empieza a saturar aproximadamente en $Q=1.233$ y roll en $Q=2.643$. Con la densidad de referencia, equivalen a velocidades de aproximadamente 133 y 195 kt mediante $V=120\sqrt Q$. Son equivalencias del modelo, no límites de vuelo ni una conversión exacta de IAS real.
+
+\subsection{De dónde procede cada parte}
+\subsubsection{Fundamento físico y adaptación de TelemFFB}
+La ley restauradora lineal es el principio general de un resorte. La dependencia de presión se apoya en $q=\rho V^2/2$. El comentario de \code{SimEffects.h} identifica explícitamente el principio de resorte aerodinámico de TelemFFB. La documentación local histórica también lo describe como adaptación.
+
+Se inspeccionó la copia local de
+\begin{quote}\small
+\code{VPforce-TelemFFB-refactor/telemffb/sim/msfs_xp/}\par
+\code{MsfsXpFlightControlsMixIn.py}.
+\end{quote}
+En \code{_calculate_dynamic_pressures}, TelemFFB multiplica la presión por una escala interna $s=0.005$. En \code{_calculate_vne_and_gains} calcula $Q_{\rm gain}=1/(q_{\rm Vne}s)$ y lo asigna a las ganancias de controles. En \code{_calculate_control_coefficients}, el coeficiente de alerón incluye $(q s)Q_{\rm gain}$, además de la corrección de resbalamiento. Si se omite esa corrección:
+\begin{equation}
+(q s)\frac{1}{q_{\rm Vne}s}=\frac{q}{q_{\rm Vne}}.
+\end{equation}
+Esa es la correspondencia conceptual con $q/q_{\rm ref}$ de MiYoke. La escala 0.005 se cancela en esa simplificación y \textbf{no es una ganancia que deba agregarse al código actual}.
+
+TelemFFB puede usar Vne configurada o calcular una referencia a partir de datos de diseño; también mezcla presión del flujo de hélice en elevador, permite curvas, ganancias base y desplazamientos de centro. \code{_calculate_joystick_spring_coefficients} ajusta y limita coeficientes, y \code{_update_joystick_controls} los entrega al dispositivo FFB. MiYoke hace una adaptación mucho más simple: una presión común, centro fijo y cálculo local de fuerza/PWM. No reproduce toda la cadena TelemFFB, ni sus constantes calibran automáticamente este yugo.
+
+Referencia pública para localizar el antecedente: \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/msfs_xp/MsfsXpFlightControlsMixIn.py}{TelemFFB, archivo de controles MSFS/X-Plane}. Las afirmaciones de implementación anteriores se basan en la copia local inspeccionada; la rama pública puede cambiar.
+
+\subsubsection{Qué se conserva del proyecto alemán original}
+Se inspeccionó la carpeta vecina \code{../../PROEYCTO ORIGINAL/Arduino_FFB_Yoke}. En \code{src/Joystick.cpp}, el resorte HID usa \code{ConditionForceCalculator}, con posición normalizada, coeficientes, centro, banda muerta y saturaciones recibidas en el efecto. También existe una rama de resorte automático predeterminado:
+\begin{equation}
+F_{\rm original}=\operatorname{int16}\left[-10000\,
+\sat_{[-1,1]}\left(\frac{\text{posición}}{\text{máxima posición}}\right)
+\frac{\text{defaultSpringGain}}{100}\right].
+\end{equation}
+Es una rama condicional del original, no prueba de que estuviera siempre activada. Comparte la idea de oponer fuerza al desplazamiento, pero esta expresión no utiliza la presión de SimConnect. No corresponde atribuirle el cociente $q/q_{\rm ref}$ del firmware actual.
+
+\code{AxisCalibration.cpp::MoveMotor} del original activa uno u otro PWM según el signo. Ese esquema coincide con el empleado por \code{MotorDriver.h}, cuyo comentario declara ese antecedente. Hay además otra función \code{MoveMotor} en \code{Arduino.ino}: utiliza \code{map}, PWM mínimo/máximo y un umbral de fuerza, con una convención de pines diferente. Por ello, ``proviene del original'' describe la arquitectura de dos salidas y la idea de conversión, no identidad exacta de todos los signos, umbrales y ecuaciones.
+
+\subsubsection{Qué es implementación o ajuste propio de MiYoke}
+\begin{longtable}{p{0.43\linewidth}p{0.49\linewidth}}
+\toprule Parte & Procedencia comprobable\\\midrule\endhead
+Nombres y unidades de SimConnect & SDK de Prepar3D y definición del puente.\\
+$q=\rho V^2/2$ & Fundamento físico general; referencia NASA.\\
+Resorte dependiente de presión normalizada & Adaptación conceptual documentada de TelemFFB.\\
+120 kt, $r=0.15$, $g_R=0.40$, $g_P=0.80$, $G=0.90$ & Valores locales de diseño. No se halló una medición de avión que los determine.\\
+$r+k_aQ$, filtro de 100 ms y límite $Q=4$ & Implementación local observable; no copia exacta de la ley completa de TelemFFB.\\
+Paquete SC8, watchdog, calibración ADC y ganancias persistidas & Infraestructura local de MiYoke.\\
+Dos PWM según signo & Antecedente verificable en la calibración del proyecto original.\\
+Escala $\times255$, redondeo simétrico y techo 220 & Implementación vigente de MiYoke, no conversión a torque físico.\\
+\bottomrule
+\end{longtable}
+La atribución es una comparación de fuentes y comentarios, no una reconstrucción de autoría mediante historial Git: la carpeta principal inspeccionada no es un repositorio Git.
+
+% [V-realismo]
+\textit{Actualización (realismo): ley local $r+(1-r)Q$ $\rightarrow$ $r+0.85Q$; se explicita la suma de rigideces y su adaptación local (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Qué ganancias y calibraciones se pueden ajustar}
+\subsubsection{Ajustes disponibles en el menú}
+\begin{longtable}{p{0.24\linewidth}p{0.15\linewidth}p{0.53\linewidth}}
+\toprule Ajuste & Inicio & Efecto sobre el resorte\\\midrule\endhead
+Ganancia total, $G$ & 0.90 & Multiplica ambos ejes y los demás efectos; no sirve para balancear roll contra pitch.\\
+Centrado roll, $g_R$ & 0.40 & Modifica sólo la intensidad de centrado roll.\\
+Centrado pitch, $g_P$ & 0.80 & Modifica sólo la intensidad de centrado pitch.\\
+Centro reposo, $r$ & 0.15 & Cambia la base, conservando la pendiente aerodinámica, según $r+k_aQ$. Es común a ambos ejes.\\
+\bottomrule
+\end{longtable}
+Estos cuatro ajustes admiten valores de 0 a 1; los botones avanzan 0.05, es decir, cinco puntos porcentuales. No es un incremento relativo del 5\% sobre el valor anterior. El menú permite apagar centrado roll y pitch por separado. Apagar ``Centro reposo'' hace efectivo $r=0$: elimina la base, pero conserva el resorte aerodinámico si $Q>0$.
+
+Las ganancias se guardan en memoria persistente y se cargan al arrancar. Cambiar un \code{define} no garantiza que se use el nuevo valor si hay ajustes guardados válidos. \code{YOKE_SETTINGS_VERSION} permite invalidar el registro de ganancias; el registro de potenciómetros tiene formato y versión separados. Hay que registrar los valores efectivamente cargados al comparar ensayos.
+
+% [V-realismo]
+\textit{Actualización (realismo): ajuste de reposo que alteraba la pendiente $\rightarrow$ ajuste sólo de la base $r$; separa los aportes mecánico y aerodinámico (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Ajustes en el puente y en el firmware}
+\begin{itemize}
+\item \code{--reference-knots}: cambia la sensibilidad aerodinámica común. A presión fija, subir de 120 a 150 kt multiplica $Q$ por $(120/150)^2=0.64$, mientras no intervenga el recorte. La base $r$ no se multiplica por 0.64. La referencia es compartida con otros cálculos de la Pico.
+\item Calibración ADC: determina centro, rango y sentido de posición. Debe corregirse antes de intentar resolver asimetrías con ganancias.
+\item \code{ROLL_MOTOR_DIRECTION} y \code{PITCH_MOTOR_DIRECTION}: invierten el comando del motor. No corrigen un centro o un recorrido mal calibrado.
+\item \code{YOKE_POT_HYSTERESIS_ADC} y \code{YOKE_POT_SAMPLES}: reducen ruido de entrada a costa de seguimiento y resolución efectiva. No endurecen directamente el resorte.
+\item El número 100 en \code{SimEffects.h}: constante del filtro de rigidez en ms. Menor valor sigue más rápido los cambios de presión; mayor valor los suaviza más. No aumenta la tasa de SimConnect.
+\item \code{SIMCONNECT_EXTRA_LIMIT}, \code{PWM_MAX} y \code{MOTOR_PWM_HARD_LIMIT}: fijan límites o escala; no corrigen la pendiente perdida cuando ya hay saturación.
+\end{itemize}
+
+\subsubsection{Cómo elegir ganancias sin saturar demasiado pronto}
+Para mantener el resorte aislado dentro del límite hasta una posición $x_{\max}$ y una presión $Q_{\max}$ previstas, en régimen:
+\begin{equation}
+g_a\le\frac{L}{G\,[r+k_aQ_{\max}]\,|x_{\max}|}.
+\end{equation}
+Con $G=0.90$, $r=0.15$, $Q_{\max}=4$ y $|x_{\max}|=1$, se necesita $g_a\lesssim0.270$. Las ganancias iniciales 0.40 y 0.80 superan ese valor; por eso se recorta el recorrido a alta presión. Esto no obliga a usar 0.270: muestra la relación entre la dureza elegida y el margen antes de saturar. Si se necesita margen para otros efectos, el límite asignado al resorte debe ser menor que $L$.
+
+% [V-realismo]
+\textit{Actualización (realismo): cota de ganancias con $r+(1-r)Q$ $\rightarrow$ cota con $r+0.85Q$; margen recalculado para rigideces separadas (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Procedimiento práctico para pulir el centrado}
+\subsubsection{Primero, referencia mecánica y posición}
+\begin{enumerate}
+\item Confirmar qué modo de posición se compiló y qué ajustes están guardados. En potenciómetros, comprobar ADC negativo, centro y positivo por separado en cada eje.
+\item Verificar que $x$ recorra aproximadamente $-1\to0\to+1$ en los sentidos físicos elegidos. La convención propuesta por el código es roll derecha positivo y pitch tirar positivo.
+\item Comprobar el centro físico con el ADC retenido y no sólo con la animación del simulador. Si queda desplazado, corregir la calibración; bajar ganancia sólo oculta parte del error.
+\end{enumerate}
+En un sensor de pendiente creciente, si se cambia el centro configurado en $\delta C$ cuentas y el recorrido es aproximadamente $S$, cerca del centro el error de posición es $\delta x\simeq-\delta C/S$. Antes de saturar, introduce un error de comando de magnitud aproximada $Gg_ak_f|\delta C|/S$: el descentrado se nota más cuando aumenta la presión.
+
+\subsubsection{Después, aislar el efecto y comprobar el signo}
+\begin{enumerate}
+\item Con simulación pausada de forma reconocida por el puente, o comunicación desconectada, usar el menú para dejar activos solamente los centrados que se ensayarán. Apagar los demás aportes, incluidos damper y fricción. El firmware bloquea la edición mientras la telemetría indica actividad sin pausa.
+\item Empezar con ganancias pequeñas y un eje por vez. Desplazar ligeramente a ambos lados: el motor debe oponerse al desplazamiento. Si empuja a alejarse, detener la prueba y corregir coherencia de signos antes de subir ganancia.
+\item Mantener posiciones fijas para separar resorte de cargas que dependen del movimiento. Probar centro, cuarto, media carrera y una posición mayor en ambos sentidos.
+\end{enumerate}
+El argumento \code{--no-buffets}, por sí solo, no aísla centrado: no apaga todas las otras contribuciones. No se ha modificado el firmware para este análisis.
+
+\subsubsection{Finalmente, ajustar reposo, vuelo y margen}
+\begin{enumerate}
+\item Con presión baja conocida, ajustar $r$ para obtener el centrado residual deseado. No interpretar automáticamente avión detenido como presión cero.
+\item Cerca de $Q=1$, ajustar $g_R$ y $g_P$ por separado: en ese punto $k^*=1$ independientemente de $r$, lo que facilita comparar ejes.
+\item Repetir con varias presiones observadas en el CSV y esperar al menos unos 0.5 s tras cada cambio para comparar con el régimen calculado. Si la salida llega a 220 pronto, bajar ganancia de eje o revisar la referencia, en vez de atribuirlo a una falta de posición.
+\item Medir fuerza en puntos del recorrido si se pretende reproducir una aeronave. La relación de comandos 2:1 no asegura una relación de fuerzas 2:1 entre una rotación de roll y una traslación de pitch.
+\end{enumerate}
+
+\subsubsection{Qué datos registrar}
+El CSV registra \code{pressure_psf} y posiciones del simulador; $q_{\rm Pa}$ y $Q$ se calculan en la Pico. En modo 2 esas posiciones no son las posiciones locales que cierran el resorte. El diagnóstico local registra ADC, posición, comando y PWM; \code{pico.log} permite guardar esa salida.
+
+Registrar por ensayo $Q$, posición local, ganancias efectivas, PWM y fuerza medida. La columna histórica \code{Centrado_Disponible} ya no se genera en SC8. Un diagnóstico futuro de $k_f$ y del aporte aislado permitiría observar los transitorios con más detalle.
+
+\subsection{Mejoras posibles, todavía no implementadas}
+\subsubsection{Centro calibrado y trim}
+La mejora más directa es capturar un centro físico independiente de los extremos en el menú. Otra ampliación es incorporar un centro de resorte desplazable $x_0$ para trim, usando $u=-Ggk_f(x-x_0)$. Eso requiere decidir cómo relacionar el trim del avión con el mecanismo; no basta con sumar sin calibrar una variable angular a una posición normalizada.
+
+\subsubsection{Separar rigidez de reposo y crecimiento aerodinámico}
+% [V-realismo]
+La separación quedó implementada: $k=r+k_aQ$, con \code{SIMCONNECT_CENTERING_AERO_STIFFNESS}=0.85. El ajuste de reposo no modifica la pendiente aerodinámica ni ablanda a presión alta.
+
+% [V-realismo]
+\textit{Actualización (realismo): separación de rigideces propuesta $\rightarrow$ implementada con $k_a=0.85$; el reposo ya no cambia la pendiente aerodinámica (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
+
+\subsubsection{Medición física y comportamiento cerca del centro}
+Conviene medir fuerza frente a PWM para varios sentidos y posiciones, y considerar una regulación de corriente si se requiere control de torque. La forma del resorte en comando puede ser lineal y la fuerza real no serlo. No hay compensación PWM mínima en \code{setCommand}; órdenes pequeñas pueden no vencer la fricción mecánica, aunque el cálculo sea correcto.
+
+Por redondeo, el primer PWM distinto de cero aparece aproximadamente cuando $|u|\ge0.5/255$. Antes de saturar, esto implica $|x|\gtrsim0.5/(255Gg_ak_f)$. A $Q=0$ con los valores iniciales resulta aproximadamente 3.63\% del semirrecorrido en roll y 1.82\% en pitch. Es cuantización eléctrica, a la que pueden añadirse histéresis y fricción; no es una banda muerta programada expresamente en la ley del resorte.
+
+\subsection{Mapa de fuentes y alcance de la comprobación}
+\subsubsection{Archivos que permiten reconstruir el cálculo}
+Las rutas siguientes son relativas a la carpeta MiYoke\_PD\_V2.4, salvo el original indicado explícitamente:
+\begin{longtable}{p{0.39\linewidth}p{0.53\linewidth}}
+\toprule Archivo & Elementos a consultar\\\midrule\endhead
+\code{SimConnectBridge/main.cpp} & \code{Receive}: datos crudos; \code{Send}: SC8; \code{main}: argumentos. $Q$ se calcula en \code{PicoForceModels.h}.\\
+\code{SimTelemetry.h} & \code{Receiver::feed}, \code{fresh}: decodificación, rangos y vigencia.\\
+\code{SimEffects.h} & \code{Effects::update}: $r$, rigidez y filtro; \code{commandWithPositionSource}: elección de posición; \code{command}: resorte y saturación.\\
+\code{mis_defines.h} & Fuente predeterminada, ganancias, pines, tiempos y límites.\\
+\code{GainSettings.h} & Valores iniciales, ajustes efectivos, pasos, encendido/apagado y persistencia.\\
+\code{AxisPotentiometers.h} & Muestreo y promedio ADC.\\
+\code{PotentiometerPosition.h} & Histéresis y normalización con tres valores.\\
+\code{PotCalibration.h} & Centro por promedio de extremos y formato persistente.\\
+\code{CalibrationMenu.h} & Captura de cuatro extremos, edición y confirmación de ajustes.\\
+\code{CalibrationControls.h} & Carga y guardado de configuración.\\
+\code{YokeMotion.h} & Posición limitada sin filtro temporal adicional de posición.\\
+\code{MiYoke_PD_V2.4.ino} & Lazo de 2 ms, fuente de posición, aplicación de ganancias, polaridad, driver y diagnóstico.\\
+\code{MotorDriver.h} & Escala, redondeo, techo absoluto y dos salidas PWM.\\
+\bottomrule
+\end{longtable}
+
+\subsubsection{Precaución con los documentos históricos}
+\code{LEEME md/CENTRADO_Y_RODAJE.md} se identifica como antecedente de versiones anteriores. Contiene rangos, ganancias y referencias a modos que no describen íntegramente el código actual. Para este documento se priorizaron el código vigente y la comparación directa con las copias de TelemFFB y del original. En particular, ahora se observan SC8, presión hasta 4, ganancias iniciales roll/pitch 0.40/0.80, límite $220/255$ y posición por potenciómetros.
+
+\subsubsection{Referencias externas utilizadas}
+\begin{enumerate}
+\item NASA Glenn: \href{https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/dynamic-pressure-2/}{Dynamic Pressure}. Fundamento de presión dinámica; consultado el 7 de octubre de 2026.
+\item Lockheed Martin: \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{Prepar3D SDK v3, Simulation Variables}. Nombres y unidades de variables; consultado el 7 de octubre de 2026.
+\item VPforce/TelemFFB: \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/msfs_xp/MsfsXpFlightControlsMixIn.py}{archivo de controles en la rama refactor}. Referencia de localización pública; comparación realizada contra la copia local incluida en este proyecto.
+\item Proyecto original local: \code{../../PROEYCTO ORIGINAL/Arduino_FFB_Yoke}, especialmente \code{src/Joystick.cpp}, \code{joystick.ino}, \code{AxisCalibration.cpp} y \code{Arduino.ino}. No se atribuye una URL de origen no comprobada.
+\end{enumerate}
+
+\textbf{Alcance:} esta explicación reconstruye el software inspeccionado y sus consecuencias matemáticas. Los ejemplos suponen ganancias iniciales y centrado aislado. La validación de fuerza real, signos del mecanismo, firmware cargado y parámetros persistidos requiere comprobar el montaje; no se presenta como realizada.
+\newpage

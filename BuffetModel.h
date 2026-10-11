@@ -3,7 +3,7 @@
 #include <cmath>
 
 // Envelopes only. Arduino synthesizes the carriers at its control-loop rate.
-// Sources and deviations from TelemFFB: tesis/explicacion_efectos_proyecto_ffb_yoke.tex (seccion de actualizacion).
+// Sources and deviations from TelemFFB: tesis/capitulos/02_realismo.tex (seccion de actualizacion).
 namespace YokeBuffet {
 struct Input {
     double ias, aoa, stallAlpha, flapLeft, flapRight, vs0, vs1;

@@ -17,7 +17,7 @@ Rules:
 ## AHORRO DE TOKENS: graphify, PDF y LaTeX (regla del usuario)
 - Codigo: antes de buscar o abrir archivos, orientarse con graphify (query/explain/path). La lectura directa es solo para lineas puntuales de un archivo ya identificado. Cada "Plan para Codex" le indica lo mismo.
 - PDF: no leer el PDF directamente. Convertirlo con `markitdown archivo.pdf -o tmp/<nombre>.md` (markitdown instalado; tmp/ esta en .gitignore) y leer solo la seccion necesaria con grep. Si una tabla o formula sale desordenada, verificar solo esa pagina en el PDF.
-- LaTeX (.tex): ya es texto, markitdown no aplica. Leer solo las partes necesarias, ubicadas por \label o titulo; nunca el archivo completo.
+- LaTeX (.tex): ya es texto, markitdown no aplica. La tesis de efectos esta dividida en tesis/capitulos/NN_*.tex; abrir solo el capitulo afectado y, dentro de el, solo las lineas ubicadas por \label o titulo. Verificar con compilar-tesis.ps1 (salida de una linea), nunca con pdflatex directo.
 
 
 ## VERSIONADO OBLIGATORIO Y AUTOMATICO (regla del usuario)
@@ -37,9 +37,10 @@ Reglas:
 ## DOCUMENTACION RELACIONADA (regla del usuario)
 Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.md .tex .txt), esa documentacion se actualiza en la misma rama. Ejemplos: calculo de efectos o fuerzas, ganancias, filtros, limites, modelos (suelo, rafagas, turbulencia, buffet), protocolo serie, pines, configuracion de compilacion, uso del lanzador.
 - Solo cuando sea necesario: actualizar unicamente los documentos cuyo contenido queda incorrecto o incompleto por el cambio, y solo las partes afectadas. No reescribir, reformatear ni "mejorar" documentos por las dudas.
-- Documentos a revisar segun el tema: tesis/explicacion_efectos_proyecto_ffb_yoke.tex y otros .tex de tesis/, LEEME md/*.md, LEEME.md y LEEME-*.md. No tocar ACTUALIZACION_Vx_y.txt ni los documentos de diseno de otras tareas.
+- Documentos a revisar segun el tema: tesis de efectos = tesis/capitulos/NN_*.tex (un archivo por seccion; tesis/main.tex solo tiene preambulo e \input, es el que se sube a Overleaf), otros .tex de tesis/, LEEME md/*.md, LEEME.md y LEEME-*.md. No tocar ACTUALIZACION_Vx_y.txt ni los documentos de diseno de otras tareas.
 - Diseno (Claude, modo Flujo): el documento de diseno incluye la seccion "Documentacion afectada" con archivo, seccion/ecuacion y que debe decir; o indica explicitamente "No afecta documentacion".
-- Implementacion (Codex): actualiza esos documentos y los incluye por nombre en el mismo commit que el codigo, antes de ejecutar nueva-version.ps1, para que la copia de la version quede coherente. Si edita un .tex, anotar en HANDOFF si compila.
+- LaTeX como reemplazo exacto: para cada cambio en un .tex, Claude escribe en "Documentacion afectada" el archivo (tesis/capitulos/NN_*.tex), el TEXTO ACTUAL literal (fragmento corto y unico, copiado del archivo) y el TEXTO NUEVO completo, listo para pegar. Codex lo aplica tal cual con una busqueda del texto actual: no lee el capitulo entero, no redacta ni reformula. Si el texto actual no aparece exactamente, Codex no improvisa: lo anota en HANDOFF y sigue con el resto.
+- Implementacion (Codex): actualiza esos documentos y los incluye por nombre en el mismo commit que el codigo, antes de ejecutar nueva-version.ps1, para que la copia de la version quede coherente. Si edita un .tex, ejecutar `powershell -ExecutionPolicy Bypass -File compilar-tesis.ps1` y anotar en HANDOFF su unica linea de resultado (OK/FALLO). No ejecutar pdflatex/latexmk directamente ni leer logs de LaTeX.
 - Revision (Claude): verifica que la documentacion coincida con el codigo nuevo (formulas, constantes, unidades, nombres) y que no haya cambios innecesarios. Documentacion faltante o desactualizada = "requiere cambios".
 
 ## ROL DE CLAUDE EN EL FLUJO (regla del usuario)
