@@ -151,3 +151,5 @@ OK chequeo estatico (11 archivos, 44 labels). No hay LaTeX instalado: la compila
     - H5 sigue siendo hipótesis hasta el ensayo E;
     - pull-down externo en EN antes de conectar los motores.
     - Después, integrar a master solo a pedido del usuario.
+
+\- Integración (2026-10-11): el usuario informó que probó V1.8 en hardware y que no falla. `mejora/recuperacion-enlace-usb` se integró a `master` y se subió `master` a GitHub, a pedido del usuario. La confirmación de H5 depende de que se haya hecho el ensayo E (§5); el usuario no detalló qué pruebas hizo.
