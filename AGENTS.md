@@ -61,5 +61,10 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 - Codigo de firmware → Embedded Firmware Engineer: respetar el lazo de control de 2 ms, nada bloqueante dentro del lazo (delay, Serial bloqueante, String), sin memoria dinamica en el lazo, saturar la fuerza antes de convertirla a PWM, mantener tipos y unidades de la especificacion.
 - Commits y versionado → Git Workflow Master, limitado a la regla VERSIONADO OBLIGATORIO Y AUTOMATICO: commit por nombre de archivo y nueva-version.ps1. Prohibido: git add . / git add -A, rebase, reescritura de historial, force push, crear o borrar tags a mano y cambiar la estrategia de ramas sin pedido del usuario.
 
+## SKILLS DE METODO (leer el archivo cuando aplique)
+- Una prueba o compilacion falla, o el comportamiento no es el esperado → .claude/skills/depuracion-sistematica/SKILL.md
+- Antes de commitear, crear version o cerrar HANDOFF → .claude/skills/verificacion-antes-de-terminar/SKILL.md
+- El Plan para Codex trae hallazgos de revision ("requiere cambios") → .claude/skills/recibir-revision/SKILL.md
+
 ## PRIORIDAD DE REGLAS
 Las reglas de este archivo prevalecen sobre las convenciones propias de cualquier agente o skill instalado (estilo de commits, ramas, alcance de cambios, formato de documentos). Ante conflicto, se aplica este archivo.
