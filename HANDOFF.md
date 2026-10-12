@@ -89,25 +89,22 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
 
 \## Última entrega
 
-- Parte 1 completada (2026-10-12) en `mejora/registro-ensayo-pico`: firmware M/G y puente con `pico.csv` / `ganancias.csv`, rotacion, lectura de 4096 B, PollPort y contadores de lineas. Conservadas la linea SC8 y debugPrintMotion.
-- Correccion de Claude aplicada: accesor `Receiver::isPaused()` en `SimTelemetry.h:45`, uso en `MiYoke_PD.ino:351`, prueba de trama pausada y trama armada en `tests/picolog_checks.h:76-77`. Bloqueo anterior resuelto.
-- Archivos modificados: `PicoLog.h`, `SimEffects.h`, `SimTelemetry.h`, `mis_defines.h`, `MiYoke_PD.ino`, `SimConnectBridge/PicoCsv.h`, `SimConnectBridge/main.cpp`, `tests/picolog_checks.h`, `tests/simconnect_checks.cpp`, `HANDOFF.md`.
-- Documentacion actualizada: este HANDOFF. Los LEEME siguen previstos para Parte 3; la tesis queda fuera de la tarea. Cambios previos del usuario en tesis y graphify-ino preservados, fuera del commit.
-- Pruebas finales (`powershell -ExecutionPolicy Bypass -File probar.ps1 -Pico -Potentiometers -Encoders -Bridge`), todas OK:
-  - OK suite simconnect_checks - PASS: 141135 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+- Parte 1b completada (2026-10-12) en `mejora/registro-ensayo-pico`, sobre `af146fd`. Hallazgos H1-H4 aplicados; pendiente de revision de Claude.
+- H1 aplicado: cada ciclo con revision modelada 0 reinicia `lastLoggedRev` ([INO] `MiYoke_PD.ino:338`), para no contar revisiones sin modelo tras pausa, desarme, slew o dt>50.
+- H2 aplicado: funcion pura inline `YokeLog::nextDrop` ([Codigo] `PicoLog.h:15`), resta el aumento de skip sin bajar de cero y satura en 65535. El firmware usa la funcion y actualiza `lastSkip` al escribir M ([INO] `MiYoke_PD.ino:344,369`).
+- H3 aplicado: dos Effects con las mismas tramas y los mismos ticks de control, uno modela las muestras en secuencia y otro saltea la intermedia. En la muestra comun, se comprueba igualdad de command con centrado, posicion .5 y presion >0, y salida distinta de cero ([Codigo] `tests/picolog_checks.h:81-101`).
+- H4 aplicado: caso de formato verifica tambien seq, t/rev de 32 bits, PWM positivo/negativo y drop/skip en 65535 ([Codigo] `tests/picolog_checks.h:31-33`).
+- Pruebas de nextDrop: 5,0,0,9 sin perdidas; 5->8 suma 2 sin skip y 1 con skip +1; skip mayor que el salto suma 0; saturacion y revision repetida.
+- Archivos modificados: `PicoLog.h`, `MiYoke_PD.ino`, `tests/picolog_checks.h`, `HANDOFF.md`. Documentacion actualizada: este HANDOFF; el diseno §2.3 ya fue corregido por Claude. Tesis y cambios previos del usuario preservados y fuera del commit.
+- Verificacion final: `powershell -ExecutionPolicy Bypass -File probar.ps1 -Pico -Potentiometers -Encoders` (codigo 0):
+  - OK suite simconnect_checks - PASS: 141150 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
   - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-  - OK Pico 2 (configurado) - Sketch uses 104468 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22768 bytes (4%) of dynamic memory, leaving 501520 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (encoders) - Sketch uses 104620 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23004 bytes (4%) of dynamic memory, leaving 501284 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (potenciometros) - Sketch uses 104468 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22768 bytes (4%) of dynamic memory, leaving 501520 bytes for local variables. Maximum is 524288 bytes.
-  - OK puente SimConnect
-- Comprobacion previa con `YOKE_MODEL_LOG 0` (`probar.ps1 -Pico`):
-  - OK suite simconnect_checks - PASS: 141135 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
-  - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-  - OK Pico 2 (configurado) - Sketch uses 103188 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22564 bytes (4%) of dynamic memory, leaving 501724 bytes for local variables. Maximum is 524288 bytes.
-- Estado final: `YOKE_MODEL_LOG 1`. Los UF2 finales se recompilaron con registro activado. Frente a V1.8 (103148 B), el configurado/potenciometros crece 1320 B y encoders 1472 B; ambos menores a 8 kB. Sin registro: 103188 B.
-- Ejecutados graphify-sync.cmd y graphify update . despues del cambio final; git diff --check sin errores. No se modificaron constantes de seguridad ni formulas de fuerzas. Sin desvios pendientes.
-- Commit de entrega por nombre, mensaje: `Pico y puente: registro pico.csv y ganancias.csv con lo que calcula la Pico`. Sin version nueva: el plan la reserva para Parte 3. No integrado a master.
-- Sigue: el usuario carga `build-pico2-potentiometers/MiYoke_PD.ino.uf2` (o la variante que use), hace un vuelo corto de 2 min y pega en Ensayos del usuario la linea `Fin:` de `bridge.log` y las 3 primeras filas de `pico.csv`. Verificar tambien que `ganancias.csv` tenga filas y comparar `us` / `lp` de SC8 con V1.8 (criterio: crecimiento <=100 us). Parte 2 requiere ese resultado en HANDOFF.
+  - OK Pico 2 (configurado) - Sketch uses 104492 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22768 bytes (4%) of dynamic memory, leaving 501520 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (encoders) - Sketch uses 104668 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23008 bytes (4%) of dynamic memory, leaving 501280 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (potenciometros) - Sketch uses 104492 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22768 bytes (4%) of dynamic memory, leaving 501520 bytes for local variables. Maximum is 524288 bytes.
+- Tamano frente a Parte 1: +24 B configurado/potenciometros, +48 B encoders. Ejecutados graphify-sync.cmd y graphify update .; git diff --check sin errores.
+- Commit por nombre, mensaje: `Pico: contador de lineas perdidas sin falsos tras pausa ni doble conteo de muestras salteadas`. Sin version, segun Parte 1b; la version queda para Parte 3. Sin desvios pendientes ni cambios en fuerzas/constantes de seguridad.
+- Sigue: revision de Claude de Parte 1b. El usuario NO carga el UF2 hasta que Claude apruebe. Despues: vuelo corto de 2 min y registrar en Ensayos del usuario la linea Fin: de bridge.log y las 3 primeras filas de pico.csv antes de Parte 2.
 
 \## Revisión
 

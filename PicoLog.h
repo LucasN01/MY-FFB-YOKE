@@ -12,6 +12,16 @@ struct Frame {
     float q, gust[2], buffet[3], ground[2], env, kc, pos[2], vel[2], cmd[2];
     int16_t pwm[2], peak[2]; uint16_t dropped, skip;
 };
+inline uint16_t nextDrop(uint16_t drop, uint32_t r, uint32_t lastLoggedRev,
+                         uint16_t skipNow, uint16_t lastSkip) {
+    if(r==0 || lastLoggedRev==0) return drop;
+    const uint32_t d=uint32_t(r-lastLoggedRev);
+    if(d<=1) return drop;
+    const uint32_t skipped=uint32_t(skipNow)-lastSkip;
+    if(skipped>=d-1) return drop;
+    const uint32_t missed=d-1-skipped;
+    return missed>=uint32_t(65535-drop) ? 65535 : uint16_t(drop+missed);
+}
 inline long scaled(float value, bool velocity, uint8_t& flags) {
     if(!isfinite(value)) { flags|=NonFinite; return 0; }
     const float limit=velocity ? 9999.999f : 9.9999f;

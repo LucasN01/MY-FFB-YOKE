@@ -322,7 +322,7 @@ void loop() {
     }
     YokeHealth::mark(YokeHealth::ModelLog);
 #if YOKE_MODEL_LOG
-    static uint16_t seq=0, drop=0, gainSeq=0, lastBits=0;
+    static uint16_t seq=0, drop=0, gainSeq=0, lastBits=0, lastSkip=0;
     static uint32_t lastLoggedRev=0, lastLineMs=0, lastGainsMs=0;
     static bool logSynced=false, lastDtr=false, gainsSent=false;
     static int16_t peak[2]={0,0};
@@ -335,16 +335,13 @@ void loop() {
     if(dtr && !lastDtr) logSynced=false;
     lastDtr=dtr;
     const uint32_t r=simEffects.modeledRevision();
+    if(r==0) lastLoggedRev=0;
     if(!logSynced) { lastLoggedRev=r; logSynced=true; }
     bool modelWritten=false;
     if(dtr && simTelemetry.rawAvailable && (r!=lastLoggedRev || uint32_t(now-lastLineMs)>=100)) {
         UsbLock usb;
         if(Serial.availableForWrite()>=YOKE_LOG_M_MAX) {
-            uint16_t nextDrop=drop;
-            if(r!=0 && lastLoggedRev!=0) {
-                const uint32_t d=uint32_t(r-lastLoggedRev);
-                if(d>1) nextDrop=d-1>=uint32_t(65535-drop) ? 65535 : uint16_t(drop+d-1);
-            }
+            const uint16_t nextDrop=YokeLog::nextDrop(drop,r,lastLoggedRev,simEffects.skipped(),lastSkip);
             YokeLog::Frame f{};
             f.seq=seq; f.t=simTelemetry.raw.timeMs; f.rev=r;
             f.flags=uint8_t((simEffects.active() ? YokeLog::Active : 0) |
@@ -369,6 +366,7 @@ void loop() {
                 YokeHealth::mark(YokeHealth::SerialTx);
                 Serial.write((const uint8_t*)line,n);
                 ++seq; drop=nextDrop; if(r!=0) lastLoggedRev=r;
+                lastSkip=simEffects.skipped();
                 lastLineMs=now; peak[0]=peak[1]=0; modelWritten=true;
             }
         }

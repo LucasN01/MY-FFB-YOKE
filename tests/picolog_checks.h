@@ -1,6 +1,20 @@
 #include "../PicoLog.h"
 #include "../SimConnectBridge/PicoCsv.h"
 static void picoLogChecks() {
+    uint16_t drop=0; uint32_t lastLoggedRev=0;
+    const uint32_t revisions[]={5,0,0,9};
+    for(uint32_t r:revisions) {
+        if(r==0) lastLoggedRev=0;
+        drop=YokeLog::nextDrop(drop,r,lastLoggedRev,0,0);
+        if(r!=0) lastLoggedRev=r;
+        CHECK(drop==0);
+    }
+    CHECK(YokeLog::nextDrop(0,8,5,0,0)==2);
+    CHECK(YokeLog::nextDrop(0,8,5,4,3)==1);
+    CHECK(YokeLog::nextDrop(0,8,5,6,3)==0);
+    CHECK(YokeLog::nextDrop(65534,8,5,0,0)==65535);
+    CHECK(YokeLog::nextDrop(65535,8,5,0,0)==65535);
+    CHECK(YokeLog::nextDrop(7,5,5,0,0)==7);
     YokeLog::Frame f{};
     f.seq=f.dropped=f.skip=65535; f.t=f.rev=0xFFFFFFFFu; f.flags=255;
     f.q=f.env=f.kc=1e9f;
@@ -14,6 +28,9 @@ static void picoLogChecks() {
     CHECK(n>0 && n<YOKE_LOG_M_MAX);
     line[n-1]=0;
     CHECK(YokeCsv::integers(line+1,'M',values,26));
+    CHECK(values[0]==65535 && values[1]==4294967295LL && values[2]==4294967295LL);
+    CHECK(values[20]==255 && values[21]==-255);
+    CHECK(values[24]==65535 && values[25]==65535);
     for(int i=4;i<20;++i) CHECK(values[i]==(i==16 || i==17 ? -9999999 : 99999));
     CHECK(YokeLog::formatModel(row,4,f)==-1);
     f=YokeLog::Frame{}; f.q=std::numeric_limits<float>::quiet_NaN();
@@ -62,15 +79,26 @@ static void picoLogChecks() {
     splitter.feed(oversized.c_str(),oversized.size(),[&](const char*) { ++calls; });
     splitter.feed("\nnext\n",6,[&](const char* l) { ++calls; CHECK(std::strcmp(l,"next")==0); });
     CHECK(calls==1);
-    YokeSC::Receiver rx; YokeSC::Effects effects; YokeRaw::Sample sample; uint8_t packet[113];
-    sample.timeMs=100; rawFrame(packet,sample,1); rawFeed(rx,packet,100);
+    YokeSC::Receiver rx, sequentialRx; YokeSC::Effects effects, sequentialEffects;
+    YokeRaw::Sample sample; uint8_t packet[113];
+    sample.value[YokeRaw::PressurePSF]=100;
+    sample.timeMs=100; rawFrame(packet,sample,1); rawFeed(rx,packet,100); rawFeed(sequentialRx,packet,100);
     effects.update(rx,100,true); CHECK(effects.active() && effects.modeledRevision()==0);
+    sequentialEffects.update(sequentialRx,100,true);
     effects.update(rx,102,true); CHECK(effects.modeledRevision()==rx.revision);
-    sample.timeMs=120; rawFrame(packet,sample,2); rawFeed(rx,packet,120);
-    sample.timeMs=140; rawFrame(packet,sample,3); rawFeed(rx,packet,120); effects.update(rx,120,true);
+    sequentialEffects.update(sequentialRx,102,true);
+    sample.timeMs=120; rawFrame(packet,sample,2);
+    rawFeed(sequentialRx,packet,118);
+    effects.update(rx,118,true); // Keep control ticks equal, before the batched arrival.
+    sequentialEffects.update(sequentialRx,118,true);
+    rawFeed(rx,packet,120); // Both new frames arrive before the next update.
+    sample.timeMs=140; rawFrame(packet,sample,3); rawFeed(rx,packet,120); rawFeed(sequentialRx,packet,120);
+    effects.update(rx,120,true); sequentialEffects.update(sequentialRx,120,true);
     CHECK(effects.skipped()==1 && effects.modeledRevision()==rx.revision);
-    // Existing rawChecks verifies this same smooth-runway zero-speed command.
-    CHECK(effects.command(rx,0,.9f,YokeSC::Ground)==0);
+    CHECK(sequentialEffects.skipped()==0);
+    const float command=effects.command(rx,0,.9f,YokeSC::Centering,.5f);
+    CHECK(command!=0);
+    CHECK(near(command,sequentialEffects.command(sequentialRx,0,.9f,YokeSC::Centering,.5f)));
     rx.revision+=70000; effects.update(rx,122,true); CHECK(effects.skipped()==65535);
     effects.reset(); CHECK(effects.skipped()==65535 && effects.modeledRevision()==0);
     rawFrame(packet,sample,4,2); rawFeed(rx,packet,124); CHECK(rx.isPaused());
