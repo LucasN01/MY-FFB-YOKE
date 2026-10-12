@@ -119,8 +119,14 @@ Bajo `#if SIMCONNECT_ADDITIONS_ENABLED && YOKE_MODEL_LOG`:
    **o** `now-lastLineMs >= 100` (latido: repite `rev`; el comparador lo usa para invariantes, no para A)).
    - Antes de formatear, comprobar `Serial.availableForWrite() >= YOKE_LOG_M_MAX` dentro de `UsbLock`; si no
      hay lugar, no formatear ni esperar: se reintenta el ciclo siguiente.
-   - `drop`: con `r=modeledRevision()`, si `r!=0 && lastLoggedRev!=0`, `d=uint32_t(r-lastLoggedRev)`; si
-     `d>1` sumar `d-1` (saturado). Nunca restar 1 cuando `d==0`.
+   - Cada ciclo, justo después de leer `r=modeledRevision()`: si `r==0` (no hay modelo: pausa, desarme, slew o
+     reinicio por `dt>50`), poner `lastLoggedRev=0`. Así, al volver a modelar no se cuentan como pérdidas las
+     revisiones recibidas sin modelo (corrección de la revisión de la Parte 1).
+   - `drop`: con `r!=0 && lastLoggedRev!=0`, `d=uint32_t(r-lastLoggedRev)`; si `d>1`, sumar
+     `max(0, (d-1) - (skipped()-lastSkip))` (saturado), donde `lastSkip` es `skipped()` al escribir la línea
+     anterior: las revisiones que la Pico nunca modeló ya están en `skip` y no se cuentan dos veces. Nunca restar 1
+     cuando `d==0`. El cálculo va en una función pura de `PicoLog.h`:
+     `uint16_t nextDrop(uint16_t drop, uint32_t r, uint32_t lastLoggedRev, uint16_t skipNow, uint16_t lastSkip)`.
    - Al escribir: `seq++`, `lastLoggedRev=r` (si `r!=0`), `lastLineMs=now`, `peak=0`.
 5. Una sola escritura `M` o `G` por ciclo (si se escribió `M`, `G` espera al siguiente).
    `G`: cuando `dtr && simTelemetry.rawAvailable` y (`!gainsSent` o algún `raw()`/`effects()` distinto de lo

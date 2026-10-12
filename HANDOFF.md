@@ -111,8 +111,26 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
 
 \## Revisión
 
-- Claude (2026-10-12), sobre el bloqueo de la Parte 1: correcto detenerse. Hueco del diseño: `Receiver::paused` es privado (`SimTelemetry.h:116`). Resuelto en §2.2b: agregar el accesor público `bool isPaused() const { return paused; }` en `SimTelemetry.h` y usar `simTelemetry.isPaused()` en `MiYoke_PD.ino`. Se autoriza `SimTelemetry.h` solo para ese accesor (agregado al alcance y al commit de la Parte 1) y su prueba. Continuar la Parte 1 desde los cambios sin commit: arreglar el acceso, completar las compilaciones pendientes (encoders, potenciómetros, puente, `YOKE_MODEL_LOG 0`) y commitear.
-- Además: la tesis queda fuera de esta tarea (pedido del usuario); se quitó de §10 y de la Parte 3.
+- Revisor: Claude (2026-10-12), con Code Reviewer. **Parte 1 (`63c5715`): REQUIERE CAMBIOS** (uno bloqueante, originado en el diseño, no en la implementación).
+  - **Fidelidad al diseño:** correcta. Los 26 campos de `M` tienen el orden y la escala pedidos (`PicoLog.h:21-29`), con recorte antes de `lroundf` y `NonFinite`. `Menu` está bajo `YOKE_CALIBRATION_ENABLED`. Una sola `M`/`G` por ciclo, `availableForWrite` va antes de formatear y dentro de `UsbLock`, y `mark(SerialTx)` está antes de cada write. `skipCount` y los accesores también están bien. En el puente: validación estricta de 26/14 enteros, cabeceras, rotación de 5 archivos, buffer de 4096, `PollPort` equivalente al bucle anterior, flush y cierre en todas las salidas, contadores en `Fin:`. No cambia ninguna fuerza ni constante de seguridad.
+  - **H1 (bloqueante): `drop` falso tras pausa, desarme, slew o reinicio por `dt>50`.**
+    - Con el modelo reiniciado, `modeledRevision()` vale 0, pero `rx.revision` sigue subiendo con cada trama de pausa/desarme (`SimTelemetry.h:75,103`). Como `lastLoggedRev` queda con la última revisión modelada (`MiYoke_PD.ino:337-346`), al volver a modelar `d` es grande y `drop` suma cientos de pérdidas que no existieron. B7 daría FALLO en cualquier ensayo con pausa.
+    - Corrección (diseño §2.3 punto 4, ya actualizado): `if(r==0) lastLoggedRev=0;` cada ciclo, justo después de leer `r`.
+  - **H2 (bloqueante, mismo bloque): `drop` cuenta dos veces las muestras no modeladas.** Si la Pico salteó una revisión (`skip`), `d` también salta y se suma a `drop`. Corrección (§2.3 punto 4): restar el aumento de `skipped()` desde la última línea escrita (`lastSkip`), sin bajar de 0, con la función pura `YokeLog::nextDrop(...)` en `PicoLog.h`.
+  - **H3 (menor): prueba débil en el caso 9.** `tests/picolog_checks.h:70`: `command()==0` sobre pista lisa a velocidad 0 da 0 haya salto o no. Reemplazar por dos `Effects` alimentados con las mismas tramas, uno con salto y otro sin salto, y comparar `command()` en un caso con salida ≠ 0 (centrado con posición ≠ 0 y presión > 0): deben coincidir en la muestra común.
+  - **H4 (menor): caso 1 incompleto.** `tests/picolog_checks.h:15-17`: verificar también `values[0]==65535`, `values[1]==values[2]==4294967295`, `values[20]==255`, `values[21]==-255` y `values[24]==values[25]==65535`.
+  - **Para Codex: Parte 1b**, en la misma rama y antes de la Parte 2:
+    1. `PicoLog.h`: `nextDrop` según §2.3 punto 4.
+    2. `MiYoke_PD.ino`: `if(r==0) lastLoggedRev=0;` después de `const uint32_t r=...`; usar `YokeLog::nextDrop`; `static uint16_t lastSkip`, que se actualiza al escribir `M`.
+    3. `tests/picolog_checks.h`:
+       - casos de `nextDrop`: secuencia r=5,0,0,9 → `drop` 0; r=5→8 sin skip → +2; r=5→8 con skip +1 → +1; con skip mayor que el salto → +0; saturación en 65535;
+       - además H3 y H4.
+    4. Pruebas: `probar.ps1 -Pico -Potentiometers -Encoders` (copiar solo las líneas OK/FALLO).
+    5. Commit por nombre `PicoLog.h MiYoke_PD.ino tests/picolog_checks.h HANDOFF.md`, con el mensaje "Pico: contador de lineas perdidas sin falsos tras pausa ni doble conteo de muestras salteadas".
+    6. `graphify-sync.cmd` y `graphify update .`. Sin versión.
+    7. Completar "Última entrega".
+  - El usuario **no** carga el UF2 hasta que Claude apruebe la Parte 1b.
+
 \## Ensayos del usuario
 
 - (el usuario o Codex anotan acá: resultado del vuelo corto, confirmación "fuente de motores apagada" con fecha, y la carpeta de cada ensayo en `ensayos\`)
