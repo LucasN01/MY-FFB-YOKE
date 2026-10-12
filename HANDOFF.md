@@ -65,7 +65,11 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
   2. Crear `tests/comparar_ensayo.h` (lógica), `tests/comparar_ensayo.cpp` (main) y `tests/comparar_ensayo.vcxproj` (§4, §7).
   3. Casos 7-8 de §7 en `tests/picolog_checks.h`.
   4. `probar.ps1`: compilar también `tests\comparar_ensayo.vcxproj` en el paso 1 y reportar `OK comparar_ensayo`.
-  5. `graphify update .`.
+  5. Ajustes menores de la revisión de la Parte 1b (firmware):
+     - `MiYoke_PD.ino:339`: sincronizar también `lastSkip` en la sincronización por dtr: `if(!logSynced){ lastLoggedRev=r; lastSkip=simEffects.skipped(); logSynced=true; }`.
+     - `tests/picolog_checks.h` (prueba H3): dar a la trama 3 una presión distinta de la trama 2, para detectar un error que modele la muestra salteada en lugar de la última.
+     - Agregar `MiYoke_PD.ino` al commit de la Parte 2, ejecutar `graphify-sync.cmd` y compilar también con `-Pico -Potentiometers -Encoders`.
+  6. `graphify update .`.
 - Pruebas: `probar.ps1 -Bridge`. Todo OK. Si existe `SimConnectBridge\bin\Win32\RealismoSC8\telemetry.csv` del vuelo corto, copiar esa carpeta de registros a `tmp\vuelo_corto\` y ejecutar `tests\bin\comparar_ensayo.exe tmp\vuelo_corto`; anotar solo las líneas `A`, `B1..B9` y `RESULTADO`.
 - Commit por nombre: `SimConnectBridge/Replay.h SimConnectBridge/main.cpp SimConnectBridge/YokeSimConnectBridge.vcxproj tests/comparar_ensayo.h tests/comparar_ensayo.cpp tests/comparar_ensayo.vcxproj tests/picolog_checks.h probar.ps1 HANDOFF.md`.
   Mensaje: "Puente: modo replay sin simulador y comparador de ensayos contra el modelo de la Pico".
@@ -127,6 +131,18 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
     6. `graphify-sync.cmd` y `graphify update .`. Sin versión.
     7. Completar "Última entrega".
   - El usuario **no** carga el UF2 hasta que Claude apruebe la Parte 1b.
+
+- Revisor: Claude (2026-10-12), con Code Reviewer. **Parte 1b (`fd46a9d`): APROBADA.**
+  - H1-H4 resueltos:
+    - `YokeLog::nextDrop` (`PicoLog.h:15-24`) cumple §2.3 punto 4.
+    - `if(r==0) lastLoggedRev=0;` evita falsos tras pausa/desarme.
+    - La prueba H3 compara `command()` con y sin salto (salida ≠ 0); H4 completa.
+    - Suite (141150 comprobaciones) y las 3 variantes de firmware OK según Codex; no se recompiló porque el código no cambió.
+  - Observaciones menores (no bloquean; pasan a la Parte 2, punto 5):
+    - tras reconectar, `lastSkip` no se sincroniza y puede ocultar alguna pérdida real (nunca crea falsos);
+    - la prueba H3 usa la misma presión en las 3 tramas.
+  - Limitación conocida: con `skip` saturado en 65535, las muestras salteadas nuevas se cuentan en `drop`.
+  - **Usuario:** ya puede cargar `build-pico2-potentiometers/MiYoke_PD.ino.uf2` (12/10 20:44) y hacer el vuelo corto de 2 min, con la fuente de motores apagada.
 
 \## Ensayos del usuario
 
