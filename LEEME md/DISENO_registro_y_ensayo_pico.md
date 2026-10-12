@@ -76,7 +76,7 @@ Significado:
 | Campo | Origen en el firmware |
 | --- | --- |
 | `t`, `rev` | `simTelemetry.raw.timeMs`, `simEffects.modeledRevision()` (revisión con la que se calcularon los modelos; 0 si no hay modelo) |
-| `flags` | `Active`=`simEffects.active()`, `Armed`=`simTelemetry.armed`, `Paused`=`simTelemetry.paused`, `Menu`=`calibration.menu.active()` solo bajo `#if YOKE_CALIBRATION_ENABLED` (si no, 0), `Dtr`=`dtr`, `Raw`=`simTelemetry.rawAvailable`, `Modeled`=`modeledRevision()!=0` |
+| `flags` | `Active`=`simEffects.active()`, `Armed`=`simTelemetry.armed`, `Paused`=`simTelemetry.isPaused()` (accesor nuevo, §2.2b), `Menu`=`calibration.menu.active()` solo bajo `#if YOKE_CALIBRATION_ENABLED` (si no, 0), `Dtr`=`dtr`, `Raw`=`simTelemetry.rawAvailable`, `Modeled`=`modeledRevision()!=0` |
 | `q, gust, buffet, gnd, env` | `simEffects.calculated()`: `pressure, gust[2], buffet[3], ground[2], groundEnvelope` |
 | `kc` | `simEffects.centering()` (rigidez de centrado suavizada, `centerPressure`) |
 | `pos, vel` | `yokePosition[2]`, `yokeVelocity[2]` |
@@ -98,6 +98,15 @@ uint16_t skipped() const { return skipCount; }
 - Motivo: en el primer ciclo armado y tras `dt>50` el `update` reinicia y retorna (`SimEffects.h:60-67`) con
   `enabled=true` y modelos en 0; sin `modeledRevision()` esa línea parecería un desvío de cálculo.
 Junto a `calculated()` (`SimEffects.h:134`).
+
+### 2.2b Cambio en `SimTelemetry.h` (accesor de solo lectura)
+`Receiver::paused` es privado (`SimTelemetry.h:116`). Agregar en la parte pública de `Receiver`, junto a `fresh()`
+(`SimTelemetry.h:44`):
+```cpp
+bool isPaused() const { return paused; }
+```
+No cambia visibilidad ni lógica de `paused`. Prueba: en `tests/picolog_checks.h`, tras una trama con flag de pausa
+(bit1, sin armado) `rx.isPaused()==true`, y tras una trama armada `false`.
 
 ### 2.3 Cambios en `MiYoke_PD.ino` (bloque `ModelLog`, `MiYoke_PD.ino:322-338`)
 Bajo `#if SIMCONNECT_ADDITIONS_ENABLED && YOKE_MODEL_LOG`:
@@ -377,8 +386,7 @@ Compilación: `probar.ps1` debe compilar también `tests\comparar_ensayo.vcxproj
 - `LEEME md/LEEME_SIMCONNECT.md:54`:
   - TEXTO ACTUAL: `` `bridge.log`, `telemetry.csv` y `pico.log`, junto al EXE, se reemplazan en cada ejecucion; ``
   - TEXTO NUEVO: `` `bridge.log`, `telemetry.csv`, `pico.log`, `pico.csv` y `ganancias.csv`, junto al EXE, se reemplazan en cada ejecucion; ``
-- `tesis/capitulos/01_arquitectura_sc8.tex:37` — agregar al final del párrafo:
-  - TEXTO ACTUAL: `porque la línea puede omitir picos y no hay medición externa.`
-  - TEXTO NUEVO: `porque la línea puede omitir picos y no hay medición externa. Además, la placa envía por cada muestra procesada una línea con todas las salidas de los modelos, el comando y el PWM de cada eje y su estado; el puente las guarda en \code{pico.csv}, con la misma marca de muestra que \code{telemetry.csv}, y una herramienta de PC recalcula los modelos con el mismo código para comparar ambos registros.`
+- La tesis (`tesis/`) **no** se modifica: esta tarea agrega herramientas de registro y ensayo y no cambia cómo se
+  calculan los efectos.
 - Nuevo `LEEME md/ENSAYOS.md`: cómo usar `ENSAYO.ps1`/`ENSAYO.cmd` y `BANCO.ps1`, tabla de fases de §6, columnas de
   `pico.csv` (§3.1) y significado de `informe.txt` (§4.4). Breve, sin repetir este diseño completo.
