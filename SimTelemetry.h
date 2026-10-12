@@ -42,6 +42,7 @@ public:
     bool armed=false;
     uint32_t last=0;
     bool fresh(uint32_t now) const { return valid && armed && uint32_t(now-last)<300; }
+    bool isPaused() const { return paused; }
     bool calibrationAllowed(uint32_t now,bool connected) const {
         // Offline calibration uses the same timeout as the force watchdog.
         // No link is not proof that the host simulator process has closed.

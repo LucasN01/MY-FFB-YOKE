@@ -220,6 +220,9 @@ static_assert(YOKE_MOTION_FILTER_TAU_S >= 0 && YOKE_MOTION_MAX_SPEED > 0 &&
 // Telemetria de etapas 1/2: una linea cada 100ms, alternando Roll/Pitch.
 // No espera a que se abra el monitor; omite la linea si no hay espacio USB.
 #define DEBUG_MOTION_TELEMETRY 1
+#ifndef YOKE_MODEL_LOG
+#define YOKE_MODEL_LOG 1
+#endif
 #define MOTION_TELEMETRY_MS 100
 
 static_assert(ROLL_POS_MIN < 0 && ROLL_POS_MAX > 0, "Revisar limites Roll");

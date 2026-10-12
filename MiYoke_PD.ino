@@ -10,6 +10,7 @@
 #include "CalibrationControls.h"
 #if SIMCONNECT_ADDITIONS_ENABLED
 #include "SimEffects.h"
+#include "PicoLog.h"
 #endif
 #if defined(ARDUINO_ARCH_RP2040) && defined(USE_TINYUSB)
 // USB CDC (Serial) para SimConnect y diagnostico; no se registra joystick HID.
@@ -320,6 +321,81 @@ void loop() {
         }
     }
     YokeHealth::mark(YokeHealth::ModelLog);
+#if YOKE_MODEL_LOG
+    static uint16_t seq=0, drop=0, gainSeq=0, lastBits=0;
+    static uint32_t lastLoggedRev=0, lastLineMs=0, lastGainsMs=0;
+    static bool logSynced=false, lastDtr=false, gainsSent=false;
+    static int16_t peak[2]={0,0};
+    static uint16_t lastGains[YokeGains::Count]={0};
+    const int16_t pwm[2]={pwmRoll,pwmPitch};
+    for(uint8_t i=0;i<2;++i) {
+        const int16_t magnitude=pwm[i]<0 ? -pwm[i] : pwm[i];
+        if(magnitude>peak[i]) peak[i]=magnitude;
+    }
+    if(dtr && !lastDtr) logSynced=false;
+    lastDtr=dtr;
+    const uint32_t r=simEffects.modeledRevision();
+    if(!logSynced) { lastLoggedRev=r; logSynced=true; }
+    bool modelWritten=false;
+    if(dtr && simTelemetry.rawAvailable && (r!=lastLoggedRev || uint32_t(now-lastLineMs)>=100)) {
+        UsbLock usb;
+        if(Serial.availableForWrite()>=YOKE_LOG_M_MAX) {
+            uint16_t nextDrop=drop;
+            if(r!=0 && lastLoggedRev!=0) {
+                const uint32_t d=uint32_t(r-lastLoggedRev);
+                if(d>1) nextDrop=d-1>=uint32_t(65535-drop) ? 65535 : uint16_t(drop+d-1);
+            }
+            YokeLog::Frame f{};
+            f.seq=seq; f.t=simTelemetry.raw.timeMs; f.rev=r;
+            f.flags=uint8_t((simEffects.active() ? YokeLog::Active : 0) |
+                (simTelemetry.armed ? YokeLog::Armed : 0) | (simTelemetry.isPaused() ? YokeLog::Paused : 0) |
+                (dtr ? YokeLog::Dtr : 0) | (simTelemetry.rawAvailable ? YokeLog::Raw : 0) |
+                (r!=0 ? YokeLog::Modeled : 0));
+#if YOKE_CALIBRATION_ENABLED
+            if(calibration.menu.active()) f.flags|=YokeLog::Menu;
+#endif
+            const auto& model=simEffects.calculated();
+            f.q=model.pressure; f.env=model.groundEnvelope; f.kc=simEffects.centering();
+            for(uint8_t i=0;i<3;++i) f.buffet[i]=model.buffet[i];
+            for(uint8_t i=0;i<2;++i) {
+                f.gust[i]=model.gust[i]; f.ground[i]=model.ground[i];
+                f.pos[i]=yokePosition[i]; f.vel[i]=yokeVelocity[i]; f.cmd[i]=motorCommands[i];
+                f.pwm[i]=pwm[i]; f.peak[i]=peak[i];
+            }
+            f.dropped=nextDrop; f.skip=simEffects.skipped();
+            char line[YOKE_LOG_M_MAX];
+            const int n=YokeLog::formatModel(line,sizeof(line),f);
+            if(n>0) {
+                YokeHealth::mark(YokeHealth::SerialTx);
+                Serial.write((const uint8_t*)line,n);
+                ++seq; drop=nextDrop; if(r!=0) lastLoggedRev=r;
+                lastLineMs=now; peak[0]=peak[1]=0; modelWritten=true;
+            }
+        }
+    }
+    if(!modelWritten && dtr && simTelemetry.rawAvailable) {
+        uint16_t raw[YokeGains::Count];
+        const uint16_t bits=gainSettings.effects();
+        bool changed=bits!=lastBits;
+        for(uint8_t i=0;i<YokeGains::Count;++i) {
+            raw[i]=gainSettings.raw(YokeGains::Id(i));
+            if(raw[i]!=lastGains[i]) changed=true;
+        }
+        if(!gainsSent || changed || uint32_t(now-lastGainsMs)>=5000) {
+            UsbLock usb;
+            if(Serial.availableForWrite()>=YOKE_LOG_M_MAX) {
+                char line[YOKE_LOG_M_MAX];
+                const int n=YokeLog::formatGains(line,sizeof(line),gainSeq,bits,raw,YokeGains::Count);
+                if(n>0) {
+                    YokeHealth::mark(YokeHealth::SerialTx);
+                    Serial.write((const uint8_t*)line,n);
+                    ++gainSeq; gainsSent=true; lastGainsMs=now; lastBits=bits;
+                    for(uint8_t i=0;i<YokeGains::Count;++i) lastGains[i]=raw[i];
+                }
+            }
+        }
+    }
+#endif
     // Nonblocking feedback from the actual Pico, recorded by the bridge in pico.log.
     // gr/gp are calculated signals x10000 before gains; R/P are final applied PWM.
     static uint32_t lastModelLog=0;

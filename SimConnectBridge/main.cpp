@@ -10,6 +10,7 @@
 #include "SimTelemetry.h"
 #include "RawTelemetry.h"
 #include "SerialLink.h"
+#include "PicoCsv.h"
 
 FILE* logFile=nullptr;
 void Log(const char* format, ...) {
@@ -27,6 +28,11 @@ ULONGLONG lastData=0, lastSend=0;
 double referenceKnots=120, gustGain=1, gustLongitudinal=0.25;
 FILE* csv=nullptr;
 FILE* picoLog=nullptr;
+FILE* picoCsv=nullptr;
+FILE* gainsCsv=nullptr;
+unsigned picoLines=0, badPicoLines=0;
+ULONGLONG lastCsvFlush=0;
+YokeCsv::LineSplitter picoSplitter;
 YokeRaw::Sample latest;
 bool pending=false;
 YokeLink::LinkMonitor link;
@@ -172,6 +178,40 @@ bool OpenPort(const std::string& name, unsigned handshakeMs) {
     }
     ClosePort(); return false;
 }
+void PollPort(ULONGLONG now) {
+    if(port!=INVALID_HANDLE_VALUE) {
+        char b[4096]; DWORD n=0;
+        if(!ReadFile(port,b,sizeof(b),&n,nullptr)) LinkLost("error de lectura",GetLastError(),0);
+        else if(n) {
+            if(picoLog) { std::fwrite(b,1,n,picoLog); std::fflush(picoLog); }
+            bootScanner.feed(b,n,[](const char* l){ char t[16]; Stamp(t); Log("[%s] Pico: %s\n",t,l); });
+            picoSplitter.feed(b,n,[](const char* l) {
+                if((l[0]!='M' && l[0]!='G') || l[1]!=',') return;
+                ++picoLines; char row[512];
+                const bool model=l[0]=='M';
+                if(!(model ? YokeCsv::modelRow(l,row,sizeof(row)) : YokeCsv::gainsRow(l,row,sizeof(row)))) {
+                    ++badPicoLines; return;
+                }
+                FILE* target=model ? picoCsv : gainsCsv;
+                if(target) std::fprintf(target,"%llu,%s\n",GetTickCount64(),row);
+            });
+        }
+    }
+    if(!com.empty() && port==INVALID_HANDLE_VALUE && reconnect.shouldAttempt(now)) {
+        if(reconnect.shouldLogRetry(now)) { char t[16]; Stamp(t); Log("[%s] Reintentando %s...\n",t,com.c_str()); }
+        if(OpenPort(com,YokeLink::kReconnectHandshakeMs)) {
+            const ULONGLONG t=GetTickCount64(); char s[16]; Stamp(s);
+            Log("[%s] Enlace USB recuperado en %s tras %.1f s; armado diferido %llu ms.\n",
+                s,com.c_str(),(t-reconnect.lostAtMs)/1000.0,(unsigned long long)YokeLink::kRearmHoldoffMs);
+            reconnect.onReopened(t); link.reset(); bootScanner=YokeLink::BootLineScanner{}; picoSplitter=YokeCsv::LineSplitter{};
+        } else reconnect.onAttemptFailed(GetTickCount64());
+    }
+    if(now-lastCsvFlush>=200) {
+        if(picoCsv) std::fflush(picoCsv);
+        if(gainsCsv) std::fflush(gainsCsv);
+        lastCsvFlush=now;
+    }
+}
 int main(int argc,char** argv) {
     double duration=20; bool durationSpecified=false; // Double click: 20-second monitor, no motor commands.
     for(int i=1;i<argc;++i) {
@@ -206,9 +246,9 @@ int main(int argc,char** argv) {
         WIN32_FILE_ATTRIBUTE_DATA attributes{};
         if(GetFileAttributesExA(file,GetFileExInfoStandard,&attributes) &&
            (attributes.nFileSizeHigh || attributes.nFileSizeLow)) {
-            const char* current[]={"bridge.log","telemetry.csv","pico.log"};
-            const char* previous[]={"bridge.anterior.log","telemetry.anterior.csv","pico.anterior.log"};
-            for(unsigned i=0;i<3;++i) {
+            const char* current[]={"bridge.log","telemetry.csv","pico.log","pico.csv","ganancias.csv"};
+            const char* previous[]={"bridge.anterior.log","telemetry.anterior.csv","pico.anterior.log","pico.anterior.csv","ganancias.anterior.csv"};
+            for(unsigned i=0;i<5;++i) {
                 strcpy_s(tail+1,MAX_PATH-(tail+1-file),current[i]);
                 char destination[MAX_PATH]; strcpy_s(destination,file);
                 strcpy_s(destination+(tail+1-file),MAX_PATH-(tail+1-file),previous[i]);
@@ -219,11 +259,15 @@ int main(int argc,char** argv) {
     if(tail) { strcpy_s(tail+1,MAX_PATH-(tail+1-file),"bridge.log"); fopen_s(&logFile,file,"w"); }
     if(tail) { strcpy_s(tail+1,MAX_PATH-(tail+1-file),"telemetry.csv"); fopen_s(&csv,file,"w"); }
     if(tail) { strcpy_s(tail+1,MAX_PATH-(tail+1-file),"pico.log"); fopen_s(&picoLog,file,"w"); }
+    if(tail) { strcpy_s(tail+1,MAX_PATH-(tail+1-file),"pico.csv"); fopen_s(&picoCsv,file,"w"); }
+    if(tail) { strcpy_s(tail+1,MAX_PATH-(tail+1-file),"ganancias.csv"); fopen_s(&gainsCsv,file,"w"); }
+    if(picoCsv) std::fprintf(picoCsv,"%s\n",YokeCsv::modelHeader);
+    if(gainsCsv) std::fprintf(gainsCsv,"%s\n",YokeCsv::gainsHeader);
     if(csv) std::fprintf(csv,"host_time_ms,sample_time_ms,sample_index,pressure_psf,ias_knots,wind_x_knots,wind_y_knots,wind_z_knots,on_ground,slew,aoa_deg,stall_alpha_deg,flap_left,flap_right,vs0_knots,vs1_knots,gear_fraction,gear_retractable,spoiler_left,spoiler_right,ground_speed_knots,yoke_roll,yoke_pitch,ground_accel_x_ft_s2,ground_accel_y_ft_s2,paused,running,armed,sent,reference_knots,gust_gain,gust_longitudinal,gusts_enabled,buffets_enabled\n");
     Log("Yoke SimConnect SC8: transporte de telemetria; todos los modelos en Pico 2 | %s\n",enable?"HABILITADO":"SOLO MONITOR");
     Log("Ajustes enviados: referencia %.1f kt, gustGain %.2f, longitudinal %.2f, gusts=%d buffets=%d\n",
         referenceKnots,gustGain,gustLongitudinal,gusts,buffets);
-    if(!com.empty()&&!OpenPort(com,3000)) { Log("No se identifico firmware YOKE17SC8 en %s. No se enviaron fuerzas.\n",com.c_str()); ClosePort(); if(csv)std::fclose(csv); if(logFile)std::fclose(logFile); if(picoLog)std::fclose(picoLog); return 3; }
+    if(!com.empty()&&!OpenPort(com,3000)) { Log("No se identifico firmware YOKE17SC8 en %s. No se enviaron fuerzas.\n",com.c_str()); ClosePort(); if(csv)std::fclose(csv); if(logFile)std::fclose(logFile); if(picoLog)std::fclose(picoLog); if(picoCsv)std::fclose(picoCsv); if(gainsCsv)std::fclose(gainsCsv); return 3; }
     SetConsoleCtrlHandler(Stop,TRUE);
     const ULONGLONG start=GetTickCount64();
     if(Check(SimConnect_Open(&sim,"Yoke SC8 raw telemetry",nullptr,0,nullptr,SIMCONNECT_OPEN_CONFIGINDEX_LOCAL),"Open")) {
@@ -240,23 +284,7 @@ int main(int argc,char** argv) {
             if((!lastData||now-lastData>250||paused||!running)&&now-lastSend>100) { Send(false); pending=false; }
             if(!opened&&now-start>15000) { failed=true; break; }
             if(duration>0&&now-start>=duration*1000) break;
-            if(port!=INVALID_HANDLE_VALUE) {
-                char b[256]; DWORD n=0;
-                if(!ReadFile(port,b,sizeof(b),&n,nullptr)) LinkLost("error de lectura",GetLastError(),0);
-                else if(n) {
-                    if(picoLog) { std::fwrite(b,1,n,picoLog); std::fflush(picoLog); }
-                    bootScanner.feed(b,n,[](const char* l){ char t[16]; Stamp(t); Log("[%s] Pico: %s\n",t,l); });
-                }
-            }
-            if(!com.empty() && port==INVALID_HANDLE_VALUE && reconnect.shouldAttempt(now)) {
-                if(reconnect.shouldLogRetry(now)) { char t[16]; Stamp(t); Log("[%s] Reintentando %s...\n",t,com.c_str()); }
-                if(OpenPort(com,YokeLink::kReconnectHandshakeMs)) {
-                    const ULONGLONG t=GetTickCount64(); char s[16]; Stamp(s);
-                    Log("[%s] Enlace USB recuperado en %s tras %.1f s; armado diferido %llu ms.\n",
-                        s,com.c_str(),(t-reconnect.lostAtMs)/1000.0,(unsigned long long)YokeLink::kRearmHoldoffMs);
-                    reconnect.onReopened(t); link.reset(); bootScanner=YokeLink::BootLineScanner{};
-                } else reconnect.onAttemptFailed(GetTickCount64());
-            }
+            PollPort(now);
             Sleep(5);
         }
         opened=false; Send(false); SimConnect_Close(sim);
@@ -264,7 +292,9 @@ int main(int argc,char** argv) {
     ClosePort();
     if(csv) std::fclose(csv);
     if(picoLog) std::fclose(picoLog);
-    Log("Fin: muestras=%u error=%d reconexiones=%u\n",samples,failed,reconnect.reconnections);
+    if(picoCsv) std::fclose(picoCsv);
+    if(gainsCsv) std::fclose(gainsCsv);
+    Log("Fin: muestras=%u error=%d reconexiones=%u lineas_pico=%u lineas_pico_malas=%u\n",samples,failed,reconnect.reconnections,picoLines,badPicoLines);
     return reconnect.lost ? 4 : (failed||samples==0 ? 1 : 0);
 }
 

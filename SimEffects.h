@@ -67,6 +67,10 @@ public:
             return;
         }
         if(rx.rawAvailable && (!modelReady || modelRevision!=rx.revision)) {
+            if(modelReady && uint32_t(rx.revision-modelRevision)>1) {
+                const uint32_t missed=uint32_t(rx.revision-modelRevision)-1;
+                skipCount=missed>=uint32_t(65535-skipCount) ? 65535 : uint16_t(skipCount+missed);
+            }
             models.update(rx.raw); modelRevision=rx.revision; modelReady=true;
         } else if(!rx.rawAvailable) { models.reset(); modelReady=false; }
         // Low-level runway texture at motor-loop rate, independent of telemetry jitter.
@@ -132,6 +136,10 @@ public:
     }
     float simulationVelocity(uint8_t axis) const { return axis<2 ? simMotion[axis].velocity : 0; }
     const PicoForceModels& calculated() const { return models; }
+    bool active() const { return enabled; }
+    float centering() const { return centerPressure; }
+    uint32_t modeledRevision() const { return modelReady ? modelRevision : 0; }
+    uint16_t skipped() const { return skipCount; }
     float command(const Receiver& rx, uint8_t axis, float gain,
                   uint8_t mask=configuredEffects, float position=0, float velocity=0) const {
         if(!enabled || axis>1 || !isfinite(gain) || gain<0 || !isfinite(position)) return 0;
@@ -200,6 +208,7 @@ YokeNoise::Narrowband texNoise[2]={
     PicoForceModels models;
     bool modelReady=false;
     uint32_t modelRevision=0;
+    uint16_t skipCount=0;
     YokeMotion simMotion[2];
 };
 }

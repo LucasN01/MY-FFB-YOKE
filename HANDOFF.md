@@ -89,20 +89,25 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
 
 \## Última entrega
 
-- Parte 1: implementacion parcial, detenida por contradiccion entre el diseno y el codigo (2026-10-12). No lista para cargar el UF2.
-- Bloqueo: el diseno §2.1 exige `Paused=simTelemetry.paused`, usado en `MiYoke_PD.ino:351`, pero `Receiver::paused` es privado (`SimTelemetry.h:116`) y no hay accesor publico. El alcance y la lista de archivos de Parte 1 no incluyen `SimTelemetry.h`. Claude debe especificar como exponer/leer ese estado y autorizar el archivo afectado; Codex no cambio su visibilidad ni sustituyo el dato.
-- Archivos implementados sin commit: `PicoLog.h`, `SimEffects.h`, `mis_defines.h`, `MiYoke_PD.ino`, `SimConnectBridge/PicoCsv.h`, `SimConnectBridge/main.cpp`, `tests/picolog_checks.h`, `tests/simconnect_checks.cpp`. Registros M/G, accesores/skip, recepcion/rotacion CSV y PollPort; casos 1-6 y 9.
-- Documentacion: solo este HANDOFF; los reemplazos de documentacion siguen previstos para Parte 3. Cambios previos del usuario en tesis y graphify-ino preservados.
-- Verificacion:
-  - OK suite simconnect_checks - PASS: 141133 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+- Parte 1 completada (2026-10-12) en `mejora/registro-ensayo-pico`: firmware M/G y puente con `pico.csv` / `ganancias.csv`, rotacion, lectura de 4096 B, PollPort y contadores de lineas. Conservadas la linea SC8 y debugPrintMotion.
+- Correccion de Claude aplicada: accesor `Receiver::isPaused()` en `SimTelemetry.h:45`, uso en `MiYoke_PD.ino:351`, prueba de trama pausada y trama armada en `tests/picolog_checks.h:76-77`. Bloqueo anterior resuelto.
+- Archivos modificados: `PicoLog.h`, `SimEffects.h`, `SimTelemetry.h`, `mis_defines.h`, `MiYoke_PD.ino`, `SimConnectBridge/PicoCsv.h`, `SimConnectBridge/main.cpp`, `tests/picolog_checks.h`, `tests/simconnect_checks.cpp`, `HANDOFF.md`.
+- Documentacion actualizada: este HANDOFF. Los LEEME siguen previstos para Parte 3; la tesis queda fuera de la tarea. Cambios previos del usuario en tesis y graphify-ino preservados, fuera del commit.
+- Pruebas finales (`powershell -ExecutionPolicy Bypass -File probar.ps1 -Pico -Potentiometers -Encoders -Bridge`), todas OK:
+  - OK suite simconnect_checks - PASS: 141135 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
   - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-  - FALLO Pico 2 (configurado) (codigo 1): `MiYoke_PD.ino:351:75: error: 'bool YokeSC::Receiver::paused' is private within this context`.
-- La corrida tambien reporto `FALLO Pico 2 (encoders) (codigo 1)` por el mismo miembro privado. Se interrumpio la corrida restante al confirmar el bloqueo; potenciometros y puente no verificados.
-- La primera prueba del contador skip fallo porque el ensayo enviaba dos tramas con el mismo timeMs; Receiver descarta la repetida (`SimTelemetry.h:73`). Se corrigio el caso para enviar timeMs distintos con la misma llegada, siguiendo `tests/raw_checks.h`; la corrida posterior dio los OK anteriores.
-- Ejecutados graphify-sync.cmd y graphify update .; grafo actualizado. git diff --check sin errores de whitespace.
-- Pendientes: resolver el bloqueo con especificacion de Claude, terminar compilaciones de las tres variantes y puente, medir crecimiento frente a 103148 B, compilar con YOKE_MODEL_LOG 0 y volver a 1, commit por nombre. No hay commit de entrega ni version (Parte 1 sin version segun el plan).
-- Luego de una entrega con todo OK: cargar UF2 de build-pico2-potentiometers (o variante usada), vuelo corto de 2 min, pegar en Ensayos del usuario la linea Fin: de bridge.log y las 3 primeras filas de pico.csv. No hacer ese ensayo con esta entrega parcial.
-
+  - OK Pico 2 (configurado) - Sketch uses 104468 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22768 bytes (4%) of dynamic memory, leaving 501520 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (encoders) - Sketch uses 104620 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23004 bytes (4%) of dynamic memory, leaving 501284 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (potenciometros) - Sketch uses 104468 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22768 bytes (4%) of dynamic memory, leaving 501520 bytes for local variables. Maximum is 524288 bytes.
+  - OK puente SimConnect
+- Comprobacion previa con `YOKE_MODEL_LOG 0` (`probar.ps1 -Pico`):
+  - OK suite simconnect_checks - PASS: 141135 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+  - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
+  - OK Pico 2 (configurado) - Sketch uses 103188 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22564 bytes (4%) of dynamic memory, leaving 501724 bytes for local variables. Maximum is 524288 bytes.
+- Estado final: `YOKE_MODEL_LOG 1`. Los UF2 finales se recompilaron con registro activado. Frente a V1.8 (103148 B), el configurado/potenciometros crece 1320 B y encoders 1472 B; ambos menores a 8 kB. Sin registro: 103188 B.
+- Ejecutados graphify-sync.cmd y graphify update . despues del cambio final; git diff --check sin errores. No se modificaron constantes de seguridad ni formulas de fuerzas. Sin desvios pendientes.
+- Commit de entrega por nombre, mensaje: `Pico y puente: registro pico.csv y ganancias.csv con lo que calcula la Pico`. Sin version nueva: el plan la reserva para Parte 3. No integrado a master.
+- Sigue: el usuario carga `build-pico2-potentiometers/MiYoke_PD.ino.uf2` (o la variante que use), hace un vuelo corto de 2 min y pega en Ensayos del usuario la linea `Fin:` de `bridge.log` y las 3 primeras filas de `pico.csv`. Verificar tambien que `ganancias.csv` tenga filas y comparar `us` / `lp` de SC8 con V1.8 (criterio: crecimiento <=100 us). Parte 2 requiere ese resultado en HANDOFF.
 
 \## Revisión
 

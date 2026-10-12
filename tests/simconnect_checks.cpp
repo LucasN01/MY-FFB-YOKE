@@ -51,6 +51,7 @@ static void feed4(YokeSC::Receiver& rx, const uint8_t* f, uint32_t time) {
 #include "calibration_checks.h"
 #include "ground_checks.h"
 #include "raw_checks.h"
+#include "picolog_checks.h"
 #include "realism_checks.h"
 #include "link_checks.h"
 #include "health_checks.h"
@@ -60,6 +61,7 @@ int main(int argc,char** argv) {
     linkChecks();
     healthChecks();
     rawChecks(); if(argc>1) replayRaw(argv[1]);
+    picoLogChecks();
     groundChecks();
     realismChecks(); checks+=legacyEffectsChecks()+simPositionFrictionChecks();
     CHECK(validPotCalibration(100, 1900, 3800));
