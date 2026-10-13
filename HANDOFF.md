@@ -28,59 +28,33 @@
 
 \## Plan para Codex
 
-Tarea: diagnóstico del HardFault, stack libre y motores seguros durante una falla (Claude, 2026-10-13).
-Rama: `mejora/diagnostico-hardfault` (ya creada; contiene el diseño). Diseño: `LEEME md/DISENO_diagnostico_hardfault.md`.
-Se divide en **2 partes**: firmware con manejador en ensamblador + compilación de prueba, y luego puente + scripts + documentación + versión. Cada parte se hace en una sesión distinta.
+Tarea: diagnóstico del HardFault — **Parte 2b**: correcciones de la revisión de la Parte 2 (Claude, 2026-10-13).
+Rama: `mejora/diagnostico-hardfault`. Diseño: `LEEME md/DISENO_diagnostico_hardfault.md` (solo como referencia: §4.2 y §8). Plan único, sin partes.
 
-\### Precondiciones (ambas partes)
-- `git checkout mejora/diagnostico-hardfault` y `git status`. Ignorar `graphify-ino/`, `tesis/main.tex`, `tesis/capitulos/11_maquinas_estado.tex` y `tesis/caracterizacion_motores_775.tex` (cambios del usuario).
-- Orientarse con `graphify query/explain`; leer solo las líneas indicadas.
-- No tocar constantes de seguridad (regla 7). No usar `git add .` ni `git add -A`.
-- Pruebas solo con `probar.ps1`; en HANDOFF copiar solo las líneas OK/FALLO.
-- Si el diseño contradice el código, detenerse y anotarlo en "Última entrega".
+\### Precondiciones
+- `git status`: ignorar `graphify-ino/`, `tesis/main.tex`, `tesis/capitulos/11_maquinas_estado.tex` y `tesis/caracterizacion_motores_775.tex` (cambios del usuario).
+- Orientarse con `graphify query`; leer solo lo indicado. Si algo no coincide, anotar `BLOQUEO:` en "Última entrega" y terminar (AGENTS.md, FLUJO AUTOMATICO).
 
-\### Parte 1 — Firmware, prueba de falla y pruebas (sin versión)
-- Leer del diseño: §1, §2, §3 (completo) y §6.
-- Código a leer: `MiYoke_PD.ino` (`:1-60`, `setup()`, el bloque `ModelLog` y el bloque `YOKE_TEST_HANG`), `LoopSupervisor.h` (completo), `mis_defines.h:125-175`, `Build-Pico2.ps1` (completo), `probar.ps1` (completo), `tests/health_checks.h` (completo), `tests/picolog_checks.h` (estilo), `SimConnectBridge/SerialLink.h:50-67`.
-- Alcance:
-  1. Verificaciones de §2, con evidencia en "Última entrega".
-  2. `MiYoke_PD.ino`: §3.1, §3.2 y §3.3 (la parte del firmware: pintado y envío de la línea `S`).
-  3. `LoopSupervisor.h`: `decode` con máscara 0xFFFF0000, `decodeException`, `formatBoot` con los campos nuevos, `paintStack` y `freeStackBytes`.
-  4. `mis_defines.h`: `#ifndef` en `YOKE_TEST_HANG` y `YOKE_TEST_HANG_MS` (§3.4).
-  5. `Build-Pico2.ps1` (`-PruebaFalla`) y `probar.ps1` (`-PruebaFalla` y su ayuda), según §3.4.
-  6. Pruebas de §6 en `tests/health_checks.h`, y las de `paintStack`/`freeStackBytes` en `tests/picolog_checks.h`.
-  7. `graphify-sync.cmd` y `graphify update .`.
-- Pruebas:
-  - `probar.ps1 -Pico -Potentiometers -Encoders -PruebaFalla`: todo OK; anotar los tamaños frente a 105 820 B;
-  - verificar en `build-pico2-prueba-falla\MiYoke_PD.ino.map` (o con `arm-none-eabi-nm`) que `hardfaultCapture` e `isr_hardfault` están en RAM (sección `.data`/`.time_critical`) y que `isr_hardfault` es el símbolo fuerte. Anotar las direcciones.
-- Commit por nombre: `MiYoke_PD.ino LoopSupervisor.h mis_defines.h Build-Pico2.ps1 probar.ps1 tests/health_checks.h tests/picolog_checks.h HANDOFF.md`.
-  Mensaje: "Pico: HardFault con PC/LR/CFSR y excepcion, motores a 0 V en la falla, stack libre y compilacion de prueba".
-- **No** ejecutar `nueva-version.ps1`. Completar "Última entrega".
+\### Alcance
+1. `ARRANQUE.ps1`:
+   - **R2b-1, `.elf` según la línea BOOT** (`:65-77`):
+     - sin `-Elf`, elegir el `.elf` automáticamente: si la línea `BOOT` contiene `etapa=15:PRUEBA`, usar `build-pico2-prueba-falla\MiYoke_PD.ino.elf`; si no, `build-pico2-potentiometers\MiYoke_PD.ino.elf`;
+     - si el archivo existe, llamar a `FALLA.ps1` con ese `-Elf`, guardar `falla.txt` e imprimir la línea `Elf usado: <ruta> (elegido por la linea BOOT; si cargaste otro UF2, repetir FALLA.ps1 con su .elf)`;
+     - si no existe, imprimir el comando de `FALLA.ps1` con ese `.elf` y el aviso `No existe <ruta>`;
+     - con `-Elf` explícito, sigue como hoy.
+   - **R2b-2, carpeta del ensayo** (`:28-34`): crear la carpeta `ensayos\..._arranque` **después** de comprobar que existe el puente (`$bridge`) y de detectar el COM, para que no queden carpetas vacías si falla un chequeo.
+2. `LEEME md/LEEME_PICO2.md:43`: mover la línea `probar.ps1 -PruebaFalla compila build-pico2-prueba-falla (...)` para que quede **después** del párrafo `El primer comando respeta ... Ninguno carga ni activa la placa.` y no entre los comandos y ese párrafo. Sin otros cambios.
+3. `LEEME md/ENSAYOS.md:81`: el título pasa a ser `## Arranque y fallas (ARRANQUE.cmd, motores apagados)`. En la sección, agregar una línea: `Sin -Elf, ARRANQUE elige el .elf por la linea BOOT: etapa=15:PRUEBA usa build-pico2-prueba-falla; si no, build-pico2-potentiometers.`
+4. `graphify update .`.
 
-\### Parte 2 — Puente, scripts, documentación y versión
-- Precondición: la Parte 1 está commiteada y revisada por Claude.
-- Leer del diseño: §3.3 (la parte del puente), §4, §5 y §8.
-- Código a leer: `SimConnectBridge/PicoCsv.h` (completo), `SimConnectBridge/main.cpp` (`PollPort` y la salida final), `BANCO.ps1` (completo), `ENSAYO.cmd`, `tests/picolog_checks.h` (las pruebas de `slowLine`, como modelo).
-- Alcance:
-  1. `PicoCsv.h`: `stackLine`. `main.cpp`: filtro del splitter con `S,`, el registro en `bridge.log` y `stack_libre_min=` en la línea `Fin:`.
-  2. Prueba de `stackLine` en `tests/picolog_checks.h`.
-  3. Crear `FALLA.ps1`, `ARRANQUE.ps1` y `ARRANQUE.cmd` (§4).
-  4. Documentación de §8: el reemplazo exacto en `LEEME md/CALCULO_PICO_SC8.md`, la sección nueva en `LEEME md/ENSAYOS.md` y la línea en `LEEME md/LEEME_PICO2.md`. Si un TEXTO ACTUAL no aparece, anotarlo y seguir.
-  5. Ajustes de la revisión de la Parte 1:
-     - en `MiYoke_PD.ino`, en la línea del flanco de subida de `dtr` (`if(dtr && !lastDtr) {...}`), agregar `lastStackBytes=0xFFFFFFFFu;`, para que una reconexión reciba la línea `S` enseguida (si hace falta, mover la declaración `static` de `lastStackBytes` antes de esa línea);
-     - agregar `build-pico2-prueba-falla/` a `.gitignore`;
-     - ejecutar `graphify-sync.cmd`.
-  6. `graphify update .`.
-- Pruebas:
-  - `probar.ps1 -Pico -Potentiometers -Encoders -Bridge -PruebaFalla`: todo OK;
-  - sintaxis de `FALLA.ps1` y `ARRANQUE.ps1`;
-  - `FALLA.ps1 -Pc 0x<direccion de loop tomada del .map de build-pico2-prueba-falla> -Elf build-pico2-prueba-falla\MiYoke_PD.ino.elf` debe imprimir `loop`; anotar la salida;
-  - `tests\bin\comparar_ensayo.exe tmp\vuelo_corto`: `RESULTADO: OK`.
-- Commit por nombre: `MiYoke_PD.ino .gitignore SimConnectBridge/PicoCsv.h SimConnectBridge/main.cpp tests/picolog_checks.h FALLA.ps1 ARRANQUE.ps1 ARRANQUE.cmd "LEEME md/CALCULO_PICO_SC8.md" "LEEME md/ENSAYOS.md" "LEEME md/LEEME_PICO2.md" HANDOFF.md`.
-  Mensaje: "Puente y scripts: stack libre, FALLA.ps1 y ARRANQUE para diagnosticar HardFault".
-- Versión: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Diagnostico de HardFault con PC y excepcion, motores a 0 V en la falla y stack libre"`. Verificar `Version Vx.y creada` y el `ACTUALIZACION_Vx_y.txt`. Si los cambios del usuario en `tesis/` lo impiden, usar el checkout temporal limpio, como en las tareas anteriores, y anotarlo.
-- "Última entrega": las líneas OK/FALLO, la salida de `FALLA.ps1`, la versión y los desvíos.
-- Luego: revisión de Claude y protocolo V1, R1-R3 del usuario (§5). No integrar a `master`.
+\### Pruebas
+- `powershell -ExecutionPolicy Bypass -File probar.ps1` (suite, comparador y lanzador) y verificación de sintaxis de `ARRANQUE.ps1` con el parser de PowerShell 5.1, como en la Parte 2.
+- Probar la selección del `.elf` con una línea BOOT de ejemplo (sin hardware): extraer la elección a una función dentro de `ARRANQUE.ps1` (`function Select-Elf([string]$boot)`) y llamarla desde un comando de PowerShell con los dos casos. Anotar el resultado.
+
+\### Commit y versión
+- Commit por nombre: `ARRANQUE.ps1 "LEEME md/LEEME_PICO2.md" "LEEME md/ENSAYOS.md" HANDOFF.md`. Mensaje: "ARRANQUE: elegir .elf por la linea BOOT y crear carpeta tras los chequeos".
+- Versión: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "ARRANQUE elige el .elf segun la linea BOOT"`. Verificar `Version Vx.y creada` y el `ACTUALIZACION_Vx_y.txt`. Si los cambios del usuario en `tesis/` lo impiden, usar el checkout temporal limpio, como en la Parte 2, y anotarlo.
+- "Última entrega": reemplazar el contenido por lo de la Parte 2b (la Parte 2 queda en el historial de git), con las líneas OK/FALLO, la prueba de `Select-Elf` y la versión. Terminar con un resumen corto como último mensaje.
 
 \## Última entrega
 
@@ -139,6 +113,19 @@ PC 0x100067dc -> loop (D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODI
     - reiniciar `lastStackBytes` en el flanco de `dtr`;
     - agregar `build-pico2-prueba-falla/` a `.gitignore`.
   - **Detalle aceptado:** con el manejador antiguo (no ARM) saldría `pc=0x00000000 pc_invalido=1`; esta placa compila para ARM.
+
+- Revisor: Claude (2026-10-13), con Code Reviewer. **Parte 2 (`97d26e8`, V2.2): APROBADA**, con correcciones menores que van a la **Parte 2b** (ver Plan para Codex).
+  - **Cumple:**
+    - `stackLine` estricto y probado;
+    - el puente registra el stack libre y su mínimo en `Fin:`;
+    - se reinicia `lastStackBytes` con el flanco de `dtr`;
+    - `FALLA.ps1` cumple §4.1, y su prueba con el `.elf` de prueba lleva el PC 0x100067dc a `loop` (`MiYoke_PD.ino:240`);
+    - `ARRANQUE.ps1`/`.cmd` cumplen §4.2 (sin `--enable`, copia los logs aunque el puente falle, códigos 0/1/2);
+    - documentación de §8 literal; tag V2.2 sobre `97d26e8`.
+  - **R2b-1 (medio):** sin `-Elf`, `ARRANQUE.ps1:75-76` imprime siempre el `.elf` de la prueba de falla. En R1-R4 se carga el UF2 normal, así que la traducción daría una función equivocada.
+  - **R2b-2 (detalle):** la carpeta del ensayo se crea antes de los chequeos.
+  - **R2b-3 (documentación):** la línea de `LEEME_PICO2.md` corta el párrafo siguiente, y a `ENSAYOS.md` le falta "motores apagados".
+- Flujo automático (2026-10-13): prueba de lanzamiento de `codex exec` OK con `--approve-for-me -c windows.sandbox="unelevated"`. El modo "elevated" falla desde Claude. Regla actualizada en `CLAUDE.md`. La Parte 2b es la primera parte lanzada por Claude.
 
 \## Ensayos del usuario
 
