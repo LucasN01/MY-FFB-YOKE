@@ -109,6 +109,15 @@ OK Select-Elf: etapa=15:PRUEBA -> build-pico2-prueba-falla; BOOT normal -> build
   - **R2b-3 (documentación):** la línea de `LEEME_PICO2.md` corta el párrafo siguiente, y a `ENSAYOS.md` le falta "motores apagados".
 - Flujo automático (2026-10-13): prueba de lanzamiento de `codex exec` OK con `--approve-for-me -c windows.sandbox="unelevated"`. El modo "elevated" falla desde Claude. Regla actualizada en `CLAUDE.md`. La Parte 2b es la primera parte lanzada por Claude.
 
+- Revisor: Claude (2026-10-13). **Parte 2b (`bc16be5`, V2.3): APROBADA.** Fue la primera parte lanzada por Claude con `codex exec`: terminó sin bloqueos.
+  - Revisión directa, porque el diff es de unas 30 líneas en `ARRANQUE.ps1` y 2 documentos:
+    - `Select-Elf` elige `build-pico2-prueba-falla` con `etapa=15:PRUEBA` y `build-pico2-potentiometers` en los demás casos; está probada con los dos casos;
+    - informa el `.elf` usado, o "No existe" con el comando listo;
+    - la carpeta se crea después del chequeo del puente;
+    - `LEEME_PICO2.md` y `ENSAYOS.md` quedan como se pidió.
+  - Tag V2.3 sobre `bc16be5`.
+  - **Usuario:** protocolo V1 y R1-R3 (diseño §5), con los motores apagados.
+
 \## Ensayos del usuario
 
 - (vacío: tarea nueva. El ensayo CICLOS y el hallazgo del HardFault están en `master`, commit `bccd1b7`.)
