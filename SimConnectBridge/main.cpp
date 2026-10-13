@@ -385,12 +385,12 @@ int main(int argc,char** argv) {
         opened=false; Send(false); SimConnect_Close(sim);
     }
     ClosePort();
+    const char* recordState=gate.state==YokeCsv::CsvGate::State::On ? "ACTIVADO" :
+        (gate.state==YokeCsv::CsvGate::State::Off ? "DESACTIVADO" : "PENDIENTE");
     FinishCsv();
     if(picoLog) std::fclose(picoLog);
     if(picoCsv) std::fclose(picoCsv);
     if(gainsCsv) std::fclose(gainsCsv);
-    const char* recordState=gate.state==YokeCsv::CsvGate::State::On ? "ACTIVADO" :
-        (gate.state==YokeCsv::CsvGate::State::Off ? "DESACTIVADO" : "PENDIENTE");
     Log("Fin: muestras=%u error=%d reconexiones=%u lineas_pico=%u lineas_pico_malas=%u registro=%s ciclos_lentos=%u filas_csv_malas=%u\n",
         samples,failed,reconnect.reconnections,picoLines,badPicoLines,recordState,slowCycles,badCsvRows);
     return reconnect.lost ? 4 : (failed||samples==0 ? 1 : 0);

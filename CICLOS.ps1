@@ -26,7 +26,7 @@ if (-not ('CiclosReloj' -as [type])) {
 $paso = 0
 do {
     $mensaje = if ($paso -le 9) { "Enter para marcar P$paso, o FIN para terminar despues de cerrar el simulador" } else { 'Escribi FIN para terminar despues de cerrar el simulador' }
-    $marca = Read-Host $mensaje
+    $marca = (Read-Host $mensaje).Trim()
     if ($marca -eq 'FIN') { break }
     if ($marca) { Write-Host 'Usa Enter para marcar el siguiente paso, o FIN.'; continue }
     if ($paso -le 9) {
@@ -41,7 +41,7 @@ foreach ($archivo in @('bridge.log','bridge.anterior.log','pico.log','pico.anter
     else { Write-Host "Falta $archivo; se sigue sin el" }
 }
 $ciclos = Join-Path $destino 'ciclos.txt'
-'' | Set-Content -LiteralPath $ciclos -Encoding UTF8
+'' | Set-Content -LiteralPath $ciclos -Encoding UTF8 -NoNewline
 foreach ($archivo in @('bridge.anterior.log','bridge.log')) {
     $ruta = Join-Path $destino $archivo
     if (Test-Path -LiteralPath $ruta) {

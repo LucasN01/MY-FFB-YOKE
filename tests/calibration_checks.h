@@ -63,10 +63,9 @@ static void recordSettingChecks() {
     for(uint8_t i=0;i<YokeGains::Count;++i) CHECK(candidate.raw(YokeGains::Id(i))==gains.raw(YokeGains::Id(i)));
     CHECK(candidate.effects()==gains.effects());
     menu.finishSave(false); expectedRows("ERROR GUARDADO","OK: REINTENTAR");
-    CHECK(record.enabled && !menu.savePending() && std::strstr(top,"ERROR GUARDADO") && std::strstr(bottom,"OK: REINTENTAR"));
+    CHECK(record.enabled && !menu.savePending());
     menu.press(Button::Ok); CHECK(menu.savingRecord()); menu.finishSave(true); expectedRows("GUARDADO","REGISTRO DATOS");
     CHECK(!record.enabled && menu.currentScreen()==Screen::BrowseRecord);
-    CHECK(std::strstr(top,"GUARDADO") && std::strstr(bottom,"REGISTRO DATOS"));
     menu.update(2000,true); expectedRows("REGISTRO DATOS","* Desactivado");
     menu.press(Button::Ok); menu.press(Button::Plus); expectedRows("REGISTRO DATOS","Activado");
     menu.press(Button::Mode); CHECK(menu.currentScreen()==Screen::Browse && !record.enabled);

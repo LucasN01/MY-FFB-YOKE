@@ -45,7 +45,7 @@ Write-Host 'Verifica en el menu: REGISTRO DATOS = Activado'
 Read-Host 'En tierra, antes de F1, presiona Enter para marcar inicio' | Out-Null
 "$([EnsayoReloj]::GetTickCount64()),inicio,inicio" | Add-Content -LiteralPath $marcas -Encoding ASCII
 do {
-    $marca = Read-Host 'Escribi un numero de fase para marcarla, o FIN para terminar (despues de cerrar el simulador)'
+    $marca = (Read-Host 'Escribi un numero de fase para marcarla, o FIN para terminar (despues de cerrar el simulador)').Trim()
     if ($marca -eq 'FIN') { break }
     if (-not $marca) { continue }
     if ($marca) {

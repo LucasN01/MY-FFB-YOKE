@@ -50,6 +50,7 @@ static void replayAndComparatorChecks() {
     }
     auto result=YokeEnsayo::compare(in,"sintetico");
     CHECK(result.aOk && result.bOk && result.code()==0 && result.matched==30);
+    CHECK(result.report.find("centrado signo R=SIN DATOS P=SIN DATOS")!=std::string::npos);
     auto changed=in; changed.pico[10].v[10]+=.01;
     result=YokeEnsayo::compare(changed,"alterado");
     CHECK(!result.aOk && result.report.find("groundR@300:")!=std::string::npos);
@@ -83,7 +84,10 @@ static void replayAndComparatorChecks() {
     pause.tel.push_back(pause.tel.back()); pause.tel.back().host=1200; pause.tel.back().armed=true;
     result=YokeEnsayo::compare(pause,"rearmado 100ms");
     CHECK(result.violations[6]==0 && result.report.find("B6: SIN DATOS")!=std::string::npos);
-    pause.tel.resize(2); pause.tel[0].paused=true; pause.tel[0].armed=false;
+    pause.tel.resize(3);
+    pause.tel[0].paused=false; pause.tel[0].armed=false;
+    pause.tel[1].paused=true; pause.tel[1].armed=false;
+    pause.tel[2].paused=false; pause.tel[2].armed=true;
     result=YokeEnsayo::compare(pause,"pausa inicial");
     CHECK(result.violations[6]==0 && result.report.find("transiciones=0 evaluadas=0")!=std::string::npos);
     changed=in; changed.tel.resize(4);

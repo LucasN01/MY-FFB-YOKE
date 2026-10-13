@@ -337,7 +337,7 @@ Centro reposo, $r$ & 0.15 & Cambia la base, conservando la pendiente aerodinámi
 \end{longtable}
 Estos cuatro ajustes admiten valores de 0 a 1; los botones avanzan 0.05, es decir, cinco puntos porcentuales. No es un incremento relativo del 5\% sobre el valor anterior. El menú permite apagar centrado roll y pitch por separado. Apagar ``Centro reposo'' hace efectivo $r=0$: elimina la base, pero conserva el resorte aerodinámico si $Q>0$.
 
-Las ganancias se guardan en memoria persistente y se cargan al arrancar. Cambiar un \code{define} no garantiza que se use el nuevo valor si hay ajustes guardados válidos. \code{YOKE_SETTINGS_VERSION} permite invalidar el registro de ganancias; el registro de potenciómetros tiene formato y versión separados. Hay que registrar los valores efectivamente cargados al comparar ensayos.
+Las ganancias se guardan en memoria persistente y se cargan al arrancar. Cambiar un \code{define} no garantiza que se use el nuevo valor si hay ajustes guardados válidos. \code{YOKE_SETTINGS_VERSION} permite invalidar el registro de ganancias; el registro de potenciómetros tiene formato y versión separados. Hay que registrar los valores efectivamente cargados al comparar ensayos. El menú tiene además una cuarta lista, \code{REGISTRO DATOS}, que activa o desactiva el envío de los registros de ensayo (\code{telemetry.csv}, \code{pico.csv} y \code{ganancias.csv}); su estado se guarda en un registro persistente propio y no modifica ninguna ganancia ni el cálculo de fuerzas.
 
 % [V-realismo]
 \textit{Actualización (realismo): ajuste de reposo que alteraba la pendiente $\rightarrow$ ajuste sólo de la base $r$; separa los aportes mecánico y aerodinámico (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}

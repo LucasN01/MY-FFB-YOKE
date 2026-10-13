@@ -185,8 +185,13 @@ inline Result compare(const Input& in,const std::string& name) {
     }
     const double denom=std::sqrt(std::max(0.0,(correlationN*sxx-sx*sx)*(correlationN*syy-sy*sy)));
     report<<"C us/lp/gap max="<<in.us<<"/"<<in.lp<<"/"<<in.gap<<" | lp>=2000="<<(in.lp>=2000)
-        <<" | centrado signo R="<<percent(signGood[0],signTotal[0])<<"% P="<<percent(signGood[1],signTotal[1])
-        <<"% | corr q-ias="<<(denom>0 ? (correlationN*sxy-sx*sy)/denom : 0)
+        <<" | centrado signo R=";
+    if(signTotal[0]) report<<percent(signGood[0],signTotal[0])<<"%";
+    else report<<"SIN DATOS";
+    report<<" P=";
+    if(signTotal[1]) report<<percent(signGood[1],signTotal[1])<<"%";
+    else report<<"SIN DATOS";
+    report<<" | corr q-ias="<<(denom>0 ? (correlationN*sxy-sx*sy)/denom : 0)
         <<" | skip="<<(in.pico.empty() ? 0 : in.pico.back().v[25])<<" excluidas="<<result.excluded<<"\n";
     struct Segment { size_t first,last; std::string title; };
     std::vector<Segment> segments;

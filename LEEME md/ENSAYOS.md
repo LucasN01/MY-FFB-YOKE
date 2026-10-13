@@ -2,6 +2,8 @@
 
 Primera sesión: fuente de potencia de motores apagada. Con motores, solo después de instalar el pull-down de EN pendiente de V1.8.
 
+Antes de cada ensayo, comprobar en el menú que REGISTRO DATOS esté en Activado; si no, los CSV quedan vacíos y el informe da SIN DATOS. No cambiarlo durante un ensayo.
+
 ## Vuelo
 
 Abrir `ENSAYO.cmd` o ejecutar:
@@ -60,3 +62,18 @@ Cada fila es una muestra calculada o el registro periódico de al menos cada 100
 Los tramos con `skipped` se excluyen de A hasta recuperar el estado y se informan, junto a las muestras sin pareja. Si solo hay `pico.log`, B6 y las métricas Pico por fase quedan `SIN DATOS` porque falta el reloj de Windows. `resumen_fases.csv` incluye orden cronológico (`03 RODAJE`), marca opcional, duración, actividad y medias/máximos. El orden cronológico es independiente del número de rutina.
 
 `RESULTADO: OK` exige A y B; `FALLO` indica incumplimientos; `SIN DATOS` corresponde a registros sin filas armadas (por ejemplo, monitor), salvo que falle B. El comparador devuelve respectivamente 0, 1 y 2.
+
+## Ciclos lentos (CICLOS.cmd)
+
+| Paso | Acción | Duración | Para qué |
+| --- | --- | --- | --- |
+| P0 | UF2 nuevo; lanzador; avión en pista; pausa | — | base |
+| P1 | No tocar nada (en pausa) | 10 min | control negativo: 0 `W` |
+| P2 | REGISTRO DATOS → Desactivado → OK; luego → Activado → OK | 2 min | control positivo: 2 `W` FLASH; prueba la opción |
+| P3 | Menú: recorrer las 4 listas y salir sin guardar, 3 veces, con 1 min entre cada una | 5 min | H2 con puente |
+| P4 | Quitar pausa y volar | 5 min | operación |
+| P5 | Cerrar el simulador. La Pico queda sola, conectada | 15 min | caso del 12/10 |
+| P6 | Sin simulador: menú, cambiar de lista 3 veces, sin guardar | 5 min | H2 + H3 |
+| P7 | Sin simulador: `powershell -ExecutionPolicy Bypass -File Iniciar-Simulador.ps1 -DetectarPlaca`, 3 veces, con 1 min entre cada una | 5 min | H1 aislada |
+| P8 | Sin simulador: REGISTRO DATOS → Desactivado → OK; esperar 2 min | 3 min | control de `hace` (~120 s) |
+| P9 | Abrir el simulador; pausa 2 min; REGISTRO DATOS → Activado → OK; cerrar | 4 min | recibe los eventos de P5-P8 |

@@ -21,16 +21,19 @@ con INPUT_PULLUP y antirrebote de 30 ms:
 
 Cada LED lleva resistencia de 330 ohm en serie. El LCD usa GP4/GP5.
 
-CALIBRACION recorre circularmente estas tres secciones:
+CALIBRACION recorre circularmente estas cuatro secciones:
 
 1. **MODO CALIBRACION**: ganancias modificables. +/- recorre la lista, OK
    entra a editar, +/- cambia el valor, OK guarda y ATRAS descarta.
 2. **EFECTOS**: +/- selecciona, OK entra, + activa y - desactiva, OK guarda.
    ATRAS descarta la edicion. Se conserva la ganancia de un efecto desactivado.
 3. **CALIBRAR POTES**: OK inicia la secuencia descrita abajo.
+4. **REGISTRO DATOS**: abajo muestra el estado (Activado/Desactivado). OK entra, + activa y - desactiva,
+   OK guarda en memoria y ATRAS descarta. Desactivado, no se llenan `telemetry.csv`, `pico.csv` ni
+   `ganancias.csv`; `bridge.log` y `pico.log` siguen. Con la memoria vacia arranca Activado.
 
 Otra pulsacion de CALIBRACION vuelve a ganancias. Cambiar de seccion descarta
-la edicion no confirmada. ATRAS desde cualquiera de las tres listas sale al
+la edicion no confirmada. ATRAS desde cualquiera de las cuatro listas sale al
 modo normal; desde el asistente de potes vuelve a CALIBRAR POTES.
 
 Mantener +/- al editar ganancias repite luego de 1 segundo, cada 150 ms.
