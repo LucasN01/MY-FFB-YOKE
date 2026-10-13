@@ -43,8 +43,19 @@ constexpr uint32_t kMagic = 0x59C80000u;
 constexpr uint8_t kFaultBit = 0x80;
 inline uint32_t encode(uint8_t stage) { return kMagic | stage; }
 inline bool decode(uint32_t v, uint8_t& stage, bool& fault) {
-    if ((v & 0xFFFFFF00u) != kMagic) return false;
+    if ((v & 0xFFFF0000u) != kMagic) return false;
     stage = uint8_t(v & 0x7F); fault = (v & kFaultBit) != 0; return true;
+}
+inline uint8_t decodeException(uint32_t v) { return uint8_t((v>>8)&0xFF); }
+inline void paintStack(uint32_t* bottom, uint32_t* current, uint32_t pattern) {
+    if(current-bottom<=64) return;
+    const uint32_t* end=current-64;
+    while(bottom<end) *bottom++=pattern;
+}
+inline uint32_t freeStackBytes(const uint32_t* bottom, const uint32_t* top, uint32_t pattern) {
+    uint32_t bytes=0;
+    while(bottom<top && *bottom==pattern) { bytes+=sizeof(uint32_t); ++bottom; }
+    return bytes;
 }
 inline const char* stageName(uint8_t s) {
     switch(s) {
@@ -79,7 +90,16 @@ inline const char* resetName(int r) {
     }
 }
 inline int formatBoot(char* out, size_t size, int reason, uint32_t wdReason,
-                      uint32_t powmanReason, bool stageValid, uint8_t stage, bool fault) {
+                      uint32_t powmanReason, bool stageValid, uint8_t stage, bool fault,
+                      uint8_t exc, uint32_t pc, uint32_t lr, uint32_t cfsr) {
+    if(stageValid && fault) {
+        const bool pcValid=(pc>=0x10000000u && pc<0x10400000u) || (pc>=0x20000000u && pc<0x20082000u);
+        const int n=snprintf(out,size,"BOOT reset=%s wd=0x%lx pm=0x%lx etapa=%u:%s falla=1 exc=%u pc=0x%08lx lr=0x%08lx cfsr=0x%08lx%s\n",
+            resetName(reason),(unsigned long)wdReason,(unsigned long)powmanReason,
+            unsigned(stage),stageName(stage),unsigned(exc),(unsigned long)pc,(unsigned long)lr,
+            (unsigned long)cfsr,pcValid ? "" : " pc_invalido=1");
+        return n>=0 && size_t(n)<size ? n : -1;
+    }
     const int n=stageValid ?
         snprintf(out,size,"BOOT reset=%s wd=0x%lx pm=0x%lx etapa=%u:%s falla=%u\n",
             resetName(reason),(unsigned long)wdReason,(unsigned long)powmanReason,

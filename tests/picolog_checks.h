@@ -166,6 +166,22 @@ static void recordAndSlowChecks() {
     gate.start(false); CHECK(gate.state==State::On); gate.row("no pico\n",0,write); CHECK(written.back()=="no pico\n");
 }
 static void picoLogChecks() {
+    uint32_t stack[128]={0};
+    const uint32_t pattern=0xA5A5A5A5u;
+    YokeHealth::paintStack(stack,stack+128,pattern);
+    CHECK(YokeHealth::freeStackBytes(stack,stack+128,pattern)==256);
+    for(unsigned i=0;i<128;++i) CHECK(stack[i]==(i<64 ? pattern : 0));
+    stack[12]=0;
+    CHECK(YokeHealth::freeStackBytes(stack,stack+128,pattern)==48);
+    stack[0]=0;
+    CHECK(YokeHealth::freeStackBytes(stack,stack+128,pattern)==0);
+    YokeHealth::paintStack(stack,stack+64,pattern);
+    CHECK(stack[0]==0);
+    YokeHealth::paintStack(stack,stack+32,pattern);
+    CHECK(stack[0]==0);
+    for(auto& word:stack) word=pattern;
+    CHECK(YokeHealth::freeStackBytes(stack,stack+128,pattern)==sizeof(stack));
+    CHECK(YokeHealth::freeStackBytes(stack,stack,pattern)==0);
     recordAndSlowChecks();
     replayAndComparatorChecks();
     const std::string emptyFolder="tmp/registro_vacio_checks";

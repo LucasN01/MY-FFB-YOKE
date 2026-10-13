@@ -165,8 +165,12 @@ static_assert(MOTOR_PWM_HARD_LIMIT >= 0 && MOTOR_PWM_HARD_LIMIT <= 220, "Techo P
 #define YOKE_WDT_MS        250   // reinicio por hardware si loop() no corre en 250 ms
 #define YOKE_WDT_FLASH_MS  3000  // durante EEPROM.commit (borrado de sector, max ~400 ms)
 #define YOKE_USB_GUARD     1     // serializar CDC con __usb_mutex (correccion H5)
+#ifndef YOKE_TEST_HANG
 #define YOKE_TEST_HANG     0     // SOLO ENSAYO: 0=no, 1=for(;;), 2=noInterrupts+for(;;), 3=__builtin_trap
+#endif
+#ifndef YOKE_TEST_HANG_MS
 #define YOKE_TEST_HANG_MS  60000 // instante del ensayo de cuelgue
+#endif
 #define YOKE_USB_STRESS    0     // SOLO ENSAYO: 1 = escribir linea corta en cada ciclo de 2 ms
 static_assert(YOKE_WDT_MS >= 50*CONTROL_LOOP_MS, "WDT demasiado corto para el lazo");
 

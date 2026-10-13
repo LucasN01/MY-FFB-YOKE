@@ -24,10 +24,34 @@
 #if defined(PICO_RP2350) && PICO_RP2350
 #include <hardware/structs/powman.h>
 #endif
+#if defined(__ARM_ARCH_8M_MAIN__)
+#include <hardware/structs/io_bank0.h>
+#include <hardware/structs/sio.h>
+extern "C" uint32_t __StackBottom, __StackTop;
+extern "C" __attribute__((used, noinline, noreturn)) void __not_in_flash_func(hardfaultCapture)(uint32_t* frame) {
+    // Seguridad primero: EN y luego los 4 PWM como GPIO SIO en 0.
+    const uint32_t en = (1u<<ROLL_EN_PIN) | (1u<<PITCH_EN_PIN);
+    const uint32_t pwm = (1u<<ROLL_PWM_LEFT) | (1u<<ROLL_PWM_RIGHT) | (1u<<PITCH_PWM_LEFT) | (1u<<PITCH_PWM_RIGHT);
+    sio_hw->gpio_clr = en; sio_hw->gpio_oe_set = en;
+    sio_hw->gpio_clr = pwm; sio_hw->gpio_oe_set = pwm;
+    io_bank0_hw->io[ROLL_PWM_LEFT].ctrl = GPIO_FUNC_SIO; io_bank0_hw->io[ROLL_PWM_RIGHT].ctrl = GPIO_FUNC_SIO;
+    io_bank0_hw->io[PITCH_PWM_LEFT].ctrl = GPIO_FUNC_SIO; io_bank0_hw->io[PITCH_PWM_RIGHT].ctrl = GPIO_FUNC_SIO;
+    watchdog_hw->scratch[1] = frame[6];
+    watchdog_hw->scratch[2] = frame[5];
+    watchdog_hw->scratch[3] = *(volatile uint32_t*)0xE000ED28u;
+    const uint32_t exc = frame[7] & 0xFFu;
+    watchdog_hw->scratch[0] = (watchdog_hw->scratch[0] & 0xFFFF00FFu) | (exc<<8) | YokeHealth::kFaultBit;
+    for(;;){}
+}
+extern "C" __attribute__((naked)) void __not_in_flash_func(isr_hardfault)(void) {
+    __asm volatile("tst lr, #4\n ite eq\n mrseq r0, msp\n mrsne r0, psp\n b hardfaultCapture\n");
+}
+#else
 extern "C" void isr_hardfault(void) {
     watchdog_hw->scratch[0] |= YokeHealth::kFaultBit;
     for(;;){}
 }
+#endif
 #endif
 #if defined(ARDUINO_ARCH_RP2040) && defined(USE_TINYUSB) && YOKE_USB_GUARD
 extern "C" void yield() {
@@ -81,6 +105,8 @@ uint32_t effectsWorstUs = 0;
 uint32_t loopWorstUs = 0, gapWorstUs = 0;
 int bootReason = 0;
 uint32_t bootWd = 0, bootPm = 0;
+uint32_t bootPc = 0, bootLr = 0, bootCfsr = 0;
+uint8_t bootExc = 0;
 uint8_t bootStage = 0;
 bool bootStageValid = false, bootFault = false, bootSent = false;
 
@@ -165,6 +191,11 @@ void debugPrintMotion(unsigned long now, const float* motorCommands) {
 void setup() {
     rollMotor.begin();
     pitchMotor.begin();
+#if defined(ARDUINO_ARCH_RP2040) && defined(__ARM_ARCH_8M_MAIN__)
+    uint32_t* stackCurrent;
+    __asm volatile("mrs %0, msp" : "=r"(stackCurrent));
+    YokeHealth::paintStack(&__StackBottom,stackCurrent,0xA5A5A5A5u);
+#endif
 #if defined(ARDUINO_ARCH_RP2040)
     bootReason=rp2040.getResetReason();
     bootWd=watchdog_hw->reason;
@@ -172,6 +203,11 @@ void setup() {
     bootPm=powman_hw->chip_reset;
 #endif
     bootStageValid=YokeHealth::decode(YokeHealth::readScratch(),bootStage,bootFault);
+    if(bootFault) {
+        bootPc=watchdog_hw->scratch[1]; bootLr=watchdog_hw->scratch[2]; bootCfsr=watchdog_hw->scratch[3];
+        bootExc=YokeHealth::decodeException(YokeHealth::readScratch());
+    }
+    watchdog_hw->scratch[1]=watchdog_hw->scratch[2]=watchdog_hw->scratch[3]=0;
     YokeHealth::mark(YokeHealth::Idle);
     analogWriteRange(255);
     analogWriteFreq(MOTOR_PWM_HZ);
@@ -350,9 +386,9 @@ void loop() {
 
 #if SIMCONNECT_ADDITIONS_ENABLED
     if(!bootSent && simTelemetry.rawAvailable && dtr) {
-        char bootLine[128]; bootLine[0]='\n';
+        char bootLine[160]; bootLine[0]='\n';
         const int n=YokeHealth::formatBoot(bootLine+1,sizeof(bootLine)-1,bootReason,
-            bootWd,bootPm,bootStageValid,bootStage,bootFault);
+            bootWd,bootPm,bootStageValid,bootStage,bootFault,bootExc,bootPc,bootLr,bootCfsr);
         UsbLock usb;
         if(n>0 && Serial.availableForWrite()>=n+1) {
             markStage(YokeHealth::SerialTx);
@@ -367,6 +403,13 @@ void loop() {
     static bool recordSent=false, lastRecordSent=true;
     static uint32_t lastRecordMs=0, lastSlowMs=0;
     static uint16_t slowSeq=0;
+#if defined(ARDUINO_ARCH_RP2040) && defined(__ARM_ARCH_8M_MAIN__)
+    static uint32_t lastStackCheckMs=0, lastStackMs=0, lastStackBytes=0xFFFFFFFFu, stackBytes=0xFFFFFFFFu;
+    if(uint32_t(now-lastStackCheckMs)>=1000) {
+        stackBytes=YokeHealth::freeStackBytes(&__StackBottom,&__StackTop,0xA5A5A5A5u);
+        lastStackCheckMs=now;
+    }
+#endif
     static int16_t peak[2]={0,0};
     static uint16_t lastGains[YokeGains::Count]={0};
     const int16_t pwm[2]={pwmRoll,pwmPitch};
@@ -393,6 +436,15 @@ void loop() {
                     markStage(YokeHealth::ModelLog);
                     slowLog.pop(); ++slowSeq; lastSlowMs=now; modelWritten=true;
                 }
+#if defined(ARDUINO_ARCH_RP2040) && defined(__ARM_ARCH_8M_MAIN__)
+            } else if(stackBytes!=0xFFFFFFFFu && (stackBytes<lastStackBytes || uint32_t(now-lastStackMs)>=60000)) {
+                const int n=snprintf(line,sizeof(line),"\nS,%lu\n",(unsigned long)stackBytes);
+                if(n>0 && n<int(sizeof(line))) {
+                    markStage(YokeHealth::SerialTx); Serial.write((const uint8_t*)line,n);
+                    markStage(YokeHealth::ModelLog);
+                    lastStackBytes=stackBytes; lastStackMs=now; modelWritten=true;
+                }
+#endif
             } else if(!recordSent || recordSettings.enabled!=lastRecordSent || uint32_t(now-lastRecordMs)>=5000) {
                 const int n=YokeLog::formatRecord(line,sizeof(line),recordSettings.enabled);
                 if(n>0) {

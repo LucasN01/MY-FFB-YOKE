@@ -2,11 +2,12 @@
 # Compila y ejecuta las verificaciones con salida minima (ahorro de tokens para agentes).
 # Imprime una linea por paso: "OK ..." o "FALLO ..." con hasta -MaxLineas lineas de error.
 # Por defecto: suite tests\simconnect_checks (Release Win32) y tests\launcher_port_checks.ps1.
-# Uso: powershell -ExecutionPolicy Bypass -File probar.ps1 [-Pico] [-Encoders] [-Potentiometers] [-Bridge] [-Todo]
+# Uso: powershell -ExecutionPolicy Bypass -File probar.ps1 [-Pico] [-Encoders] [-Potentiometers] [-Bridge] [-PruebaFalla] [-Todo]
 #   -Pico            compila firmware Pico 2 con la configuracion del codigo (Build-Pico2.ps1)
 #   -Encoders        compila tambien la variante encoders
 #   -Potentiometers  compila tambien la variante potenciometros
 #   -Bridge          compila el puente SimConnect (Build-Bridge.ps1)
+#   -PruebaFalla     compila potenciometros con HardFault a los 20 s (no entra en -Todo)
 #   -Todo            todo lo anterior
 # No carga firmware ni ejecuta el simulador.
 
@@ -15,6 +16,7 @@ param(
     [switch]$Encoders,
     [switch]$Potentiometers,
     [switch]$Bridge,
+    [switch]$PruebaFalla,
     [switch]$Todo,
     [int]$MaxLineas = 15
 )
@@ -90,6 +92,10 @@ if ($Potentiometers) {
 if ($Bridge) {
     $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'Build-Bridge.ps1' }
     $fallos += Resumir 'puente SimConnect' $r.Codigo $r.Salida '^$' '(error|warning) [A-Z]+\d+'
+}
+if ($PruebaFalla) {
+    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'Build-Pico2.ps1' -PruebaFalla }
+    $fallos += Resumir 'Pico 2 (prueba falla)' $r.Codigo $r.Salida $patronTam $patronErr
 }
 
 if ($fallos -gt 0) { exit 1 }
