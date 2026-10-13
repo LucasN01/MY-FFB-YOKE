@@ -198,6 +198,7 @@ Se divide en **3 partes**, porque hay estado nuevo en firmware y en puente, un r
 
 - Ensayo de ciclos lentos con `CICLOS.cmd` (usuario, 2026-10-13, V2.1, motores apagados). Carpeta: `ensayos/20261013-171626_ciclos/`; Claude copió ahí también los 6 CSV de las dos sesiones. Análisis de Claude.
   - **Marcas:** el usuario marcó cada paso **al terminarlo**: la ventana de Pn va de la marca P(n-1) a la marca Pn.
+    - Aclaración del usuario: en P0 marcó con el simulador corriendo y pausó después. No cambia nada: entre P0 (17:18:10) y P1 (17:28:33) no hubo eventos, y los guardados se identifican por la etapa FLASH, no por la ventana. El BOOT con HardFault llegó a las 17:17:33, antes de P0.
   - **Eventos `W`:** 4 en total (`total=4`, `perdidos=0`), todos en la etapa **FLASH**, de 37 635 a 39 304 µs. Todos coinciden con los guardados que hizo el usuario:
     - 2 en P2 (17:28:48 y 17:29:23);
     - 1 en P8: llegó a las 18:04:43 con `hace=144 745` ms, o sea que ocurrió a las 18:02:18, dentro de la ventana de P8; `flags=0x6` (sin `dtr`, menú activo);
