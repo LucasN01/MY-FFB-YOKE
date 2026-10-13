@@ -9,7 +9,33 @@
 namespace YokeHealth {
 enum Stage : uint8_t { Idle=0, SerialRx=1, Calibration=2, FlashSave=3, Effects=4,
     Motion=5, Force=6, Motor=7, ModelLog=8, DebugLog=9, Lcd=10, PotRead=11,
-    SerialTx=12, TestHang=15 };
+    SerialTx=12, Between=14, TestHang=15 };
+struct StageTimer {
+    uint8_t current=Idle, worst=Idle; uint32_t since=0, worstUs=0;
+    void begin(uint32_t us) { current=Idle; since=us; worst=Idle; worstUs=0; }
+    void enter(uint8_t stage,uint32_t us) {
+        const uint32_t d=us-since;
+        if(d>worstUs) { worstUs=d; worst=current; }
+        current=stage; since=us;
+    }
+};
+struct SlowEvent { uint32_t atMs, lpUs, idleUs, stageUs; uint8_t stage, flags; };
+struct SlowLog {
+    SlowEvent e[4]; uint8_t head=0, count=0; uint16_t total=0, lost=0;
+    void push(const SlowEvent& event) {
+        if(total<65535) ++total;
+        if(count==4) { head=(head+1)%4; --count; if(lost<65535) ++lost; }
+        e[(head+count)%4]=event; ++count;
+    }
+    bool front(SlowEvent& event) const { if(!count) return false; event=e[head]; return true; }
+    void pop() { if(count) { head=(head+1)%4; --count; } }
+};
+inline int formatSlow(char* out,size_t size,uint16_t seq,uint32_t ageMs,const SlowEvent& e,uint16_t total,uint16_t lost) {
+    const int n=snprintf(out,size,"\nW,%u,%lu,%lu,%lu,%u,%lu,%u,%u,%u\n",unsigned(seq),
+        (unsigned long)ageMs,(unsigned long)e.lpUs,(unsigned long)e.idleUs,unsigned(e.stage),
+        (unsigned long)e.stageUs,unsigned(e.flags),unsigned(total),unsigned(lost));
+    return n>=0 && size_t(n)<size ? n : -1;
+}
 constexpr uint32_t kMagic = 0x59C80000u;
 constexpr uint8_t kFaultBit = 0x80;
 inline uint32_t encode(uint8_t stage) { return kMagic | stage; }
@@ -32,6 +58,7 @@ inline const char* stageName(uint8_t s) {
     case Lcd: return "LCD";
     case PotRead: return "POTES";
     case SerialTx: return "SERIE_TX";
+    case Between: return "ENTRE_CICLOS";
     case TestHang: return "PRUEBA";
     default: return "?";
     }

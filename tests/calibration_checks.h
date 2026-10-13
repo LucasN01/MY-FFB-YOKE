@@ -3,7 +3,57 @@
 #include "../CalibrationMenu.h"
 #include <cstring>
 
+static void recordSettingChecks() {
+    using namespace YokeCalibration;
+    YokeGains::Settings gains; YokeRecord::Settings record;
+    uint8_t bytes[YokeRecord::recordSize];
+    for(bool enabled:{false,true}) {
+        record.enabled=enabled; YokeRecord::encode(record,bytes);
+        YokeRecord::Settings loaded; CHECK(YokeRecord::decode(bytes,loaded) && loaded.enabled==enabled);
+    }
+    YokeRecord::Settings loaded;
+    std::memset(bytes,255,sizeof(bytes)); CHECK(!YokeRecord::decode(bytes,loaded) && loaded.enabled);
+    YokeRecord::encode(record,bytes); bytes[6]^=1;
+    CHECK(!YokeRecord::decode(bytes,loaded) && loaded.enabled);
+    for(int field:{0,4,5}) {
+        YokeRecord::encode(record,bytes); bytes[field]=2; YokeSC::put16(bytes+6,YokeSC::crc(bytes,6));
+        CHECK(!YokeRecord::decode(bytes,loaded) && loaded.enabled);
+    }
+    Menu menu(gains,nullptr,&record); char top[17],bottom[17];
+    auto rows=[&]() { menu.rows(top,bottom); CHECK(std::strlen(top)<=16 && std::strlen(bottom)<=16); };
+    menu.press(Button::Mode); CHECK(!menu.active());
+    menu.update(0,true);
+    const Screen cycle[]={Screen::Browse,Screen::BrowseEffects,Screen::BrowsePots,Screen::BrowseRecord,Screen::Browse};
+    for(Screen screen:cycle) { menu.press(Button::Mode); CHECK(menu.currentScreen()==screen); rows(); }
+    for(int i=0;i<3;++i) menu.press(Button::Mode);
+    rows(); CHECK(std::strstr(top,"REGISTRO DATOS") && std::strstr(bottom,"* Activado"));
+    menu.press(Button::Plus); menu.press(Button::Minus); rows();
+    CHECK(menu.currentScreen()==Screen::BrowseRecord && record.enabled);
+    menu.press(Button::Ok); rows(); CHECK(std::strstr(bottom,"Activado"));
+    menu.press(Button::Ok); CHECK(menu.currentScreen()==Screen::BrowseRecord && !menu.savePending());
+    menu.press(Button::Ok); menu.press(Button::Minus); rows(); CHECK(std::strstr(bottom,"Desactivado"));
+    menu.press(Button::Back); CHECK(menu.currentScreen()==Screen::BrowseRecord && record.enabled);
+    menu.press(Button::Ok); menu.press(Button::Minus); menu.press(Button::Ok);
+    CHECK(menu.savingRecord() && !menu.recordCandidate().enabled);
+    const auto candidate=menu.candidate();
+    for(uint8_t i=0;i<YokeGains::Count;++i) CHECK(candidate.raw(YokeGains::Id(i))==gains.raw(YokeGains::Id(i)));
+    CHECK(candidate.effects()==gains.effects());
+    menu.finishSave(false); rows();
+    CHECK(record.enabled && !menu.savePending() && std::strstr(top,"ERROR GUARDADO") && std::strstr(bottom,"OK: REINTENTAR"));
+    menu.press(Button::Ok); CHECK(menu.savingRecord()); menu.finishSave(true); rows();
+    CHECK(!record.enabled && menu.currentScreen()==Screen::BrowseRecord);
+    CHECK(std::strstr(top,"GUARDADO") && std::strstr(bottom,"REGISTRO DATOS"));
+    menu.update(2000,true); rows(); CHECK(std::strstr(bottom,"* Desactivado"));
+    menu.press(Button::Ok); menu.press(Button::Plus); rows(); CHECK(std::strstr(bottom,"Activado"));
+    menu.press(Button::Mode); CHECK(menu.currentScreen()==Screen::Browse && !record.enabled);
+    for(int i=0;i<3;++i) menu.press(Button::Mode);
+    menu.press(Button::Back); CHECK(!menu.active());
+    Menu legacy(gains); legacy.update(0,true);
+    const Screen oldCycle[]={Screen::Browse,Screen::BrowseEffects,Screen::BrowsePots,Screen::Browse};
+    for(Screen screen:oldCycle) { legacy.press(Button::Mode); CHECK(legacy.currentScreen()==screen); }
+}
 static void calibrationChecks() {
+    recordSettingChecks();
     using namespace YokeCalibration;
     using namespace YokeGains;
     Settings settings;

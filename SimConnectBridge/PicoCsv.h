@@ -5,7 +5,46 @@
 #include <cstdint>
 #include <cerrno>
 #include <cstdlib>
+#include <string>
+#include <vector>
 namespace YokeCsv {
+struct CsvGate {
+    enum class State : uint8_t { Pending, On, Off };
+    State state=State::Pending; uint64_t pendingSince=0; std::vector<std::string> held;
+    void start(bool pico) { state=pico ? State::Pending : State::On; pendingSince=0; held.clear(); }
+    template<class W> void row(const std::string& r,uint64_t now,W write) {
+        if(state==State::On) write(r);
+        else if(state==State::Pending) { if(held.empty()) pendingSince=now; held.push_back(r); }
+    }
+    template<class W> void recordState(bool on,W write) {
+        state=on ? State::On : State::Off;
+        if(on) for(const auto& r:held) write(r);
+        held.clear();
+    }
+    template<class W> void tick(uint64_t now,W write) {
+        if(state==State::Pending && !held.empty() && (now-pendingSince>=2000 || held.size()>=2000))
+            recordState(true,write);
+    }
+    template<class W> void finish(W write) { if(state==State::Pending) recordState(true,write); }
+    void reopen() { start(true); }
+    bool writesPico() const { return state!=State::Off; }
+};
+inline bool recordLine(const char* line,bool& on) {
+    if(!line || line[0]!='L' || line[1]!=',' || (line[2]!='0' && line[2]!='1') || line[3]!=0) return false;
+    on=line[2]=='1'; return true;
+}
+inline bool slowLine(const char* line,uint32_t v[9]) {
+    if(!line || line[0]!='W' || line[1]!=',') return false;
+    const char* p=line+2;
+    for(size_t i=0;i<9;++i) {
+        if(*p<'0' || *p>'9') return false;
+        errno=0; char* end=nullptr;
+        const unsigned long long value=std::strtoull(p,&end,10);
+        if(errno==ERANGE || value>UINT32_MAX || (i<8 ? *end!=',' : *end!=0)) return false;
+        v[i]=uint32_t(value); p=end+(i<8 ? 1 : 0);
+    }
+    return true;
+}
 static const char modelHeader[]="host_time_ms,seq,sample_time_ms,revision,flags,pressure,gust_roll,gust_pitch,buffet_stall,buffet_gear,buffet_spoiler,ground_roll,ground_pitch,ground_envelope,center_stiffness,pos_roll,pos_pitch,vel_roll,vel_pitch,cmd_roll,cmd_pitch,pwm_roll,pwm_pitch,peak_pwm_roll,peak_pwm_pitch,dropped,skipped";
 static const char gainsHeader[]="host_time_ms,seq,enabled_bits,total,center_pitch,center_rest,gust_roll,gust_pitch,ground,stall,gear,spoiler,damper,friction,center_roll";
 struct LineSplitter {

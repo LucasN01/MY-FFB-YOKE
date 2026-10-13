@@ -2,12 +2,13 @@
 #define YOKE_CALIBRATION_MENU_H
 #include "GainSettings.h"
 #include "PotCalibration.h"
+#include "RecordSetting.h"
 #include <stdio.h>
 #include <string.h>
 
 namespace YokeCalibration {
 enum class Button : uint8_t { Mode, Ok, Back, Plus, Minus };
-enum class Screen : uint8_t { Normal, Browse, Edit, BrowseEffects, EditEffect, BrowsePots, CalibratePots };
+enum class Screen : uint8_t { Normal, Browse, Edit, BrowseEffects, EditEffect, BrowsePots, CalibratePots, BrowseRecord, EditRecord };
 class DebouncedButton {
 public:
     void begin(bool pressed,uint32_t now) {
@@ -34,8 +35,10 @@ private:
 };
 class Menu {
 public:
-    explicit Menu(YokeGains::Settings& values,YokePots::Settings* pots=nullptr)
-        :settings(values),potSettings(pots) {}
+    explicit Menu(YokeGains::Settings& values,YokePots::Settings* pots=nullptr,YokeRecord::Settings* record=nullptr)
+        :settings(values),potSettings(pots),recordSettings(record) {}
+    bool savingRecord() const { return pending && screen==Screen::EditRecord; }
+    YokeRecord::Settings recordCandidate() const { return {draft!=0}; }
     void potReadings(uint16_t roll,uint16_t pitch) {
         adc[0]=roll; adc[1]=pitch; potsAvailable=potSettings && roll<=4095 && pitch<=4095;
     }
@@ -80,13 +83,16 @@ public:
         }
         if(button==Button::Mode) {
             screen=effectView() ? Screen::BrowsePots :
-                ((screen==Screen::BrowsePots || screen==Screen::CalibratePots) ? Screen::Browse : Screen::BrowseEffects);
+                ((screen==Screen::BrowsePots || screen==Screen::CalibratePots) ?
+                    (recordSettings ? Screen::BrowseRecord : Screen::Browse) :
+                ((screen==Screen::BrowseRecord || screen==Screen::EditRecord) ? Screen::Browse : Screen::BrowseEffects));
             index=0; error=false; return; // switch lists, discard unconfirmed edit
         }
         if(button==Button::Back) {
-            screen=screen==Screen::CalibratePots ? Screen::BrowsePots :
+            screen=screen==Screen::EditRecord ? Screen::BrowseRecord :
+                (screen==Screen::CalibratePots ? Screen::BrowsePots :
                 (screen==Screen::EditEffect ? Screen::BrowseEffects :
-                (screen==Screen::Edit ? Screen::Browse : Screen::Normal));
+                (screen==Screen::Edit ? Screen::Browse : Screen::Normal)));
             error=false; return;
         }
         if(screen==Screen::BrowsePots) {
@@ -112,6 +118,20 @@ public:
             stepAt=clock;
             if(potStep==3) pending=true;
             else ++potStep;
+            return;
+        }
+        if(screen==Screen::BrowseRecord) {
+            if(button==Button::Ok) { draft=recordSettings->enabled; error=false; screen=Screen::EditRecord; }
+            return;
+        }
+        if(screen==Screen::EditRecord) {
+            if(button==Button::Plus) { draft=1; error=false; }
+            if(button==Button::Minus) { draft=0; error=false; }
+            if(button==Button::Ok) {
+                if(error) pending=true;
+                else if(draft==recordSettings->enabled) screen=Screen::BrowseRecord;
+                else pending=true;
+            }
             return;
         }
         if(screen==Screen::Browse || screen==Screen::BrowseEffects) {
@@ -141,7 +161,7 @@ public:
     }
     YokeGains::Settings candidate() const {
         YokeGains::Settings result=settings;
-        if(pending && !savingPots()) {
+        if(pending && !savingPots() && !savingRecord()) {
             if(effectView()) result.setEnabled(selected(),draft!=0);
             else result.set(selected(),draft);
         }
@@ -149,6 +169,10 @@ public:
     }
     void finishSave(bool success) {
         if(!pending) return;
+        if(savingRecord()) {
+            if(success) { recordSettings->enabled=draft!=0; screen=Screen::BrowseRecord; show(Notice::RecordSaved); }
+            error=!success; pending=false; return;
+        }
         if(savingPots()) {
             if(success) { *potSettings=potDraft; screen=Screen::BrowsePots; show(Notice::PotsSaved); }
             error=!success; pending=false; return;
@@ -168,6 +192,13 @@ public:
             padded(top,"REQUIERE MODO 2"); padded(bottom,"POTES ADC0/ADC1");
         } else if(notice==Notice::PotsSaved) {
             padded(top,"POTES GUARDADOS"); padded(bottom,"PITCH Y ROLL");
+        } else if(notice==Notice::RecordSaved) {
+            padded(top,"GUARDADO"); padded(bottom,"REGISTRO DATOS");
+        } else if(screen==Screen::BrowseRecord) {
+            padded(top,"REGISTRO DATOS"); padded(bottom,recordSettings->enabled ? "* Activado" : "* Desactivado");
+        } else if(screen==Screen::EditRecord) {
+            padded(top,error ? "ERROR GUARDADO" : "REGISTRO DATOS");
+            padded(bottom,error ? "OK: REINTENTAR" : (draft ? "Activado" : "Desactivado"));
         } else if(screen==Screen::BrowsePots) {
             padded(top,"CALIBRAR POTES"); padded(bottom,"OK PARA INICIAR");
         } else if(screen==Screen::CalibratePots) {
@@ -193,7 +224,7 @@ public:
         } else { padded(top,""); padded(bottom,""); }
     }
 private:
-    enum class Notice : uint8_t { None, PauseRequired, Saved, PotsRequired, PotsSaved };
+    enum class Notice : uint8_t { None, PauseRequired, Saved, PotsRequired, PotsSaved, RecordSaved };
     Notice notice=Notice::None;
     uint32_t clock=0,noticeAt=0;
     bool allowed=false;
@@ -204,6 +235,7 @@ private:
     }
     YokeGains::Settings& settings;
     YokePots::Settings* potSettings;
+    YokeRecord::Settings* recordSettings;
     YokePots::Settings potDraft;
     uint16_t adc[2]={0,0};
     uint8_t potStep=0;

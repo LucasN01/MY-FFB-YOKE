@@ -6,6 +6,10 @@
 #include <math.h>
 #define YOKE_LOG_M_MAX 192
 namespace YokeLog {
+inline int formatRecord(char* out,size_t size,bool enabled) {
+    const int n=snprintf(out,size,"\nL,%u\n",unsigned(enabled));
+    return n>=0 && size_t(n)<size ? n : -1;
+}
 enum Flag : uint8_t { Active=1, Armed=2, Paused=4, Menu=8, Dtr=16, Raw=32, NonFinite=64, Modeled=128 };
 struct Frame {
     uint16_t seq; uint32_t t, rev; uint8_t flags;

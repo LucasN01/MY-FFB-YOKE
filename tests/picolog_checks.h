@@ -1,4 +1,5 @@
 #include "../PicoLog.h"
+#include "../LoopSupervisor.h"
 #include "../SimConnectBridge/PicoCsv.h"
 #include "comparar_ensayo.h"
 static std::string replayLine(const YokeReplay::ReplayRow& r,unsigned index) {
@@ -100,7 +101,64 @@ static void replayAndComparatorChecks() {
     result=YokeEnsayo::compare(changed,"monitor");
     CHECK(result.noData && result.code()==2 && result.report.find("RESULTADO: SIN DATOS")!=std::string::npos);
 }
+static void recordAndSlowChecks() {
+    char line[192]; bool on=false;
+    for(bool enabled:{false,true}) {
+        const int n=YokeLog::formatRecord(line,sizeof(line),enabled);
+        CHECK(n==5 && std::strcmp(line,enabled ? "\nL,1\n" : "\nL,0\n")==0);
+        line[n-1]=0; CHECK(YokeCsv::recordLine(line+1,on) && on==enabled);
+    }
+    CHECK(YokeLog::formatRecord(line,5,true)==-1);
+    for(const char* bad:{"L,2","L,","L,1,0","","L, 1","L,+1"}) CHECK(!YokeCsv::recordLine(bad,on));
+    YokeHealth::StageTimer timer; timer.begin(0xFFFFFFF0u);
+    timer.enter(YokeHealth::Effects,0xFFFFFFF5u); timer.enter(YokeHealth::Motor,20);
+    CHECK(timer.worst==YokeHealth::Effects && timer.worstUs==31);
+    timer.enter(YokeHealth::Between,25); CHECK(timer.worstUs==31);
+    timer.begin(100); CHECK(timer.current==YokeHealth::Idle && timer.worst==YokeHealth::Idle && timer.worstUs==0);
+    CHECK(std::strcmp(YokeHealth::stageName(YokeHealth::Between),"ENTRE_CICLOS")==0);
+    YokeHealth::SlowLog log; YokeHealth::SlowEvent event{};
+    CHECK(!log.front(event)); log.pop(); CHECK(log.count==0);
+    for(uint32_t i=0;i<6;++i) log.push({i,39000,2000,37000,YokeHealth::Lcd,15});
+    CHECK(log.total==6 && log.lost==2 && log.count==4);
+    for(uint32_t i=2;i<6;++i) { CHECK(log.front(event) && event.atMs==i); log.pop(); }
+    CHECK(!log.front(event));
+    log.total=log.lost=65534;
+    for(int i=0;i<6;++i) log.push(event);
+    CHECK(log.total==65535 && log.lost==65535 && log.count==4);
+    event={0xFFFFFFFFu,0xFFFFFFFFu,0xFFFFFFFFu,0xFFFFFFFFu,255,255};
+    const int n=YokeHealth::formatSlow(line,sizeof(line),65535,0xFFFFFFFFu,event,65535,65535);
+    CHECK(n>0 && n<int(sizeof(line))); line[n-1]=0; uint32_t v[9];
+    CHECK(YokeCsv::slowLine(line+1,v));
+    const uint32_t expected[]={65535,0xFFFFFFFFu,0xFFFFFFFFu,0xFFFFFFFFu,255,0xFFFFFFFFu,255,65535,65535};
+    for(int i=0;i<9;++i) CHECK(v[i]==expected[i]);
+    CHECK(YokeHealth::formatSlow(line,4,0,0,event,0,0)==-1);
+    for(const char* bad:{"W,1,2,3,4,5,6,7,8","W,1,2,3,4,5,6,7,8,9,10",
+        "W,-1,2,3,4,5,6,7,8,9","W,4294967296,2,3,4,5,6,7,8,9",
+        "W,+1,2,3,4,5,6,7,8,9","W,1,2,3,4,5,6,7,8,9x"}) CHECK(!YokeCsv::slowLine(bad,v));
+    YokeCsv::CsvGate gate; using State=YokeCsv::CsvGate::State;
+    std::vector<std::string> written; auto write=[&](const std::string& r) { written.push_back(r); };
+    gate.start(true); gate.tick(9000,write); CHECK(gate.state==State::Pending && gate.writesPico());
+    gate.row("first\n",10000,write); gate.row("second\n",10001,write); CHECK(written.empty() && gate.pendingSince==10000);
+    gate.recordState(true,write); CHECK(written.size()==2 && written[0]=="first\n" && written[1]=="second\n");
+    gate.row("third\n",10002,write); CHECK(written.back()=="third\n");
+    gate.reopen(); CHECK(gate.state==State::Pending && gate.held.empty());
+    gate.row("discard\n",0,write); gate.recordState(false,write);
+    gate.row("off\n",1,write); gate.finish(write); CHECK(written.size()==3 && !gate.writesPico() && gate.held.empty());
+    gate.recordState(true,write); gate.row("resume\n",2,write); CHECK(written.back()=="resume\n");
+    gate.start(true); gate.row("timeout\n",10000,write); gate.tick(11999,write); CHECK(gate.state==State::Pending);
+    gate.tick(12000,write); CHECK(gate.state==State::On && written.back()=="timeout\n");
+    gate.reopen();
+    for(int i=0;i<1999;++i) gate.row(std::to_string(i)+"\n",0,write);
+    gate.tick(0,write); CHECK(gate.state==State::Pending);
+    gate.row("1999\n",0,write); const size_t before=written.size(); gate.tick(0,write);
+    CHECK(gate.state==State::On && written.size()==before+2000);
+    for(int i=0;i<2000;++i) CHECK(written[before+i]==std::to_string(i)+"\n");
+    gate.reopen(); gate.row("finish\n",0,write); gate.finish(write); CHECK(written.back()=="finish\n" && gate.state==State::On);
+    gate.reopen(); gate.row("stale\n",0,write); gate.reopen(); CHECK(gate.held.empty());
+    gate.start(false); CHECK(gate.state==State::On); gate.row("no pico\n",0,write); CHECK(written.back()=="no pico\n");
+}
 static void picoLogChecks() {
+    recordAndSlowChecks();
     replayAndComparatorChecks();
     uint16_t drop=0; uint32_t lastLoggedRev=0;
     const uint32_t revisions[]={5,0,0,9};

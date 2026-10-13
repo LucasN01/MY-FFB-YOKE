@@ -104,7 +104,20 @@ Se divide en **3 partes**, porque hay estado nuevo en firmware y en puente, un r
 
 \## Última entrega
 
-- (vacío: tarea nueva; Codex completa al cerrar cada parte)
+- Parte 1 completada (2026-10-13): encabezados puros y pruebas, sin integrar firmware ni puente.
+- Archivos modificados: `RecordSetting.h`, `CalibrationMenu.h`, `LoopSupervisor.h`, `PicoLog.h`, `SimConnectBridge/PicoCsv.h`, `tests/calibration_checks.h`, `tests/picolog_checks.h` y `HANDOFF.md`.
+- Implementado: registro YREC de 8 B con CRC y validacion sin modificar la salida ante error; cuarta lista REGISTRO DATOS con guardado/reintento; StageTimer, anillo SlowLog de 4 eventos y formato W; formato L; CsvGate y parsers L/W estrictos.
+- Pruebas ejecutadas con `powershell -ExecutionPolicy Bypass -File probar.ps1`:
+  - OK suite simconnect_checks - PASS: 143412 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+  - OK comparar_ensayo
+  - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
+- `git diff --check`: sin errores. `graphify update .` ejecutado: 1145 nodos, 1499 aristas. No se edito el .ino.
+- Documentacion: HANDOFF actualizado; los reemplazos de documentos funcionales y tesis corresponden a la Parte 3 segun el plan. No se edito .tex ni se compilo la tesis.
+- Firmware y puente: no compilados en esta parte, segun el plan; integracion pendiente de Parte 2.
+- Commit: el de esta entrega, mensaje "Menu REGISTRO DATOS, registro persistente y medicion de ciclos lentos: partes puras y pruebas", en `mejora/registro-menu-y-ciclos-lentos`.
+- Version: no creada, tal como exige la Parte 1; `nueva-version.ps1` queda para la Parte 3.
+- Cambios del usuario en `tesis/main.tex`, `tesis/capitulos/11_maquinas_estado.tex`, `tesis/caracterizacion_motores_775.tex` y `graphify-ino/` preservados fuera del commit.
+- Desvios: ninguno. Sigue Parte 2 (integracion firmware, puente, comparador y scripts).
 
 \## Revisión
 
