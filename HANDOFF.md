@@ -137,8 +137,8 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
   - RESULTADO: SIN DATOS
 - C informativo del monitor: us/lp/gap max=286/39252/39297; lp>=2000=1. Se registra el dato, sin atribuir causa ni modificar el firmware fuera del plan.
 - `graphify update .` ejecutado (AST, sin API); grafo actualizado. `git diff --check` sin errores. No corresponde compilar tesis.
-- Commit por nombre: mensaje `Ensayos: rutina de vuelo, banco sin simulador y documentacion de registros de la Pico`; el identificador se registra tras el commit.
-- Version: pendiente de ejecutar nueva-version.ps1 despues del commit. Para preservar los cambios previos de tesis, se ejecutara el script sin modificarlo en un checkout temporal limpio y detached del mismo commit, dentro del mismo directorio padre (misma carpeta MiYoke_PD_VERSIONES). No se cambia la rama de trabajo.
+- Commit de implementacion por nombre: `82b5c04` — `Ensayos: rutina de vuelo, banco sin simulador y documentacion de registros de la Pico`. Cierre documental posterior: `HANDOFF: cierre de Parte 3 y version V1.9`, solo HANDOFF.md.
+- Version creada: **V1.9**, etiqueta sobre `82b5c04`. `nueva-version.ps1` ejecutado desde PowerShell sin modificarlo, despues del commit; salida `Version V1.9 creada`. Verificado `..\MiYoke_PD_VERSIONES\V1_9\ACTUALIZACION_V1_9.txt`. Desvio operativo: por los cambios previos de tesis, se uso un checkout temporal limpio y detached del mismo commit, dentro del mismo directorio padre (misma carpeta MiYoke_PD_VERSIONES); se retiro al terminar. La rama de trabajo y los archivos del usuario se preservaron. El campo RAMA del TXT generado queda vacio por ese checkout detached; la rama de origen se indica arriba.
 - Sigue: revision de Claude de Parte 3; banco armado por el usuario con fuente de motores apagada y vuelo con ENSAYO.cmd. No integrado a master.
 
 \## Revisión
