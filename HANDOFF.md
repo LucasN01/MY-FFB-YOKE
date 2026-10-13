@@ -79,14 +79,17 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
 \### Parte 3 — Scripts + documentación + versión
 - Leer del diseño: §5, §6, §8, §10.
 - Código a leer: `Iniciar-Simulador.ps1:1-20` y `:130-145`, `.gitignore`.
+- Código a leer también: `tests/comparar_ensayo.h` (solo las funciones de B6, B7, skip, reset y fases) y `SimConnectBridge/Replay.h:30-40`, `SimConnectBridge/main.cpp:315-330`.
 - Alcance:
+  0. Correcciones de la revisión de la Parte 2 (sección "Revisión", hallazgos R1 a R7), con sus pruebas en `tests/picolog_checks.h`.
   1. Crear `ENSAYO.ps1`, `ENSAYO.cmd` (igual estilo que `PROBAR REALISMO.cmd`) y `BANCO.ps1` (§5), con la tabla de fases de §6 dentro de `ENSAYO.ps1`.
   2. Agregar `ensayos/` a `.gitignore`.
   3. Documentación: aplicar los reemplazos exactos de §10 (buscar el TEXTO ACTUAL literal; si no aparece, anotarlo y seguir) y crear `LEEME md/ENSAYOS.md`.
   4. Banco en monitor (sin armar): con la Pico conectada, Prepar3D cerrado y la entrada del vuelo corto: `BANCO.ps1 -Entrada tmp\vuelo_corto\telemetry.csv`. Anotar sus líneas `B` y `RESULTADO` (A dará `SIN DATOS`). **No usar `-Armar`** salvo que HANDOFF tenga la confirmación del usuario "fuente de motores apagada" con fecha de ese día; en ese caso, `-Armar -Confirmado`.
   5. `graphify update .`.
 - Pruebas: `probar.ps1 -Pico -Potentiometers -Encoders -Bridge` (todo OK). La tesis no se toca en esta tarea.
-- Commit por nombre: `ENSAYO.ps1 ENSAYO.cmd BANCO.ps1 .gitignore "LEEME md/CALCULO_PICO_SC8.md" "LEEME md/LEEME_SIMCONNECT.md" "LEEME md/ENSAYOS.md" HANDOFF.md`.
+- Antes del banco, volver a ejecutar `tests\bin\comparar_ensayo.exe tmp\vuelo_corto` y anotar las líneas `A`, `B1..B9` y `RESULTADO`: tiene que dar `RESULTADO: OK`.
+- Commit por nombre: `tests/comparar_ensayo.h tests/picolog_checks.h SimConnectBridge/Replay.h SimConnectBridge/main.cpp ENSAYO.ps1 ENSAYO.cmd BANCO.ps1 .gitignore "LEEME md/CALCULO_PICO_SC8.md" "LEEME md/LEEME_SIMCONNECT.md" "LEEME md/ENSAYOS.md" HANDOFF.md`.
   Mensaje: "Ensayos: rutina de vuelo, banco sin simulador y documentacion de registros de la Pico".
 - Versión: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Registro pico.csv de lo que calcula la Pico, modo replay, comparador y rutina de ensayo"`. Verificar "Version Vx.y creada" y `..\MiYoke_PD_VERSIONES\Vx_y\ACTUALIZACION_Vx_y.txt`.
 - "Última entrega": hecho, líneas OK/FALLO, resultado del banco, versión creada, desvíos.
@@ -159,6 +162,24 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
     - la prueba H3 usa la misma presión en las 3 tramas.
   - Limitación conocida: con `skip` saturado en 65535, las muestras salteadas nuevas se cuentan en `drop`.
   - **Usuario:** ya puede cargar `build-pico2-potentiometers/MiYoke_PD.ino.uf2` (12/10 20:44) y hacer el vuelo corto de 2 min, con la fuente de motores apagada.
+
+- Revisor: Claude (2026-10-12), con Code Reviewer. **Parte 2 (`963338a`): APROBADA, con correcciones a hacer al empezar la Parte 3** (punto 0).
+  - **Bien:**
+    - Replay integrado sin tocar el bucle de SimConnect. `timeBeginPeriod`/`timeEndPeriod` sin salidas intermedias; arma solo con `--enable`; rechaza opciones incompatibles y la entrada `telemetry.csv` del EXE.
+    - El comparador usa el `Receiver::feed` real y los modelos del firmware. Sobre el vuelo corto: A=100 % en 4376 revisiones (peor 5e-5), B1-B5 y B7-B9 OK, 0,44 s de ejecución, O(n log n).
+    - Ajustes menores de la Parte 1b aplicados. Suite (141283 comprobaciones), comparador, firmware y puente OK según Codex; no se recompiló.
+  - **R1 (corrige un falso FALLO): B6 mal especificado por Claude.** Evaluaba la pausa de arranque, previa al primer armado, y no consideraba el rearmado dentro de la ventana. Nueva regla en la tabla §4.2 (fila B6): solo transiciones armado→desarmado, latencia hasta la primera fila con `cmd=0` ≤ 150 ms, rearmado dentro de la ventana = no evaluada. Prueba: pausa antes del primer armado no evaluada; transición con cmd=0 a los 60 ms → OK; a los 200 ms → FALLO; rearmado a los 100 ms → no evaluada.
+  - **R2 (menor) B7 en vuelos largos** (`tests/comparar_ensayo.h:149`). `seq` es uint16 y se desborda a las 65 536 líneas (~55 min). Usar como denominador `filas pico + pérdida`; tratar el salto hacia atrás de `seq` como desborde (`uint16_t(seq-prev)-1`) o reinicio de la Pico, sin contarlo como pérdida enorme. Prueba con `seq` 65534→65535→0→1: pérdida 0.
+  - **R3 (menor) exclusión falsa al inicio** (`:85,108`). Iniciar `previousSkip` con el `skipped` de la primera fila de pico.csv, no con 0. Prueba: pico.csv que empieza con `skipped=5` constante → 0 excluidas.
+  - **R4 (menor) watchdog del comparador** (`:68,77`). Antes de cada `feed`: `if(!rx.fresh(uint32_t(r.host))) models.reset();`, en lugar del hueco entre filas `sent`.
+  - **R5 (menor) cierre del replay** (`SimConnectBridge/main.cpp:319-327`). Poner `opened=false` antes de los 3 `Send(false)` finales, como en `main.cpp:347`, para que salgan con modo 0.
+  - **R6 (menor) tokens NaN** (`SimConnectBridge/Replay.h:35`). Aceptar también `-nan`, `nan(snan)` y `-nan(snan)` (prefijo `[-]nan` con paréntesis opcional), sin distinguir mayúsculas. Prueba con los tres.
+  - **R7 (menor) fases e informe** (`tests/comparar_ensayo.h:187-191,212`).
+    - Fusionar de nuevo los tramos consecutivos con el mismo nombre tras unir los cortos.
+    - Escribir el orden como `03 RODAJE` (§4.5).
+    - Con respaldo en `pico.log` (`host=0`), escribir `SIN DATOS` en las métricas de la Pico por fase.
+    - Informar en la línea `A` las revisiones no emparejadas por `drop` (`no_emparejadas_drop=<n>`).
+  - Con estas correcciones, `comparar_ensayo.exe tmp\vuelo_corto` debe dar `RESULTADO: OK`.
 
 \## Ensayos del usuario
 

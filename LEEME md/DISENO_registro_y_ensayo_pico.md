@@ -237,7 +237,7 @@ Reutiliza `Replay.h` y `PicoCsv.h` para leer, y `PicoForceModels.h`, `RawTelemet
 | B3 | `|pwm| ≤ PWM_MAX`, `|peak| ≤ PWM_MAX`, `|cmd| ≤ SIMCONNECT_EXTRA_LIMIT` | `MiYoke_PD.ino:306-307`, `SimEffects.h:179` |
 | B4 | solo filas `Modeled`, emparejadas con la **primera** fila `sent=1` de igual `sample_time_ms`: `on_ground=0` ⇒ `ground_*=0` y `ground_envelope=0` | `PicoForceModels.h:47-51`, `GroundModel` |
 | B5 | mismo emparejamiento que B4: `ground_speed_knots ≤ 0.5` ⇒ `ground_envelope=0` | `CALCULO_PICO_SC8.md` "Vibración de suelo" |
-| B6 | tras la primera fila `sent=1` con `paused=1` (o `armed=0` después de `armed=1`), la primera fila `pico.csv` con `host_time_ms` ≥ +150 ms tiene `cmd=0` | `SimTelemetry.h:44` (watchdog 300 ms) |
+| B6 | Transición = fila `sent=1` con `armed=0` cuya fila `sent=1` anterior tenía `armed=1` (pausa o desarme). Las pausas anteriores al primer armado **no** se evalúan. Para cada transición, latencia = `host_time_ms` de la primera fila de `pico.csv` posterior con `cmd_roll=cmd_pitch=0` menos `host_time_ms` de la transición; OK si ≤ 150 ms. Si antes de esa fila hay otra fila `sent=1` con `armed=1` (rearmado) dentro de los 150 ms, la transición cuenta como "no evaluada". Informe: `B6: OK\|FALLO transiciones=<n> evaluadas=<n> latencia_max=<ms>`. Si no hay ninguna evaluada: `SIN DATOS` | `SimTelemetry.h:44` (watchdog 300 ms) |
 | B7 | pérdida en la Pico: `dropped_final/(revisiones distintas en pico.csv + dropped_final) ≤ 2 %`; pérdida en el puente: `Σ max(0, seq[i]-seq[i-1]-1) / seq_final ≤ 2 %` | §2.3 |
 | B8 | ningún `flags&64` (no finito) | §2.1 |
 | B9 | `lineas_pico_malas / lineas_pico` (de la línea `Fin:` de `bridge.log`) ≤ 0,1 % | §3.2 |
