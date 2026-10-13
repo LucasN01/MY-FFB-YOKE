@@ -211,6 +211,18 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
 - Versión: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Correcciones de scripts de ensayo: pausa final, fin con FIN y copia tolerante"`. Verificar `Version Vx.y creada` y el `ACTUALIZACION_Vx_y.txt`.
 - Completar "Última entrega": las líneas OK/FALLO, el `RESULTADO` del comparador y la versión creada.
 
+- Revisor: Claude (2026-10-12), con Code Reviewer. **Parte 3b (`caab4f0`, V2.0): APROBADA.**
+  - S1, S2, S3, S5 y S6 cumplen: sintaxis OK; `continue`/`break` correctos en PS 5.1; `-eq 'FIN'` no distingue mayúsculas; `$ErrorActionPreference` se restaura en `finally`.
+  - Comparador sobre `tmpuelo_corto`: `RESULTADO: OK`. Tag V2.0 sobre `caab4f0` y `ACTUALIZACION_V2_0.txt` presentes.
+  - **Pendiente menor** (para una tarea futura; no justifica otra versión):
+    - S4: la prueba de "pausa inicial" sigue sin discriminar, porque `compare` empieza en `i=1` y `tel[1]` está armada. Mi indicación era insuficiente; corrección: tres filas (desarmada, en pausa desarmada, armada).
+    - " FIN" con espacios no se recorta (`ENSAYO.ps1:48`).
+  - **Usuario:**
+    - cargar `build-pico2-potentiometers/MiYoke_PD.ino.uf2` (12/10 21:37, incluye el ajuste de `lastSkip` de la Parte 2);
+    - banco armado con la fuente de motores apagada;
+    - vuelo con `ENSAYO.cmd`.
+  - Integración a `master` solo a pedido del usuario, después de esos ensayos.
+
 \## Ensayos del usuario
 
 - Vuelo corto (usuario, 2026-10-12 20:52; firmware `fd46a9d`, fuente de motores apagada). Análisis de Claude con Test Results Analyzer, sobre los registros de `SimConnectBridge/bin/Win32/RealismoSC8/`:
