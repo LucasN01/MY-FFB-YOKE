@@ -61,7 +61,7 @@ Cada fila es una muestra calculada o el registro periódico de al menos cada 100
 
 Los tramos con `skipped` se excluyen de A hasta recuperar el estado y se informan, junto a las muestras sin pareja. Si solo hay `pico.log`, B6 y las métricas Pico por fase quedan `SIN DATOS` porque falta el reloj de Windows. `resumen_fases.csv` incluye orden cronológico (`03 RODAJE`), marca opcional, duración, actividad y medias/máximos. El orden cronológico es independiente del número de rutina.
 
-`RESULTADO: OK` exige A y B; `FALLO` indica incumplimientos; `SIN DATOS` corresponde a registros sin filas armadas (por ejemplo, monitor), salvo que falle B. El comparador devuelve respectivamente 0, 1 y 2.
+`RESULTADO: OK` exige A y B; `FALLO` indica incumplimientos; `SIN DATOS` corresponde a registros sin filas armadas (por ejemplo, monitor), salvo que falle B. El comparador devuelve respectivamente 0, 1 y 2. Si `telemetry.csv` no tiene filas (REGISTRO DATOS desactivado), el informe agrega la línea `REGISTRO:`, da `RESULTADO: SIN DATOS` y devuelve 1.
 
 ## Ciclos lentos (CICLOS.cmd)
 

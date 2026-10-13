@@ -182,6 +182,18 @@ Se divide en **3 partes**, porque hay estado nuevo en firmware y en puente, un r
     - hay `strstr` redundantes en las pruebas;
     - nit: las filas retenidas que se descartan con `reopen()` no suman a ningún contador, con efecto despreciable.
 
+- Revisor: Claude (2026-10-13), con Code Reviewer. **Parte 3 (`a361f4c`, V2.1): APROBADA.**
+  - Reemplazos de §11 literales y sin otros cambios; tabla de §7 idéntica.
+  - Ajustes de la revisión de la Parte 2 aplicados: estado de la compuerta antes de `FinishCsv`, `ciclos.txt` sin línea vacía, `FIN` con espacios.
+  - Pruebas discriminantes: pausa inicial con 3 filas; centrado `SIN DATOS`.
+  - Tag V2.1 sobre `a361f4c`; la copia tiene los archivos nuevos. Tesis: chequeo estático OK.
+  - Documentación completada por Claude (solo `.md`, no genera versión): `LEEME md/ENSAYOS.md` aclara que, sin filas en `telemetry.csv`, el comparador da `SIN DATOS` y código 1. Codex lo había señalado.
+  - **Pendientes menores** (tarea futura):
+    - `([string](Read-Host ...)).Trim()` por si la entrada se redirige (`ENSAYO.ps1:48`, `CICLOS.ps1:29`);
+    - una prueba de `centrado signo` con filas;
+    - contar las filas descartadas por `reopen()`.
+  - **Usuario:** cargar `build-pico2-potentiometers/MiYoke_PD.ino.uf2` y hacer el ensayo `CICLOS.cmd` (§7). Integración a `master` solo a pedido.
+
 \## Ensayos del usuario
 
 - (vacío: tarea nueva. Los resultados de la tarea anterior, registro/ensayo de la Pico V1.9-V2.0, están en `master`, commit `66a4a51`.)
