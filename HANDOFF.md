@@ -242,6 +242,10 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
     - Durante el slew, P3D deja de enviar muestras (`running=0`), así que `slew≠0` nunca llega. La Pico desarmó igual en 46 ms. El comparador lo clasifica como el tramo anterior: pendiente menor, clasificar `DETENIDO` con `running=0` o `armed=0`.
     - Crucero con el tren arriba muy breve (tramo VUELO de 3,5 s); se voló hasta 190 kt con el tren abajo.
   - **HALLAZGO IMPORTANTE (antes de encender motores):** el pote de pitch, **en la lectura de la Pico** (ADC), tiene 4 picos de una sola muestra hacia valores extremos (p. ej. 0,84 → −1,00 → 0,85 en host 95754046). El `yoke_pitch` del simulador (Arduino UNO, mismo cursor) no tiene ninguno, y roll tampoco. Esos picos cambian el comando de pitch hasta ~275 PWM durante ~47 ms; con motores sería un golpe. Hipótesis: contacto o divisor en el tramo cursor → Pico (ADC1/GPIO27, AGND) o ruido del ADC; pico.csv registra a ~20 Hz, así que a 500 Hz puede haber más. A investigar con `depuracion-sistematica` en una tarea propia (hardware y, si corresponde, filtro de picos en `PotentiometerPosition`).
+  - **Aclaración del usuario (2026-10-13) sobre el hallazgo del pote de pitch:**
+    - Los potes son solo un banco de pruebas: están soldados en una placa experimental, se mueven a mano y su salida va por una protoboard empalmada al UNO y a la Pico.
+    - El proyecto final usa encoders, así que los saltos son del montaje de prueba y **no** se corrigen en el firmware. Por el mismo ruido, Damper y Fricción hacen variar el PWM con los potes quietos.
+    - Al montar los encoders, repetir el banco y `ENSAYO.cmd` y revisar en `pico.csv` `pos`/`vel` en reposo y los saltos, antes de encender los motores.
   - **Otros pendientes para tareas futuras:**
     - ciclo de 39 ms visto una vez entre ensayos;
     - rigidez de centrado hasta 2,25 a 190 kt (con el pote a tope el comando se recortaría): revisar con TelemFFB antes de usar motores;
