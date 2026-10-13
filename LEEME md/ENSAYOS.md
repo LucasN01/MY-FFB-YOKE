@@ -78,7 +78,9 @@ Los tramos con `skipped` se excluyen de A hasta recuperar el estado y se informa
 | P8 | Sin simulador: REGISTRO DATOS → Desactivado → OK; esperar 2 min | 3 min | control de `hace` (~120 s) |
 | P9 | Abrir el simulador; pausa 2 min; REGISTRO DATOS → Activado → OK; cerrar | 4 min | recibe los eventos de P5-P8 |
 
-## Arranque y fallas (ARRANQUE.cmd)
+## Arranque y fallas (ARRANQUE.cmd, motores apagados)
+
+Sin -Elf, ARRANQUE elige el .elf por la linea BOOT: etapa=15:PRUEBA usa build-pico2-prueba-falla; si no, build-pico2-potentiometers.
 
 | Paso | Acción | Qué se espera |
 | --- | --- | --- |

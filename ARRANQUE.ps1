@@ -3,6 +3,10 @@ param(
     [ValidatePattern('^COM\d+$')][string]$Puerto,
     [string]$Elf
 )
+function Select-Elf([string]$boot) {
+    $build = if ($boot -match '\betapa=15:PRUEBA\b') { 'build-pico2-prueba-falla' } else { 'build-pico2-potentiometers' }
+    Join-Path $PSScriptRoot ($build + '\MiYoke_PD.ino.elf')
+}
 $ErrorActionPreference = 'Stop'
 try {
     if (-not (Test-Path -LiteralPath $Entrada -PathType Leaf)) { throw "No existe la entrada: $Entrada" }
@@ -25,13 +29,13 @@ try {
         Where-Object { ($_ | ConvertFrom-Csv -Header ($header -split ',')).sent -eq '1' } |
         Select-Object -First 300)
     if (-not $rows.Count) { throw 'La entrada no tiene filas con sent=1.' }
+    $registros = Join-Path $PSScriptRoot 'SimConnectBridge\bin\Win32\RealismoSC8'
+    $bridge = Join-Path $registros 'YokeSimConnectBridge.exe'
+    if (-not (Test-Path -LiteralPath $bridge -PathType Leaf)) { throw "No existe el puente: $bridge" }
     $destino = Join-Path $PSScriptRoot ('ensayos\' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '_arranque')
     New-Item -ItemType Directory -Path $destino | Out-Null
     $copia = Join-Path $destino 'entrada.csv'
     [System.IO.File]::WriteAllLines($copia, [string[]](@($header) + $rows), (New-Object System.Text.UTF8Encoding($false)))
-    $registros = Join-Path $PSScriptRoot 'SimConnectBridge\bin\Win32\RealismoSC8'
-    $bridge = Join-Path $registros 'YokeSimConnectBridge.exe'
-    if (-not (Test-Path -LiteralPath $bridge -PathType Leaf)) { throw "No existe el puente: $bridge" }
     $startedUtc = [DateTime]::UtcNow
     $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
     try {
@@ -64,16 +68,20 @@ try {
         $lrMatch = [regex]::Match($boot, '\blr=(0x[0-9a-fA-F]+)')
         $fallaArgs = @('-Pc', $pcMatch.Groups[1].Value)
         if ($lrMatch.Success) { $fallaArgs += @('-Lr', $lrMatch.Groups[1].Value) }
-        if ($Elf) {
+        $automatico = -not $Elf
+        if ($automatico) { $Elf = Select-Elf $boot }
+        if (-not $automatico -or (Test-Path -LiteralPath $Elf -PathType Leaf)) {
+            if ($automatico) { Write-Host "Elf usado: $Elf (elegido por la linea BOOT; si cargaste otro UF2, repetir FALLA.ps1 con su .elf)" }
             $fallaArgs += @('-Elf', $Elf)
             $output = @(& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'FALLA.ps1') @fallaArgs 2>&1)
             $output | Set-Content -LiteralPath (Join-Path $destino 'falla.txt') -Encoding UTF8
             $output | ForEach-Object { Write-Host $_ }
         } else {
+            Write-Host "No existe $Elf"
             $fallaScript = Join-Path $PSScriptRoot 'FALLA.ps1'
             $lrArg = if ($lrMatch.Success) { ' -Lr ' + $lrMatch.Groups[1].Value } else { '' }
             Write-Host ('powershell -ExecutionPolicy Bypass -File "{0}" -Pc {1}{2} -Elf "{3}"' -f
-                $fallaScript, $pcMatch.Groups[1].Value, $lrArg, (Join-Path $PSScriptRoot 'build-pico2-prueba-falla\MiYoke_PD.ino.elf'))
+                $fallaScript, $pcMatch.Groups[1].Value, $lrArg, $Elf)
         }
     }
     if ($fault) { exit 2 }
