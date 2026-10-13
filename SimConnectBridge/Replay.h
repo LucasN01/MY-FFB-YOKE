@@ -32,7 +32,13 @@ inline bool number(const std::string& s,double& value) {
     if(s.empty()) return false;
     std::string lower=s;
     for(char& c:lower) c=char(std::tolower(static_cast<unsigned char>(c)));
-    if(lower=="nan" || lower=="-nan(ind)") { value=std::numeric_limits<double>::quiet_NaN(); return true; }
+    const std::string nan=lower[0]=='-' ? lower.substr(1) : lower;
+    bool nanToken=nan=="nan";
+    if(nan.size()>5 && nan.compare(0,4,"nan(")==0 && nan.back()==')') {
+        nanToken=true;
+        for(size_t j=4;j+1<nan.size();++j) if(!std::isalnum(static_cast<unsigned char>(nan[j])) && nan[j]!='_') nanToken=false;
+    }
+    if(nanToken) { value=std::numeric_limits<double>::quiet_NaN(); return true; }
     if(lower=="inf" || lower=="-inf") { value=lower[0]=='-' ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity(); return true; }
     size_t i=(s[0]=='+' || s[0]=='-') ? 1 : 0; bool digits=false;
     while(i<s.size() && s[i]>='0' && s[i]<='9') { digits=true; ++i; }

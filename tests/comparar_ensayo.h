@@ -62,16 +62,15 @@ inline Result compare(const Input& in,const std::string& name) {
     std::map<uint32_t,std::array<double,10>> expected;
     std::map<uint32_t,const YokeReplay::ReplayRow*> firstSent;
     std::vector<const YokeReplay::ReplayRow*> sent;
-    uint16_t sequence=0; uint64_t previousHost=0; bool havePrevious=false,armedData=false;
+    uint16_t sequence=0; bool armedData=false;
     for(const auto& r:in.tel) if(r.sent) {
         sent.push_back(&r); firstSent.emplace(r.sample,&r); armedData|=r.armed;
-        if(havePrevious && r.host-previousHost>=300) models.reset();
-        previousHost=r.host; havePrevious=true;
         auto s=YokeReplay::payload(r); bool armed=r.armed;
         if(!YokeRaw::valid(s)) { s=YokeRaw::Sample{}; armed=false; }
         uint8_t packet[YokeRaw::packetSize]={0xa5,0x5a,8,uint8_t(r.paused && !armed ? 2 : (armed ? 1 : 0))};
         YokeSC::put16(packet+4,++sequence); YokeRaw::encodePayload(packet,s);
         YokeSC::put16(packet+111,YokeSC::crc(packet,111));
+        if(!rx.fresh(uint32_t(r.host))) models.reset();
         const uint32_t revision=rx.revision;
         for(uint8_t byte:packet) rx.feed(byte,uint32_t(r.host));
         if(!rx.armed || rx.raw.value[YokeRaw::Slew]!=0) models.reset();
@@ -82,7 +81,7 @@ inline Result compare(const Input& in,const std::string& name) {
     result.expected=expected.size(); result.noData=!armedData;
     std::set<uint32_t> revisions,matchedTimes,excludedTimes,allRevisions;
     std::array<size_t,9> good{}; std::array<double,9> worst{}; std::array<uint32_t,9> worstTime{};
-    uint16_t previousSkip=0; bool excluding=false; uint32_t exclusionStart=0;
+    uint16_t previousSkip=in.pico.empty() ? 0 : uint16_t(in.pico.front().v[25]); bool excluding=false; uint32_t exclusionStart=0;
     uint64_t sequenceLoss=0; uint16_t previousSeq=0; bool haveSeq=false;
     size_t signGood[2]={},signTotal[2]={};
     double sx=0,sy=0,sxx=0,syy=0,sxy=0; size_t correlationN=0;
@@ -91,7 +90,7 @@ inline Result compare(const Input& in,const std::string& name) {
         const uint32_t revision=uint32_t(v[2]),time=uint32_t(v[1]);
         allRevisions.insert(revision);
         const uint16_t seq=uint16_t(v[0]);
-        if(haveSeq) { const uint16_t d=uint16_t(seq-previousSeq); if(d>1) sequenceLoss+=d-1; }
+        if(haveSeq) { const uint16_t d=uint16_t(seq-previousSeq); if(d>1 && d<32768) sequenceLoss+=d-1; }
         previousSeq=seq; haveSeq=true;
         if(!(flags&YokeLog::Active) && (v[18]!=0 || v[19]!=0)) ++result.violations[1];
         if((flags&YokeLog::Menu) && (v[18]!=0 || v[19]!=0 || v[20]!=0 || v[21]!=0)) ++result.violations[2];
@@ -135,18 +134,30 @@ inline Result compare(const Input& in,const std::string& name) {
             if(std::isfinite(x) && std::isfinite(y)) { ++correlationN; sx+=x; sy+=y; sxx+=x*x; syy+=y*y; sxy+=x*y; }
         }
     }
-    size_t pauseChecks=0; bool wasArmed=false,wasPaused=false;
-    if(in.picoHost) for(const auto* r:sent) {
-        if((r->paused && !wasPaused) || (!r->armed && wasArmed)) {
-            const auto p=std::lower_bound(in.pico.begin(),in.pico.end(),r->host+150,
-                [](const PicoRow& row,uint64_t host) { return row.host<host; });
-            if(p!=in.pico.end()) { ++pauseChecks; if(p->v[18]!=0 || p->v[19]!=0) ++result.violations[6]; }
+    size_t pauseChecks=0,transitions=0; uint64_t maxLatency=0;
+    if(in.picoHost) for(size_t i=1;i<sent.size();++i) {
+        const auto* r=sent[i];
+        if(r->armed || !sent[i-1]->armed) continue;
+        ++transitions;
+        auto p=std::lower_bound(in.pico.begin(),in.pico.end(),r->host,
+            [](const PicoRow& row,uint64_t host) { return row.host<host; });
+        while(p!=in.pico.end() && (p->v[18]!=0 || p->v[19]!=0)) ++p;
+        const uint64_t zeroHost=p==in.pico.end() ? UINT64_MAX : p->host;
+        bool rearmed=false;
+        for(size_t j=i+1;j<sent.size() && sent[j]->host<=r->host+150 && sent[j]->host<zeroHost;++j)
+            if(sent[j]->armed) { rearmed=true; break; }
+        if(rearmed) continue;
+        if(p==in.pico.end() && (in.pico.empty() || in.pico.back().host<r->host+150)) continue;
+        ++pauseChecks;
+        if(p==in.pico.end()) ++result.violations[6];
+        else {
+            const uint64_t latency=p->host-r->host; maxLatency=std::max(maxLatency,latency);
+            if(latency>150) ++result.violations[6];
         }
-        wasArmed=r->armed; wasPaused=r->paused;
     }
     const double dropped=in.pico.empty() ? 0 : in.pico.back().v[24];
     const double picoLoss=dropped+allRevisions.size()>0 ? dropped/(dropped+allRevisions.size()) : 0;
-    const double bridgeLoss=haveSeq && previousSeq ? double(sequenceLoss)/previousSeq : (sequenceLoss ? 1 : 0);
+    const double bridgeLoss=in.pico.size()+sequenceLoss ? double(sequenceLoss)/(in.pico.size()+sequenceLoss) : 0;
     if(picoLoss>.02 || bridgeLoss>.02) ++result.violations[7];
     if(in.bridgeCounts && (in.lines ? double(in.badLines)/in.lines>.001 : in.badLines!=0)) ++result.violations[9];
     const size_t eligibleExpected=expected.size()-excludedTimes.size();
@@ -163,11 +174,11 @@ inline Result compare(const Input& in,const std::string& name) {
         <<"% buffet="<<std::min(percent(good[3],result.matched),std::min(percent(good[4],result.matched),percent(good[5],result.matched)))
         <<"% ground="<<std::min(percent(good[6],result.matched),percent(good[7],result.matched))<<"% env="<<percent(good[8],result.matched)
         <<"% peor="<<names[worstIndex]<<"@"<<worstTime[worstIndex]<<":"<<std::setprecision(6)<<worst[worstIndex]
-        <<" excluidas="<<result.excluded<<" esperadas="<<result.expected<<"\n"<<std::setprecision(3);
+        <<" excluidas="<<result.excluded<<" esperadas="<<result.expected<<" no_emparejadas_drop="<<(eligibleExpected-matchedTimes.size())<<"\n"<<std::setprecision(3);
     for(size_t i=1;i<=9;++i) {
         const bool missing=i==6 ? !in.picoHost || pauseChecks==0 : (i==9 && !in.bridgeCounts);
         report<<"B"<<i<<": "<<(result.violations[i] ? "FALLO" : (missing ? "SIN DATOS" : "OK"))<<" violaciones="<<result.violations[i];
-        if(i==6) report<<" comprobaciones="<<pauseChecks;
+        if(i==6) report<<" transiciones="<<transitions<<" evaluadas="<<pauseChecks<<" latencia_max="<<maxLatency<<"ms";
         if(i==7) report<<" pico="<<picoLoss*100<<"% puente="<<bridgeLoss*100<<"% dropped="<<dropped;
         if(i==9) report<<" lineas="<<in.lines<<" malas="<<in.badLines;
         report<<"\n";
@@ -189,6 +200,11 @@ inline Result compare(const Input& in,const std::string& name) {
         if(end-sent[segments[i].first]->host<2000) { segments[i-1].last=segments[i].last; segments.erase(segments.begin()+i); }
         else ++i;
     }
+    for(size_t i=1;i<segments.size();) {
+        if(segments[i-1].title==segments[i].title) {
+            segments[i-1].last=segments[i].last; segments.erase(segments.begin()+i);
+        } else ++i;
+    }
     const char* metrics[]={"ias","ground_speed","on_ground","pressure","gust_roll","gust_pitch","buffet_stall","buffet_gear","buffet_spoiler","ground_roll","ground_pitch","center_stiffness","cmd_roll","cmd_pitch","pwm_roll","pwm_pitch","peak_roll","peak_pitch"};
     std::ostringstream phases; phases<<"order,name,routine_phase,duration_s,active_percent";
     for(const char* metric:metrics) phases<<","<<metric<<"_mean,"<<metric<<"_max";
@@ -209,13 +225,20 @@ inline Result compare(const Input& in,const std::string& name) {
         std::string mark;
         for(const auto& m:in.marks) if(m.host<=start) mark=m.phase;
         const double duration=double(end-start)/1000;
-        phases<<n+1<<","<<segment.title<<","<<mark<<","<<duration<<","<<percent(active,rows);
-        for(size_t i=0;i<18;++i) phases<<","<<(counts[i] ? sums[i]/counts[i] : 0)<<","<<maxima[i];
+        phases<<std::setw(2)<<std::setfill('0')<<n+1<<" "<<segment.title<<","<<segment.title<<","<<mark<<","<<duration<<",";
+        if(in.picoHost) phases<<percent(active,rows); else phases<<"SIN DATOS";
+        for(size_t i=0;i<18;++i) {
+            if(i>=3 && !in.picoHost) phases<<",SIN DATOS,SIN DATOS";
+            else phases<<","<<(counts[i] ? sums[i]/counts[i] : 0)<<","<<maxima[i];
+        }
         phases<<"\n";
-        report<<"F"<<n+1<<" "<<segment.title<<": "<<duration<<"s ias="<<maxima[0]<<" gs="<<maxima[1]<<" q="<<maxima[3]
-            <<" gust="<<std::max(maxima[4],maxima[5])<<" buf="<<std::max(maxima[6],std::max(maxima[7],maxima[8]))
+        report<<std::setw(2)<<std::setfill('0')<<n+1<<" "<<segment.title<<": "<<duration<<"s ias="<<maxima[0]<<" gs="<<maxima[1];
+        if(!in.picoHost) report<<" | Pico por fase: SIN DATOS";
+        else report<<" q="<<maxima[3]<<" gust="<<std::max(maxima[4],maxima[5])
+            <<" buf="<<std::max(maxima[6],std::max(maxima[7],maxima[8]))
             <<" gnd="<<std::max(maxima[9],maxima[10])<<" cmdR/P="<<maxima[12]<<"/"<<maxima[13]
-            <<" pwmR/P="<<maxima[14]<<"/"<<maxima[15]<<" act="<<percent(active,rows)<<"% marca="<<mark<<"\n";
+            <<" pwmR/P="<<maxima[14]<<"/"<<maxima[15]<<" act="<<percent(active,rows)<<"%";
+        report<<" marca="<<mark<<"\n";
     }
     report<<"RESULTADO: "<<(result.code()==1 ? "FALLO" : (result.noData ? "SIN DATOS" : "OK"))<<"\n";
     result.report=report.str(); result.phases=phases.str(); return result;

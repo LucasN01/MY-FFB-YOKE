@@ -317,6 +317,7 @@ int main(int argc,char** argv) {
             latest.timeMs=row.sample; ++samples; Send(enable && row.armed);
             PollPort(GetTickCount64());
         }
+        opened=false;
         for(int i=0;i<3;++i) {
             Send(false);
             if(i<2) {

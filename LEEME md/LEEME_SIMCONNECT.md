@@ -51,7 +51,7 @@ Para revisar la conexion sin enviar fuerzas ni abrir el COM:
 .\YokeSimConnectBridge.exe --seconds 60 --gusts
 ```
 
-`bridge.log`, `telemetry.csv` y `pico.log`, junto al EXE, se reemplazan en cada ejecucion; si el `pico.log` anterior no estaba vacio, la generacion previa se conserva como `*.anterior.*`. Comprobar conexion y variables del avion en destino: no se ha probado fisicamente con Prepar3D v3 ni con los motores.
+`bridge.log`, `telemetry.csv`, `pico.log`, `pico.csv` y `ganancias.csv`, junto al EXE, se reemplazan en cada ejecucion; si el `pico.log` anterior no estaba vacio, la generacion previa se conserva como `*.anterior.*`. Comprobar conexion y variables del avion en destino: no se ha probado fisicamente con Prepar3D v3 ni con los motores.
 
 ## Ajustes
 

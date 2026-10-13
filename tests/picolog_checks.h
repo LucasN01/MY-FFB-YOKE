@@ -21,6 +21,10 @@ static void replayAndComparatorChecks() {
     CHECK(YokeReplay::parseRow(joined(),decoded) && std::isnan(decoded.v[YokeRaw::SpoilerLeft]));
     fields[3+YokeRaw::SpoilerLeft]="NaN";
     CHECK(YokeReplay::parseRow(joined(),decoded) && std::isnan(decoded.v[YokeRaw::SpoilerLeft]));
+    for(const char* token:{"-nan","nan(snan)","-nan(snan)"}) {
+        fields[3+YokeRaw::SpoilerLeft]=token;
+        CHECK(YokeReplay::parseRow(joined(),decoded) && std::isnan(decoded.v[YokeRaw::SpoilerLeft]));
+    }
     fields[3+YokeRaw::SpoilerLeft]="INF";
     CHECK(YokeReplay::parseRow(joined(),decoded) && std::isinf(decoded.v[YokeRaw::SpoilerLeft]) && decoded.v[YokeRaw::SpoilerLeft]>0);
     fields[3+YokeRaw::SpoilerLeft]="-inf";
@@ -49,6 +53,49 @@ static void replayAndComparatorChecks() {
     CHECK(!result.aOk && result.report.find("groundR@300:")!=std::string::npos);
     changed=in; for(size_t i=5;i<changed.pico.size();++i) changed.pico[i].v[25]=1;
     result=YokeEnsayo::compare(changed,"skip"); CHECK(result.excluded>0 && result.aOk);
+    changed=in; for(auto& row:changed.pico) row.v[25]=5;
+    result=YokeEnsayo::compare(changed,"skip previo"); CHECK(result.excluded==0 && result.aOk);
+    changed=in; changed.tel.resize(4); changed.pico.resize(4);
+    const uint16_t sequences[]={65534,65535,0,1};
+    for(size_t i=0;i<4;++i) changed.pico[i].v[0]=sequences[i];
+    result=YokeEnsayo::compare(changed,"wrap");
+    CHECK(result.violations[7]==0 && result.report.find("puente=0.000%")!=std::string::npos);
+    changed=in; changed.tel.resize(4); changed.pico.resize(2);
+    changed.tel[1]=changed.tel[0]; changed.tel[1].host=1100;
+    changed.tel[2]=changed.tel[0]; changed.tel[2].host=1200;
+    changed.tel[3]=changed.tel[0]; changed.tel[3].host=1301; changed.tel[3].sample=200;
+    changed.tel[3].v[YokeRaw::AccelX]=changed.tel[3].v[YokeRaw::AccelY]=20;
+    changed.pico[1]=changed.pico[0]; changed.pico[1].host=1301;
+    changed.pico[1].v[0]=2; changed.pico[1].v[1]=200; changed.pico[1].v[2]=2;
+    result=YokeEnsayo::compare(changed,"watchdog con duplicados"); CHECK(result.aOk);
+    YokeEnsayo::Input pause=in; pause.tel.resize(3); pause.pico.resize(3);
+    for(size_t i=0;i<3;++i) {
+        pause.tel[i].host=900+i*100; pause.tel[i].armed=i==1;
+        pause.pico[i].host=1000+i*80; pause.pico[i].v[18]=i==2 ? 0 : .1;
+        pause.pico[i].v[19]=0;
+    }
+    result=YokeEnsayo::compare(pause,"pausa 60ms");
+    CHECK(result.violations[6]==0 && result.report.find("transiciones=1 evaluadas=1 latencia_max=60ms")!=std::string::npos);
+    pause.pico[2].host=1300;
+    result=YokeEnsayo::compare(pause,"pausa 200ms"); CHECK(result.violations[6]==1);
+    pause.tel.push_back(pause.tel.back()); pause.tel.back().host=1200; pause.tel.back().armed=true;
+    result=YokeEnsayo::compare(pause,"rearmado 100ms");
+    CHECK(result.violations[6]==0 && result.report.find("B6: SIN DATOS")!=std::string::npos);
+    pause.tel.resize(2);
+    result=YokeEnsayo::compare(pause,"pausa inicial");
+    CHECK(result.violations[6]==0 && result.report.find("transiciones=0 evaluadas=0")!=std::string::npos);
+    changed=in; changed.tel.resize(4);
+    const uint64_t phaseHosts[]={1000,4000,4500,8000};
+    for(size_t i=0;i<4;++i) { changed.tel[i].host=phaseHosts[i]; changed.tel[i].v[YokeRaw::GroundSpeed]=i==1 ? 40 : 0; }
+    result=YokeEnsayo::compare(changed,"fusion de fases");
+    CHECK(result.phases.find("01 PARADO")!=std::string::npos && result.phases.find("02 ")==std::string::npos);
+    changed=in; changed.picoHost=false; for(auto& row:changed.pico) row.host=0;
+    result=YokeEnsayo::compare(changed,"fallback");
+    CHECK(result.report.find("Pico por fase: SIN DATOS")!=std::string::npos);
+    CHECK(result.phases.find(",SIN DATOS,SIN DATOS")!=std::string::npos);
+    changed=in; changed.pico.erase(changed.pico.begin()+10);
+    result=YokeEnsayo::compare(changed,"drop");
+    CHECK(result.report.find("no_emparejadas_drop=1")!=std::string::npos);
     changed=in; for(auto& row:changed.tel) row.armed=false;
     result=YokeEnsayo::compare(changed,"monitor");
     CHECK(result.noData && result.code()==2 && result.report.find("RESULTADO: SIN DATOS")!=std::string::npos);
