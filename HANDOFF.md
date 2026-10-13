@@ -83,7 +83,7 @@ Se divide en **3 partes**, porque hay estado nuevo en firmware y en puente, un r
   - Compilar una vez con `YOKE_MODEL_LOG 0` (`probar.ps1 -Pico`) y volver a 1.
   - Verificar la sintaxis de `CICLOS.ps1` y `ENSAYO.ps1` como en la tarea anterior.
   - `tests\bin\comparar_ensayo.exe tmp\vuelo_corto` tiene que seguir dando `RESULTADO: OK`.
-- Commit por nombre: `CalibrationControls.h mis_defines.h MiYoke_PD.ino SimConnectBridge/main.cpp tests/comparar_ensayo.h tests/picolog_checks.h ENSAYO.ps1 CICLOS.ps1 CICLOS.cmd HANDOFF.md`.
+- Commit por nombre: `CalibrationControls.h mis_defines.h MiYoke_PD.ino SimConnectBridge/main.cpp tests/comparar_ensayo.h tests/picolog_checks.h tests/calibration_checks.h ENSAYO.ps1 CICLOS.ps1 CICLOS.cmd HANDOFF.md`.
   Mensaje: "Pico y puente: registro CSV activable desde el menu y eventos de ciclos lentos".
 - **No** ejecutar `nueva-version.ps1`.
 
