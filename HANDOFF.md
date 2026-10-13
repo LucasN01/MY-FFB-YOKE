@@ -28,202 +28,64 @@
 
 \## Plan para Codex
 
-Tarea: opción REGISTRO DATOS en el menú y diagnóstico de ciclos lentos del lazo (Claude, 2026-10-13).
-Rama: `mejora/registro-menu-y-ciclos-lentos` (ya creada; contiene el diseño). Diseño: `LEEME md/DISENO_registro_menu_y_ciclos_lentos.md`.
-Se divide en **3 partes**, porque hay estado nuevo en firmware y en puente, un registro persistente, muchas pruebas y documentación con `.tex`. Cada parte se hace en una sesión de Codex distinta.
+Tarea: diagnóstico del HardFault, stack libre y motores seguros durante una falla (Claude, 2026-10-13).
+Rama: `mejora/diagnostico-hardfault` (ya creada; contiene el diseño). Diseño: `LEEME md/DISENO_diagnostico_hardfault.md`.
+Se divide en **2 partes**: firmware con manejador en ensamblador + compilación de prueba, y luego puente + scripts + documentación + versión. Cada parte se hace en una sesión distinta.
 
-\### Precondiciones (todas las partes)
-- `git checkout mejora/registro-menu-y-ciclos-lentos` y `git status`. Ignorar `graphify-ino/`, `tesis/main.tex`, `tesis/capitulos/11_maquinas_estado.tex` y `tesis/caracterizacion_motores_775.tex`: son cambios del usuario; no tocarlos ni commitearlos.
-- Orientarse con `graphify query/explain` antes de abrir código; leer solo las líneas indicadas. Las líneas del diseño son de `master` V2.0; si no coinciden, ubicar por contenido.
+\### Precondiciones (ambas partes)
+- `git checkout mejora/diagnostico-hardfault` y `git status`. Ignorar `graphify-ino/`, `tesis/main.tex`, `tesis/capitulos/11_maquinas_estado.tex` y `tesis/caracterizacion_motores_775.tex` (cambios del usuario).
+- Orientarse con `graphify query/explain`; leer solo las líneas indicadas.
 - No tocar constantes de seguridad (regla 7). No usar `git add .` ni `git add -A`.
-- Pruebas solo con `powershell -ExecutionPolicy Bypass -File probar.ps1 [...]`; en HANDOFF copiar solo las líneas OK/FALLO.
-- Si el diseño contradice el código, detenerse y anotarlo en "Última entrega"; no improvisar.
+- Pruebas solo con `probar.ps1`; en HANDOFF copiar solo las líneas OK/FALLO.
+- Si el diseño contradice el código, detenerse y anotarlo en "Última entrega".
 
-\### Parte 1 — Encabezados puros + pruebas (sin versión)
-- Leer del diseño: §2, §3.1, §4.1, `formatRecord` de §4.3, §5.1 y §8.
-- Código a leer: `CalibrationMenu.h` (completo), `LoopSupervisor.h` (completo), `PicoLog.h` (completo), `SimConnectBridge/PicoCsv.h` (completo), `GainSettings.h:55-85`, `PotCalibration.h:20-30`, `tests/calibration_checks.h` (estilo y primeras 40 líneas), `tests/picolog_checks.h` (estilo), `tests/simconnect_checks.cpp:50-66`.
+\### Parte 1 — Firmware, prueba de falla y pruebas (sin versión)
+- Leer del diseño: §1, §2, §3 (completo) y §6.
+- Código a leer: `MiYoke_PD.ino` (`:1-60`, `setup()`, el bloque `ModelLog` y el bloque `YOKE_TEST_HANG`), `LoopSupervisor.h` (completo), `mis_defines.h:125-175`, `Build-Pico2.ps1` (completo), `probar.ps1` (completo), `tests/health_checks.h` (completo), `tests/picolog_checks.h` (estilo), `SimConnectBridge/SerialLink.h:50-67`.
 - Alcance:
-  1. Crear `RecordSetting.h` (§2).
-  2. `CalibrationMenu.h` según §3.1.
-  3. `LoopSupervisor.h`: `Between`, `StageTimer`, `SlowLog` y `formatSlow` (§4.1).
-  4. `PicoLog.h`: `formatRecord`.
-  5. `SimConnectBridge/PicoCsv.h`: `CsvGate`, `recordLine` y `slowLine` (§5.1).
-  6. Pruebas de §8 en `tests/calibration_checks.h` y `tests/picolog_checks.h`. La de `comparar_ensayo` queda para la Parte 2.
-  7. `graphify update .`.
-- Pruebas: `probar.ps1`. Tienen que dar OK la suite, el comparador y el lanzador. El firmware todavía no se compila, porque `CalibrationControls.h` y el `.ino` cambian en la Parte 2.
-- Commit por nombre: `RecordSetting.h CalibrationMenu.h LoopSupervisor.h PicoLog.h SimConnectBridge/PicoCsv.h tests/calibration_checks.h tests/picolog_checks.h HANDOFF.md`.
-  Mensaje: "Menu REGISTRO DATOS, registro persistente y medicion de ciclos lentos: partes puras y pruebas".
+  1. Verificaciones de §2, con evidencia en "Última entrega".
+  2. `MiYoke_PD.ino`: §3.1, §3.2 y §3.3 (la parte del firmware: pintado y envío de la línea `S`).
+  3. `LoopSupervisor.h`: `decode` con máscara 0xFFFF0000, `decodeException`, `formatBoot` con los campos nuevos, `paintStack` y `freeStackBytes`.
+  4. `mis_defines.h`: `#ifndef` en `YOKE_TEST_HANG` y `YOKE_TEST_HANG_MS` (§3.4).
+  5. `Build-Pico2.ps1` (`-PruebaFalla`) y `probar.ps1` (`-PruebaFalla` y su ayuda), según §3.4.
+  6. Pruebas de §6 en `tests/health_checks.h`, y las de `paintStack`/`freeStackBytes` en `tests/picolog_checks.h`.
+  7. `graphify-sync.cmd` y `graphify update .`.
+- Pruebas:
+  - `probar.ps1 -Pico -Potentiometers -Encoders -PruebaFalla`: todo OK; anotar los tamaños frente a 105 820 B;
+  - verificar en `build-pico2-prueba-falla\MiYoke_PD.ino.map` (o con `arm-none-eabi-nm`) que `hardfaultCapture` e `isr_hardfault` están en RAM (sección `.data`/`.time_critical`) y que `isr_hardfault` es el símbolo fuerte. Anotar las direcciones.
+- Commit por nombre: `MiYoke_PD.ino LoopSupervisor.h mis_defines.h Build-Pico2.ps1 probar.ps1 tests/health_checks.h tests/picolog_checks.h HANDOFF.md`.
+  Mensaje: "Pico: HardFault con PC/LR/CFSR y excepcion, motores a 0 V en la falla, stack libre y compilacion de prueba".
 - **No** ejecutar `nueva-version.ps1`. Completar "Última entrega".
 
-\### Parte 2 — Integración: firmware, puente, comparador y scripts (sin versión)
-- Precondición: la Parte 1 está commiteada y anotada.
-- Leer del diseño: §3.2, §3.3, §4.2, §4.3, §5.2, §6 y §7 (para `CICLOS.ps1`).
-- Código a leer:
-  - `CalibrationControls.h` (completo);
-  - `MiYoke_PD.ino` (completo);
-  - `mis_defines.h:160-230`;
-  - `SimConnectBridge/main.cpp` (completo);
-  - `tests/comparar_ensayo.h:250-300`;
-  - `ENSAYO.ps1` y `ENSAYO.cmd`;
-  - `Iniciar-Simulador.ps1:18-19` (ruta del puente).
+\### Parte 2 — Puente, scripts, documentación y versión
+- Precondición: la Parte 1 está commiteada y revisada por Claude.
+- Leer del diseño: §3.3 (la parte del puente), §4, §5 y §8.
+- Código a leer: `SimConnectBridge/PicoCsv.h` (completo), `SimConnectBridge/main.cpp` (`PollPort` y la salida final), `BANCO.ps1` (completo), `ENSAYO.cmd`, `tests/picolog_checks.h` (las pruebas de `slowLine`, como modelo).
 - Alcance:
-  1. `CalibrationControls.h` (§3.2), `mis_defines.h` (`YOKE_RECORD_OPTION`, `YOKE_SLOW_LOOP_US`) y `MiYoke_PD.ino` (§3.3, §4.2 y §4.3).
-  2. `SimConnectBridge/main.cpp` (§5.2).
-  3. `tests/comparar_ensayo.h` (§6.1) y su prueba en `tests/picolog_checks.h`.
-  4. `ENSAYO.ps1` (§6.2).
-  5. `CICLOS.ps1` y `CICLOS.cmd` (§6.3).
-  5b. Pruebas menores de la revisión de la Parte 1, en `tests/calibration_checks.h`:
-     - ciclo de CALIBRACIÓN partiendo de Edit, EditEffect y CalibratePots, con 4 listas y con 3;
-     - comprobar los textos de `rows()` completos (`strncmp` con el texto esperado más el relleno de espacios), no solo `strlen<=16`;
-     - en la prueba de `decode` inválido, iniciar `loaded=false` y verificar que siga en `false`.
-     En el puente, descartar `v` cuando `slowLine` devuelve `false`.
-  6. `graphify-sync.cmd` (se editó el `.ino`) y `graphify update .`.
+  1. `PicoCsv.h`: `stackLine`. `main.cpp`: filtro del splitter con `S,`, el registro en `bridge.log` y `stack_libre_min=` en la línea `Fin:`.
+  2. Prueba de `stackLine` en `tests/picolog_checks.h`.
+  3. Crear `FALLA.ps1`, `ARRANQUE.ps1` y `ARRANQUE.cmd` (§4).
+  4. Documentación de §8: el reemplazo exacto en `LEEME md/CALCULO_PICO_SC8.md`, la sección nueva en `LEEME md/ENSAYOS.md` y la línea en `LEEME md/LEEME_PICO2.md`. Si un TEXTO ACTUAL no aparece, anotarlo y seguir.
+  5. `graphify update .`.
 - Pruebas:
-  - `probar.ps1 -Pico -Potentiometers -Encoders -Bridge`: todo OK. Anotar el tamaño frente a 104 500 B.
-  - Compilar una vez con `YOKE_MODEL_LOG 0` (`probar.ps1 -Pico`) y volver a 1.
-  - Verificar la sintaxis de `CICLOS.ps1` y `ENSAYO.ps1` como en la tarea anterior.
-  - `tests\bin\comparar_ensayo.exe tmp\vuelo_corto` tiene que seguir dando `RESULTADO: OK`.
-- Commit por nombre: `CalibrationControls.h mis_defines.h MiYoke_PD.ino SimConnectBridge/main.cpp tests/comparar_ensayo.h tests/picolog_checks.h tests/calibration_checks.h ENSAYO.ps1 CICLOS.ps1 CICLOS.cmd HANDOFF.md`.
-  Mensaje: "Pico y puente: registro CSV activable desde el menu y eventos de ciclos lentos".
-- **No** ejecutar `nueva-version.ps1`.
-
-\### Parte 3 — Documentación + versión
-- Leer del diseño: §11.
-- Alcance:
-  1. Aplicar los reemplazos exactos de §11 en `LEEME md/MENU_CALIBRACION.md`, `LEEME md/CALCULO_PICO_SC8.md`, `LEEME md/ENSAYOS.md` y `tesis/capitulos/03_centrado.tex`. Buscar cada TEXTO ACTUAL literal; si alguno no aparece, anotarlo y seguir con el resto. No leer capítulos completos.
-  2. En `LEEME md/ENSAYOS.md`, agregar al final una sección breve `## Ciclos lentos (CICLOS.cmd)` con la tabla de pasos de §7 del diseño, copiada tal cual.
-  3. Ajustes menores pendientes de la tarea anterior, en `tests/comparar_ensayo.h` y `tests/picolog_checks.h`:
-     - `centrado signo` con 0 filas → `SIN DATOS`;
-     - la prueba de "pausa inicial" con 3 filas (desarmada, pausada y desarmada, armada), esperando `transiciones=0 evaluadas=0`;
-     - en `ENSAYO.ps1` y `CICLOS.ps1`, recortar espacios antes de comparar con `FIN`.
-     - de la revisión de la Parte 2:
-       - en `SimConnectBridge/main.cpp`, guardar el estado de la compuerta **antes** de `FinishCsv()`, para que la línea `Fin:` pueda decir `registro=PENDIENTE`;
-       - en `CICLOS.ps1`, que `ciclos.txt` no empiece con una línea vacía;
-       - en `tests/calibration_checks.h:65-70`, quitar los `strstr` que repiten lo que ya verifica `expectedRows`.
-  4. `graphify update .`.
-- Pruebas:
-  - `probar.ps1 -Pico -Potentiometers -Encoders -Bridge`: todo OK;
-  - `powershell -ExecutionPolicy Bypass -File compilar-tesis.ps1`: anotar su línea;
+  - `probar.ps1 -Pico -Potentiometers -Encoders -Bridge -PruebaFalla`: todo OK;
+  - sintaxis de `FALLA.ps1` y `ARRANQUE.ps1`;
+  - `FALLA.ps1 -Pc 0x<direccion de loop tomada del .map de build-pico2-prueba-falla> -Elf build-pico2-prueba-falla\MiYoke_PD.ino.elf` debe imprimir `loop`; anotar la salida;
   - `tests\bin\comparar_ensayo.exe tmp\vuelo_corto`: `RESULTADO: OK`.
-- Commit por nombre: `"LEEME md/MENU_CALIBRACION.md" "LEEME md/CALCULO_PICO_SC8.md" "LEEME md/ENSAYOS.md" tesis/capitulos/03_centrado.tex tests/comparar_ensayo.h tests/picolog_checks.h tests/calibration_checks.h SimConnectBridge/main.cpp ENSAYO.ps1 CICLOS.ps1 HANDOFF.md`.
-  Mensaje: "Documentacion del menu REGISTRO DATOS y ciclos lentos; ajustes menores del comparador".
-- Versión: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Menu REGISTRO DATOS para activar los CSV y diagnostico de ciclos lentos del lazo"`. Verificar `Version Vx.y creada` y `..\MiYoke_PD_VERSIONES\Vx_y\ACTUALIZACION_Vx_y.txt`. Si los cambios del usuario en `tesis/` impiden ejecutar el script, usar el mismo procedimiento de la tarea anterior (checkout temporal limpio) y anotarlo.
-- "Última entrega": lo hecho, las líneas OK/FALLO, la línea de la tesis, la versión y los desvíos.
-- Luego: revisión de Claude; el usuario carga el UF2 y hace el ensayo `CICLOS.cmd` (§7). No integrar a `master`.
+- Commit por nombre: `SimConnectBridge/PicoCsv.h SimConnectBridge/main.cpp tests/picolog_checks.h FALLA.ps1 ARRANQUE.ps1 ARRANQUE.cmd "LEEME md/CALCULO_PICO_SC8.md" "LEEME md/ENSAYOS.md" "LEEME md/LEEME_PICO2.md" HANDOFF.md`.
+  Mensaje: "Puente y scripts: stack libre, FALLA.ps1 y ARRANQUE para diagnosticar HardFault".
+- Versión: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Diagnostico de HardFault con PC y excepcion, motores a 0 V en la falla y stack libre"`. Verificar `Version Vx.y creada` y el `ACTUALIZACION_Vx_y.txt`. Si los cambios del usuario en `tesis/` lo impiden, usar el checkout temporal limpio, como en las tareas anteriores, y anotarlo.
+- "Última entrega": las líneas OK/FALLO, la salida de `FALLA.ps1`, la versión y los desvíos.
+- Luego: revisión de Claude y protocolo V1, R1-R3 del usuario (§5). No integrar a `master`.
 
 \## Última entrega
 
-- Parte 3 completada y versionada (2026-10-13), sobre partes 1 `629e5a4` y 2 `c74d6e7`, ambas aprobadas por Claude. Rama: `mejora/registro-menu-y-ciclos-lentos`.
-- Archivos modificados: `LEEME md/MENU_CALIBRACION.md`, `LEEME md/CALCULO_PICO_SC8.md`, `LEEME md/ENSAYOS.md`, `tesis/capitulos/03_centrado.tex`, `tests/comparar_ensayo.h`, `tests/picolog_checks.h`, `tests/calibration_checks.h`, `SimConnectBridge/main.cpp`, `ENSAYO.ps1`, `CICLOS.ps1` y `HANDOFF.md`.
-- Documentacion: todos los TEXTO ACTUAL de §11 coincidieron una vez; aplicados los reemplazos literales, sin redactar ni reformular el .tex. Agregada al final de ENSAYOS.md la tabla literal de §7 bajo "Ciclos lentos (CICLOS.cmd)". No se modificaron otros documentos funcionales ni documentos de diseno.
-- [Código] `tests/comparar_ensayo.h:188`: centrado signo informa SIN DATOS por eje si no hay filas evaluables; prueba sintetica agregada. La prueba de pausa inicial usa tres filas desarmada / pausada y desarmada / armada, con transiciones=0 evaluadas=0 (`tests/picolog_checks.h:87`).
-- Revision Parte 2: aplicada la captura del estado de la compuerta antes de FinishCsv para conservar PENDIENTE en Fin; ciclos.txt se inicia sin salto de linea; eliminados los strstr redundantes de las pruebas. ENSAYO y CICLOS recortan espacios antes de comparar FIN. El nit del contador de filas descartadas en reopen queda sin cambios, fuera del alcance del plan.
-- Verificaciones ejecutadas despues del ultimo cambio con `powershell -ExecutionPolicy Bypass -File probar.ps1 -Pico -Potentiometers -Encoders -Bridge`:
-  - OK suite simconnect_checks - PASS: 143428 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
-  - OK comparar_ensayo
-  - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-  - OK Pico 2 (configurado) - Sketch uses 105820 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22892 bytes (4%) of dynamic memory, leaving 501396 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (encoders) - Sketch uses 105988 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23128 bytes (4%) of dynamic memory, leaving 501160 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (potenciometros) - Sketch uses 105820 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22892 bytes (4%) of dynamic memory, leaving 501396 bytes for local variables. Maximum is 524288 bytes.
-  - OK puente SimConnect
-  - OK sintaxis CICLOS.ps1
-  - OK sintaxis ENSAYO.ps1
-  - OK ciclos.txt sin linea inicial vacia
-  - OK tabla CICLOS en ENSAYOS.md coincide con el diseno
-  - `tests\bin\comparar_ensayo.exe tmp\vuelo_corto`: RESULTADO: OK
-- Tesis, `powershell -ExecutionPolicy Bypass -File compilar-tesis.ps1`:
-  - OK chequeo estatico (12 archivos, 56 labels). No hay LaTeX instalado: la compilacion real se hace en Overleaf.
-- No se afirma compilacion real del PDF: solo chequeo estatico OK. No se invoco pdflatex ni latexmk.
-- Tamano configurado: 105820 B, +1320 B respecto de V2.0 (104500 B), dentro del limite de +6 kB. YOKE_MODEL_LOG permanece en 1.
-- `git diff --check`: sin errores. `graphify update .` ejecutado: 1154 nodos y 1528 aristas. No se modifico el .ino.
-- Commit de codigo y documentacion: `a361f4c`, "Documentacion del menu REGISTRO DATOS y ciclos lentos; ajustes menores del comparador", con los archivos agregados por nombre. El registro final de version en HANDOFF va en este commit posterior, solo de documentacion.
-- Version: **V2.1 creada** por `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Menu REGISTRO DATOS para activar los CSV y diagnostico de ciclos lentos del lazo"`, sobre `a361f4c`.
-  - Version V2.1 creada en `..\MiYoke_PD_VERSIONES\V2_1`.
-  - OK existe `..\MiYoke_PD_VERSIONES\V2_1\ACTUALIZACION_V2_1.txt`.
-- Procedimiento de versionado previsto en el plan: checkout temporal limpio `..\MiYoke_PD_version_codex_20261013170531`, con HEAD separado en a361f4c y mismo padre para conservar el destino correcto de MiYoke_PD_VERSIONES. Se ejecuto alli el script original; no se tocaron ni guardaron temporalmente los cambios del usuario. Checkout retirado con git worktree remove tras verificar la version. No se crearon etiquetas ni carpetas de version a mano.
-- Cambios del usuario en `tesis/main.tex`, `tesis/capitulos/11_maquinas_estado.tex`, `tesis/caracterizacion_motores_775.tex` y `graphify-ino/` preservados fuera del commit y de la copia de la version.
-- Observacion para Claude, fuera de los reemplazos literales de §11: el parrafo final de ENSAYOS.md sobre codigos 0/1/2 no explicita la excepcion de telemetry.csv vacio (informe SIN DATOS y salida 1). No se amplio el alcance del diseno.
-- Desvios de implementacion: ninguno nuevo; el desvio ENTRE_CICLOS de Parte 2 ya esta incorporado al diseno (`6671b6a`). Sigue revision de Claude; el usuario carga el UF2 y hace CICLOS.cmd. No se integro a master.
+- (vacío: tarea nueva; Codex completa al cerrar cada parte)
 
 \## Revisión
 
-- Revisor: Claude (2026-10-13), con Code Reviewer. **Parte 1 (`629e5a4`): APROBADA.**
-  - **Diseño:** `RecordSetting.h`, `CalibrationMenu.h`, `LoopSupervisor.h`, `PicoLog.h` y `PicoCsv.h` cumplen §2, §3.1, §4.1, §4.3 y §5.1.
-    - Menú: ciclo con 4 y 3 listas; los bloques del registro van antes del de Browse; la rama de guardado del registro va primero; RecordSaved se evalúa antes que las pantallas; todos los textos ≤ 16. Las otras listas no cambian de comportamiento.
-    - Anillo y temporizador: correctos, con resta sin signo y saturación.
-    - Parsers: estrictos.
-  - **Firmware:** el firmware no incluye STL; `PicoCsv.h` no llega al `.ino`.
-  - **Suite:** 143412 comprobaciones OK según Codex; no se recompiló.
-  - **Observaciones menores** (pasan a la Parte 2, punto 5b):
-    - falta probar el ciclo desde las pantallas de edición;
-    - la comprobación de `strlen` no puede fallar porque `padded` trunca;
-    - la prueba de `decode` inválido no detecta que se escriba `true`;
-    - descartar `v` si `slowLine` falla.
-
-- Revisor: Claude (2026-10-13), con Code Reviewer. **Parte 2 (`c74d6e7`): APROBADA.**
-  - **Firmware**, revisado por Claude:
-    - las tres salidas del lazo pasan por `finishLoop`;
-    - el guardado en flash queda en la etapa FLASH (control positivo);
-    - W > L > M > G, con una sola línea por ciclo y con enlace reciente (`now-last<300`);
-    - `W` es independiente del registro, y `M`/`G` dependen de `enabled && recordSent`;
-    - al reactivar se reinician `gainsSent`, `logSynced` y `peak`;
-    - `UsbLock` en `slowFlags` está fuera de otros bloqueos;
-    - con `YOKE_MODEL_LOG 0` compila.
-  - **Desvío autorizado por el usuario:** `slowBetween` (`gapUs>=umbral && prevElapsedUs<umbral`), probado. El diseño §4.2 se actualizó para coincidir (`6671b6a`).
-  - **Puente, comparador y scripts**, revisados por Code Reviewer:
-    - `Record()` conserva el formato de 34 campos;
-    - la compuerta está en las dos ramas (normal y replay), con `tick`/`reopen`/`finish` y `fflush`;
-    - el filtro acepta M/G/L/W, y el comparador da `SIN DATOS` antes de exigir `pico.csv`;
-    - `CICLOS.ps1` cumple §6.3.
-  - **Compilación:** todo OK según Codex (+1320 B frente a V2.0).
-  - **Observaciones menores** (van a la Parte 3, punto 3):
-    - `registro=PENDIENTE` nunca aparece porque el estado se lee después de `FinishCsv()`;
-    - `ciclos.txt` empieza con una línea vacía;
-    - hay `strstr` redundantes en las pruebas;
-    - nit: las filas retenidas que se descartan con `reopen()` no suman a ningún contador, con efecto despreciable.
-
-- Revisor: Claude (2026-10-13), con Code Reviewer. **Parte 3 (`a361f4c`, V2.1): APROBADA.**
-  - Reemplazos de §11 literales y sin otros cambios; tabla de §7 idéntica.
-  - Ajustes de la revisión de la Parte 2 aplicados: estado de la compuerta antes de `FinishCsv`, `ciclos.txt` sin línea vacía, `FIN` con espacios.
-  - Pruebas discriminantes: pausa inicial con 3 filas; centrado `SIN DATOS`.
-  - Tag V2.1 sobre `a361f4c`; la copia tiene los archivos nuevos. Tesis: chequeo estático OK.
-  - Documentación completada por Claude (solo `.md`, no genera versión): `LEEME md/ENSAYOS.md` aclara que, sin filas en `telemetry.csv`, el comparador da `SIN DATOS` y código 1. Codex lo había señalado.
-  - **Pendientes menores** (tarea futura):
-    - `([string](Read-Host ...)).Trim()` por si la entrada se redirige (`ENSAYO.ps1:48`, `CICLOS.ps1:29`);
-    - una prueba de `centrado signo` con filas;
-    - contar las filas descartadas por `reopen()`.
-  - **Usuario:** cargar `build-pico2-potentiometers/MiYoke_PD.ino.uf2` y hacer el ensayo `CICLOS.cmd` (§7). Integración a `master` solo a pedido.
+- (vacío: tarea nueva)
 
 \## Ensayos del usuario
 
-- Ensayo de ciclos lentos con `CICLOS.cmd` (usuario, 2026-10-13, V2.1, motores apagados). Carpeta: `ensayos/20261013-171626_ciclos/`; Claude copió ahí también los 6 CSV de las dos sesiones. Análisis de Claude.
-  - **Marcas:** el usuario marcó cada paso **al terminarlo**: la ventana de Pn va de la marca P(n-1) a la marca Pn.
-    - Aclaración del usuario: en P0 marcó con el simulador corriendo y pausó después. No cambia nada: entre P0 (17:18:10) y P1 (17:28:33) no hubo eventos, y los guardados se identifican por la etapa FLASH, no por la ventana. El BOOT con HardFault llegó a las 17:17:33, antes de P0.
-  - **Eventos `W`:** 4 en total (`total=4`, `perdidos=0`), todos en la etapa **FLASH**, de 37 635 a 39 304 µs. Todos coinciden con los guardados que hizo el usuario:
-    - 2 en P2 (17:28:48 y 17:29:23);
-    - 1 en P8: llegó a las 18:04:43 con `hace=144 745` ms, o sea que ocurrió a las 18:02:18, dentro de la ventana de P8; `flags=0x6` (sin `dtr`, menú activo);
-    - 1 en P9 (18:07:14).
-  - **Sin eventos:**
-    - P1 (control negativo, 10 min);
-    - P3 (menú ×3 con puente);
-    - P4 (vuelo);
-    - P5 (Pico sola 15 min);
-    - P6 (menú ×3 sin puente);
-    - P7 (detección de puerto ×3).
-  - **Validez del instrumento:** controles negativo y positivo correctos; la antigüedad (`hace`) es coherente; `perdidos=0`.
-  - **Conclusión sobre el ciclo de ~39 ms:** corresponde al **guardado en flash del menú** (FLASH ≈ 38-39 ms, igual que los 38 948 y 39 252 µs de antes).
-    - Es un comportamiento esperado: el firmware pone los motores en 0 antes de guardar y amplía el watchdog (`MiYoke_PD.ino`, bloque `savePending`), y el menú solo funciona en pausa o sin puente.
-    - Se descartan H1, H2 y H3 como disparadores deterministas. En ~50 min de observación no hubo ningún ciclo ≥ 3 ms fuera de los guardados.
-    - Probablemente el 39 ms del 12/10 vino de un guardado entre el vuelo corto y el banco. No hay registro que lo confirme, pero es la única etapa medida con esa duración.
-  - **REGISTRO DATOS en hardware:**
-    - Desactivado de 17:28:48 a 17:29:23: hueco de ~35 s en los **tres** CSV (`telemetry` 34 953 ms, `pico` 35 000 ms, `ganancias` 35 031 ms), sin filas.
-    - En la sesión P9, que arrancó con el registro desactivado, no hay filas hasta reactivarlo (18:07:14); después, 17 s de filas.
-    - `bridge.log` informa cada cambio, y `Fin:` dice `registro=ACTIVADO ciclos_lentos=2 filas_csv_malas=0` en ambas sesiones.
-  - **HALLAZGO NUEVO:** al conectar a las 17:17:33, la Pico informó `BOOT reset=WDT wd=0x1 pm=0x10000 etapa=0:INACTIVO falla=1`.
-    - Los arranques anteriores después de cargar un UF2 decían `reset=ENCENDIDO` (12/10, dos veces).
-    - Significa que la ejecución anterior de la Pico terminó en un **HardFault** (`isr_hardfault` marca el bit) y la reinició el watchdog. Pasó antes de las 17:17:33, probablemente en el primer arranque de V2.1 tras cargar el UF2.
-    - La etapa `INACTIVO` indica que fue fuera del cuerpo del lazo (entre vueltas: `yield()`/`tud_task` o una interrupción USB) o en `setup()` después de `mark(Idle)` (aunque entonces el watchdog todavía no corre).
-    - **Importa antes de conectar motores:** durante un HardFault el PWM queda en su último valor hasta que actúa el watchdog (250 ms).
-    - Siguiente paso propuesto: tarea propia con `depuracion-sistematica`. Reproducirlo (cargar el UF2 dos veces; desenchufar y enchufar) y agregar al diagnóstico de HardFault la dirección de la instrucción que falló (PC apilado en `scratch[1]`), para ubicarlo en el código.
-
-- (vacío: tarea nueva. Los resultados de la tarea anterior, registro/ensayo de la Pico V1.9-V2.0, están en `master`, commit `66a4a51`.)
+- (vacío: tarea nueva. El ensayo CICLOS y el hallazgo del HardFault están en `master`, commit `bccd1b7`.)
