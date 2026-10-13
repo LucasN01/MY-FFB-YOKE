@@ -108,6 +108,13 @@ static void replayAndComparatorChecks() {
 }
 static void recordAndSlowChecks() {
     char line[192]; bool on=false;
+    uint32_t stackBytes=0;
+    CHECK(YokeCsv::stackLine("S,123",stackBytes) && stackBytes==123);
+    CHECK(YokeCsv::stackLine("S,0",stackBytes) && stackBytes==0);
+    CHECK(YokeCsv::stackLine("S,4294967295",stackBytes) && stackBytes==UINT32_MAX);
+    CHECK(!YokeCsv::stackLine(nullptr,stackBytes));
+    for(const char* bad:{"S,","S,-1","S,1,2","S,+1","S, 1","S,1x","S,1 ","S,4294967296",
+        "S,18446744073709551616","","S","X,123"}) CHECK(!YokeCsv::stackLine(bad,stackBytes));
     for(bool enabled:{false,true}) {
         const int n=YokeLog::formatRecord(line,sizeof(line),enabled);
         CHECK(n==5 && std::strcmp(line,enabled ? "\nL,1\n" : "\nL,0\n")==0);

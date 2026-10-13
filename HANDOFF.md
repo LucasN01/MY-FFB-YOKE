@@ -84,35 +84,43 @@ Se divide en **2 partes**: firmware con manejador en ensamblador + compilación 
 
 \## Última entrega
 
-- Parte 1 completada (Codex, 2026-10-13), rama `mejora/diagnostico-hardfault`. Commit de implementacion: `b6db398` (codigo y HANDOFF); esta anotacion del hash se guarda en un commit posterior de HANDOFF.
-- Archivos modificados: `MiYoke_PD.ino`, `LoopSupervisor.h`, `mis_defines.h`, `Build-Pico2.ps1`, `probar.ps1`, `tests/health_checks.h`, `tests/picolog_checks.h` y `HANDOFF.md`.
-- Implementado: apagado EN/PWM y captura PC/LR/CFSR/excepcion en HardFault ARM; lectura y limpieza de scratch al arrancar; BOOT ampliado solo con falla; pintado y medicion del stack, linea S despues de W; variante `-PruebaFalla` con potes y trap a los 20 s. Constantes de seguridad sin cambios.
-- Documentacion: esta entrega actualizada. Los cambios de manuales quedan en Parte 2, como indica el plan; no se editaron .tex. Cambios del usuario en tesis/ y graphify-ino/ conservados y fuera del commit.
-- Verificaciones de §2 [Codigo], rutas del core relativas a `%LOCALAPPDATA%/Arduino15/packages/rp2040/hardware/rp2040/6.1.1`:
-  - `pico-sdk/src/rp2_common/hardware_watchdog/watchdog.c:84,102-108,126`: usa watchdog scratch[4..7], sin uso de [1..3] en cores/rp2040 ni en ese modulo. Salvedad: `pico-sdk/src/rp2_common/pico_crt0/crt0.S:434-452` usa scratch[2..3] para arranque RAM bajo `PICO_NO_FLASH`; esta variante usa flash (`build-pico2-prueba-falla/MiYoke_PD.ino.map:5828`, carga .data desde 0x1001cfb0), por lo que ese camino no aplica.
-  - `pico-sdk/src/rp2_common/pico_crt0/crt0.S:200-201,349`: `decl_isr_bkpt isr_hardfault` declara el simbolo debil. `Build-Pico2.ps1:15` compila `arch=arm`; build.options.json de prueba confirma ese FQBN y `-DYOKE_USE_SIMULATION=2 -DYOKE_TEST_HANG=3 -DYOKE_TEST_HANG_MS=20000`.
-  - `lib/rp2350/memmap_default.ld:305-310`: `__StackLimit` es el limite historico del heap; para pintar se usan `__StackBottom` y `__StackTop`. ELF/map de prueba: 0x20081800 y 0x20082000 (2048 B). Diferencia frente a la hipotesis de 4 KB del diseño: el core reserva 2 KB (`pico-sdk/src/rp2350/pico_platform/include/pico/platform.h:49-51`, PICO_STACK_SIZE=0x800). No se cambia el tamaño; se utilizan los limites reales, conforme a la verificacion no bloqueante de §2.
-  - `pico-sdk/src/rp2350/hardware_structs/include/hardware/structs/io_bank0.h:36,62,180`: GPIO_FUNC_SIO=5 y `io[p].ctrl`; `.../sio.h:84,129`: `gpio_clr` y `gpio_oe_set`.
-- [INO] `MiYoke_PD.ino:31-47`: manejadores; `:191-210`: pintado y captura de arranque; `:407-445`: medicion una vez por segundo y envio S con las condiciones de L, despues de W.
-- [Codigo] `LoopSupervisor.h:45-59,92-115`: decode/excepcion, funciones puras de stack y BOOT. `SimConnectBridge/SerialLink.h:52-67` conserva su buffer de 160 B (hasta 159 caracteres).
-- `graphify-sync.cmd` ejecutado y `graphify update .` actualizado (AST, sin API). La primera invocacion sin `./` no encontro el comando en PowerShell; se corrigio a `./graphify-sync.cmd` y se completo la sincronizacion.
-- Pruebas: `powershell -ExecutionPolicy Bypass -File probar.ps1 -Pico -Potentiometers -Encoders -PruebaFalla` termino con codigo 0:
+- Parte 2 implementada (Codex, 2026-10-13), rama `mejora/diagnostico-hardfault`. Parte 1 aprobada por Claude en `9ea9978` (implementacion `b6db398`). Commit de Parte 2: se registra despues de crearlo.
+- Archivos modificados: `MiYoke_PD.ino`, `.gitignore`, `SimConnectBridge/PicoCsv.h`, `SimConnectBridge/main.cpp`, `tests/picolog_checks.h`, `FALLA.ps1`, `ARRANQUE.ps1`, `ARRANQUE.cmd`, `LEEME md/CALCULO_PICO_SC8.md`, `LEEME md/ENSAYOS.md`, `LEEME md/LEEME_PICO2.md` y `HANDOFF.md`.
+- [Codigo] `SimConnectBridge/PicoCsv.h:48`: stackLine acepta S mas un entero uint32 sin signo, rechaza vacios, signo, campos extra y desbordes. `SimConnectBridge/main.cpp:227-238,406-410`: acepta S, registra cada valor distinto en bridge.log y conserva el minimo de toda la sesion para Fin (o - si no recibio valores).
+- [INO] `MiYoke_PD.ino:420-425`: reinicia lastStackBytes en el flanco DTR para reenviar S tras reconexion. `.gitignore` excluye build-pico2-prueba-falla/. Constantes de seguridad sin cambios.
+- Scripts: FALLA busca addr2line de la carpeta mas nueva, traduce PC/LR, limpia Thumb en LR, verifica rango y muestra fecha/advertencia del ELF. ARRANQUE conserva cabecera literal y hasta 300 filas sent=1 (UTF-8 sin BOM), ejecuta replay sin --enable, copia logs actuales aun con salida no cero, informa BOOT/stack y guarda falla.txt si se indica ELF. El wrapper avisa si falta el CSV y siempre hace pause.
+- Documentacion actualizada en el mismo commit: reemplazo exacto de CALCULO_PICO_SC8.md; tabla y Decision de §5 copiadas a ENSAYOS.md; linea literal de compilacion de prueba en LEEME_PICO2.md. Todos los textos actuales aparecieron. La ayuda de probar.ps1 ya estaba actualizada por Parte 1. No afecta tesis; no se editaron ni compilaron .tex.
+- `graphify-sync.cmd` y `graphify update .` completados (AST, sin API). Cambios del usuario en tesis/ y graphify-ino/ conservados y fuera del commit.
+- Pruebas: `powershell -ExecutionPolicy Bypass -File probar.ps1 -Pico -Potentiometers -Encoders -Bridge -PruebaFalla`, codigo 0:
 
 ```text
-OK suite simconnect_checks - PASS: 143603 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+OK suite simconnect_checks - PASS: 143619 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
 OK comparar_ensayo
 OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-OK Pico 2 (configurado) - Sketch uses 106364 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
-OK Pico 2 (encoders) - Sketch uses 106524 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23256 bytes (4%) of dynamic memory, leaving 501032 bytes for local variables. Maximum is 524288 bytes.
-OK Pico 2 (potenciometros) - Sketch uses 106364 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
-OK Pico 2 (prueba falla) - Sketch uses 106412 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
+OK Pico 2 (configurado) - Sketch uses 106380 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
+OK Pico 2 (encoders) - Sketch uses 106540 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23256 bytes (4%) of dynamic memory, leaving 501032 bytes for local variables. Maximum is 524288 bytes.
+OK Pico 2 (potenciometros) - Sketch uses 106380 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
+OK puente SimConnect
+OK Pico 2 (prueba falla) - Sketch uses 106420 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
+OK sintaxis FALLA.ps1
+OK sintaxis ARRANQUE.ps1
+OK FALLA rechaza PC fuera de codigo (salida 1)
+RESULTADO: OK
 ```
 
-- Tamaños frente a 105820 B: configurado y potes +544 B; encoders +704 B; prueba falla +592 B.
-- RAM verificada en `build-pico2-prueba-falla/MiYoke_PD.ino.map:5828-5837`: `.time_critical.hardfaultCapture` y `.time_critical.isr_hardfault` dentro de `.data`. `arm-none-eabi-nm -n`: `20000110 T hardfaultCapture`, `2000015c T isr_hardfault`; T mayuscula confirma simbolos fuertes. Para Parte 2: `100067dc T loop` en este ELF.
-- `git diff --check`: sin errores de espacios. No se cargo firmware ni se valido el manejador en hardware; queda el protocolo V1 y R1-R3 del diseño.
-- Version: no creada, conforme a Parte 1 (sin version); `nueva-version.ps1` queda para la Parte 2 final.
-- Sigue: revision de Claude de Parte 1; despues, Parte 2 (puente, scripts, documentacion y version). No se integro a master.
+- Sintaxis con el parser de Windows PowerShell 5.1. RESULTADO: OK corresponde a `tests/bin/comparar_ensayo.exe tmp/vuelo_corto`, codigo 0.
+- Tamaños respecto de 105820 B: configurado/potes +560 B, encoders +720 B, prueba falla +600 B.
+- FALLA con PC de loop tomado del map final (`-Pc 0x100067dc -Elf build-pico2-prueba-falla/MiYoke_PD.ino.elf`), codigo 0:
+
+```text
+El .elf debe ser de la misma compilacion que el UF2 cargado
+PC 0x100067dc -> loop (D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD/MiYoke_PD.ino:240)
+```
+
+- Adicional: FALLA con PC 0x20000110 y LR 0x2000015d del ELF configurado devuelve hardfaultCapture e isr_hardfault (LR limpio 0x2000015c), codigo 0. ELF de prueba final confirma `20000110 T hardfaultCapture` y `2000015c T isr_hardfault`: RAM y simbolos fuertes. Stack verificado en Parte 1: 2048 B, no 4 KB.
+- `git diff --check`: sin errores. Sin desvios del alcance. ARRANQUE no se ejecuto en hardware; no se cargo firmware ni se integro a master.
+- Version: pendiente del paso inmediato `nueva-version.ps1`, desde checkout temporal limpio debido a los cambios del usuario en tesis/ (procedimiento autorizado en el plan).
+- Sigue: revision de Claude de Parte 2 y protocolo del usuario V1, R1-R3 (§5), con motores apagados.
 
 \## Revisión
 

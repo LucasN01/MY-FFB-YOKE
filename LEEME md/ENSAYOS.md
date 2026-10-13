@@ -77,3 +77,22 @@ Los tramos con `skipped` se excluyen de A hasta recuperar el estado y se informa
 | P7 | Sin simulador: `powershell -ExecutionPolicy Bypass -File Iniciar-Simulador.ps1 -DetectarPlaca`, 3 veces, con 1 min entre cada una | 5 min | H1 aislada |
 | P8 | Sin simulador: REGISTRO DATOS → Desactivado → OK; esperar 2 min | 3 min | control de `hace` (~120 s) |
 | P9 | Abrir el simulador; pausa 2 min; REGISTRO DATOS → Activado → OK; cerrar | 4 min | recibe los eventos de P5-P8 |
+
+## Arranque y fallas (ARRANQUE.cmd)
+
+| Paso | Acción | Qué se espera |
+| --- | --- | --- |
+| V1 | Cargar `build-pico2-prueba-falla\MiYoke_PD.ino.uf2` (BOOTSEL). **Esperar 30 s.** Ejecutar `ARRANQUE.cmd` | `BOOT reset=WDT ... etapa=15:PRUEBA falla=1 exc=0 pc=...`; `FALLA.ps1` con `-Elf build-pico2-prueba-falla\MiYoke_PD.ino.elf` lleva el PC a `loop` |
+| R1 | Cargar el UF2 normal `build-pico2-potentiometers\MiYoke_PD.ino.uf2`. Esperar 30 s. `ARRANQUE.cmd` | `ENCENDIDO` (o `WDT falla=1`: se captura) |
+| R2 | Desenchufar y enchufar la Pico, esperar 30 s, `ARRANQUE.cmd`; 3 veces | `ENCENDIDO` |
+| R3 | Volver a cargar el **mismo** UF2 normal, esperar 30 s, `ARRANQUE.cmd`; 2 veces | `ENCENDIDO`; si aparece `falla=1`, está ligada al primer arranque tras la carga |
+| R4 | Uso normal en los días siguientes | Cada vuelo deja su `BOOT` y su `stack libre minimo` en `bridge.log` |
+
+- **Decisión:**
+  - con `falla=1` en R1-R4, `exc` (hilo o IRQ), PC y LR con `FALLA.ps1` indican dónde se produjo, y la corrección se
+    diseña en otra tarea;
+  - si el stack libre mínimo cae por debajo de 512 B, se toma como evidencia de H-b;
+  - sin fallas, "no reproducido", y el diagnóstico queda activo.
+- No recompilar entre la carga del UF2 y el uso de `FALLA.ps1`.
+- Si `ARRANQUE.cmd` se ejecuta antes de los 20 s en V1, la falla ocurre con el puente conectado (código 4): esperar y
+  repetir `ARRANQUE.cmd`.

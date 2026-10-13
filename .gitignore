@@ -2,6 +2,7 @@
 build-pico2/
 build-pico2-encoders/
 build-pico2-potentiometers/
+build-pico2-prueba-falla/
 SimConnectBridge/bin/
 SimConnectBridge/obj/
 *.uf2

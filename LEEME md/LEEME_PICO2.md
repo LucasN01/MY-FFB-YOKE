@@ -40,6 +40,8 @@ Tambien se puede compilar desde PowerShell, situado en esta carpeta:
 .\Build-Pico2.ps1 -Encoders
 ```
 
+probar.ps1 -PruebaFalla compila build-pico2-prueba-falla (HardFault provocado a los 20 s, solo para validar el diagnostico; no usar para volar).
+
 El primer comando respeta `USE_POTENTIOMETERS` del archivo de configuracion;
 el segundo fuerza encoders. Ninguno carga ni activa la placa.
 FQBN utilizado: `rp2040:rp2040:rpipico2:usbstack=tinyusb,arch=arm`.

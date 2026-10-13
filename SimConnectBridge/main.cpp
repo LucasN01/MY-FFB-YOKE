@@ -36,6 +36,7 @@ FILE* picoLog=nullptr;
 FILE* picoCsv=nullptr;
 FILE* gainsCsv=nullptr;
 unsigned picoLines=0, badPicoLines=0, slowCycles=0, badCsvRows=0;
+uint32_t stackFreeMin=0, stackFreeLast=0; bool stackReceived=false;
 YokeCsv::CsvGate gate;
 void WriteCsv(const std::string& row) { if(csv) std::fputs(row.c_str(),csv); }
 void FinishCsv() { gate.finish(WriteCsv); if(csv) { std::fflush(csv); std::fclose(csv); csv=nullptr; } }
@@ -202,7 +203,7 @@ void PollPort(ULONGLONG now) {
             if(picoLog) { std::fwrite(b,1,n,picoLog); std::fflush(picoLog); }
             bootScanner.feed(b,n,[](const char* l){ char t[16]; Stamp(t); Log("[%s] Pico: %s\n",t,l); });
             picoSplitter.feed(b,n,[](const char* l) {
-                if((l[0]!='M' && l[0]!='G' && l[0]!='L' && l[0]!='W') || l[1]!=',') return;
+                if((l[0]!='M' && l[0]!='G' && l[0]!='L' && l[0]!='W' && l[0]!='S') || l[1]!=',') return;
                 ++picoLines; char row[512];
                 if(l[0]=='L') {
                     bool on;
@@ -223,6 +224,17 @@ void PollPort(ULONGLONG now) {
                     Log("[%s] Pico: ciclo lento lp=%u us fuera=%u us etapa=%u:%s (%u us) hace %u ms flags=0x%X total=%u perdidos=%u\n",
                         t,unsigned(v[2]),unsigned(v[3]),unsigned(v[4]),YokeHealth::stageName(uint8_t(v[4])),
                         unsigned(v[5]),unsigned(v[1]),unsigned(v[6]),unsigned(v[7]),unsigned(v[8]));
+                    return;
+                }
+                if(l[0]=='S') {
+                    uint32_t bytes;
+                    if(!YokeCsv::stackLine(l,bytes)) { ++badPicoLines; return; }
+                    if(!stackReceived || bytes!=stackFreeLast) {
+                        char t[16]; Stamp(t);
+                        Log("[%s] Pico: stack libre minimo %u B\n",t,unsigned(bytes));
+                    }
+                    if(!stackReceived || bytes<stackFreeMin) stackFreeMin=bytes;
+                    stackFreeLast=bytes; stackReceived=true;
                     return;
                 }
                 const bool model=l[0]=='M';
@@ -391,8 +403,11 @@ int main(int argc,char** argv) {
     if(picoLog) std::fclose(picoLog);
     if(picoCsv) std::fclose(picoCsv);
     if(gainsCsv) std::fclose(gainsCsv);
-    Log("Fin: muestras=%u error=%d reconexiones=%u lineas_pico=%u lineas_pico_malas=%u registro=%s ciclos_lentos=%u filas_csv_malas=%u\n",
-        samples,failed,reconnect.reconnections,picoLines,badPicoLines,recordState,slowCycles,badCsvRows);
+    char stackSummary[16];
+    if(stackReceived) sprintf_s(stackSummary,sizeof(stackSummary),"%u",unsigned(stackFreeMin));
+    else strcpy_s(stackSummary,sizeof(stackSummary),"-");
+    Log("Fin: muestras=%u error=%d reconexiones=%u lineas_pico=%u lineas_pico_malas=%u registro=%s ciclos_lentos=%u filas_csv_malas=%u stack_libre_min=%s\n",
+        samples,failed,reconnect.reconnections,picoLines,badPicoLines,recordState,slowCycles,badCsvRows,stackSummary);
     return reconnect.lost ? 4 : (failed||samples==0 ? 1 : 0);
 }
 

@@ -45,6 +45,13 @@ inline bool slowLine(const char* line,uint32_t v[9]) {
     }
     return true;
 }
+inline bool stackLine(const char* line,uint32_t& bytes) {
+    if(!line || line[0]!='S' || line[1]!=',' || line[2]<'0' || line[2]>'9') return false;
+    errno=0; char* end=nullptr;
+    const unsigned long long value=std::strtoull(line+2,&end,10);
+    if(errno==ERANGE || value>UINT32_MAX || *end!=0) return false;
+    bytes=uint32_t(value); return true;
+}
 static const char modelHeader[]="host_time_ms,seq,sample_time_ms,revision,flags,pressure,gust_roll,gust_pitch,buffet_stall,buffet_gear,buffet_spoiler,ground_roll,ground_pitch,ground_envelope,center_stiffness,pos_roll,pos_pitch,vel_roll,vel_pitch,cmd_roll,cmd_pitch,pwm_roll,pwm_pitch,peak_pwm_roll,peak_pwm_pitch,dropped,skipped";
 static const char gainsHeader[]="host_time_ms,seq,enabled_bits,total,center_pitch,center_rest,gust_roll,gust_pitch,ground,stall,gear,spoiler,damper,friction,center_roll";
 struct LineSplitter {

@@ -417,7 +417,12 @@ void loop() {
         const int16_t magnitude=pwm[i]<0 ? -pwm[i] : pwm[i];
         if(magnitude>peak[i]) peak[i]=magnitude;
     }
-    if(dtr && !lastDtr) { logSynced=false; recordSent=false; gainsSent=false; }
+    if(dtr && !lastDtr) {
+        logSynced=false; recordSent=false; gainsSent=false;
+#if defined(ARDUINO_ARCH_RP2040) && defined(__ARM_ARCH_8M_MAIN__)
+        lastStackBytes=0xFFFFFFFFu;
+#endif
+    }
     if(recordSettings.enabled && !lastRecordSent) { gainsSent=false; logSynced=false; peak[0]=peak[1]=0; }
     lastDtr=dtr;
     const uint32_t r=simEffects.modeledRevision();
