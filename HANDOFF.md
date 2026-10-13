@@ -125,8 +125,8 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
   - B9: OK violaciones=0 lineas=4533 malas=0
   - RESULTADO: OK
 - `graphify update .` ejecutado (AST, sin API); `git diff --check` sin errores. No se repitieron compilaciones de firmware/puente ni banco, que no forman parte de 3b. La observacion del ciclo de 39 ms queda fuera de esta tarea, como pide la revision.
-- Commit por nombre: `Ensayos: ventana abierta al terminar, fin con FIN, copia tolerante y pruebas reforzadas`; identificador a registrar tras el commit.
-- Version: pendiente de ejecutar nueva-version.ps1 despues del commit. Se usara el mismo procedimiento de Parte 3: checkout temporal limpio y detached del mismo commit, en el mismo directorio padre, para preservar los cambios previos de tesis y mantener el destino MiYoke_PD_VERSIONES.
+- Commit de implementacion por nombre: `caab4f0` — `Ensayos: ventana abierta al terminar, fin con FIN, copia tolerante y pruebas reforzadas`. Cierre documental posterior, solo HANDOFF.md: `HANDOFF: cierre de Parte 3b y version V2.0`.
+- Version creada: **V2.0**, etiqueta sobre `caab4f0`. `nueva-version.ps1` ejecutado desde PowerShell sin modificarlo, despues del commit; salida `Version V2.0 creada`. Verificado `..\MiYoke_PD_VERSIONES\V2_0\ACTUALIZACION_V2_0.txt`. Desvio operativo igual a Parte 3: checkout temporal limpio y detached del mismo commit, en el mismo directorio padre, para preservar los cambios previos de tesis y mantener el destino MiYoke_PD_VERSIONES. Checkout retirado; rama de trabajo preservada. El campo RAMA del TXT generado queda vacio por el checkout detached; la rama de origen se indica arriba.
 - Sigue: revision de Claude de Parte 3b. No integrado a master.
 
 \## Revisión
