@@ -113,7 +113,7 @@ Se divide en **3 partes**, porque hay estado nuevo en firmware y en puente, un r
 
 \## Última entrega
 
-- Parte 3 implementada (2026-10-13), sobre partes 1 `629e5a4` y 2 `c74d6e7`, ambas aprobadas por Claude. Rama: `mejora/registro-menu-y-ciclos-lentos`.
+- Parte 3 completada y versionada (2026-10-13), sobre partes 1 `629e5a4` y 2 `c74d6e7`, ambas aprobadas por Claude. Rama: `mejora/registro-menu-y-ciclos-lentos`.
 - Archivos modificados: `LEEME md/MENU_CALIBRACION.md`, `LEEME md/CALCULO_PICO_SC8.md`, `LEEME md/ENSAYOS.md`, `tesis/capitulos/03_centrado.tex`, `tests/comparar_ensayo.h`, `tests/picolog_checks.h`, `tests/calibration_checks.h`, `SimConnectBridge/main.cpp`, `ENSAYO.ps1`, `CICLOS.ps1` y `HANDOFF.md`.
 - Documentacion: todos los TEXTO ACTUAL de §11 coincidieron una vez; aplicados los reemplazos literales, sin redactar ni reformular el .tex. Agregada al final de ENSAYOS.md la tabla literal de §7 bajo "Ciclos lentos (CICLOS.cmd)". No se modificaron otros documentos funcionales ni documentos de diseno.
 - [Código] `tests/comparar_ensayo.h:188`: centrado signo informa SIN DATOS por eje si no hay filas evaluables; prueba sintetica agregada. La prueba de pausa inicial usa tres filas desarmada / pausada y desarmada / armada, con transiciones=0 evaluadas=0 (`tests/picolog_checks.h:87`).
@@ -136,8 +136,11 @@ Se divide en **3 partes**, porque hay estado nuevo en firmware y en puente, un r
 - No se afirma compilacion real del PDF: solo chequeo estatico OK. No se invoco pdflatex ni latexmk.
 - Tamano configurado: 105820 B, +1320 B respecto de V2.0 (104500 B), dentro del limite de +6 kB. YOKE_MODEL_LOG permanece en 1.
 - `git diff --check`: sin errores. `graphify update .` ejecutado: 1154 nodos y 1528 aristas. No se modifico el .ino.
-- Commit: el de esta entrega, mensaje "Documentacion del menu REGISTRO DATOS y ciclos lentos; ajustes menores del comparador", con los archivos agregados por nombre.
-- Version: pendiente de ejecutar nueva-version.ps1 tras este commit. Se usara un checkout temporal limpio junto al proyecto (mismo directorio padre para MiYoke_PD_VERSIONES), porque los cambios del usuario en tesis impiden el requisito de arbol limpio del script. El resultado se anotara en un commit posterior de HANDOFF, solo de documentacion.
+- Commit de codigo y documentacion: `a361f4c`, "Documentacion del menu REGISTRO DATOS y ciclos lentos; ajustes menores del comparador", con los archivos agregados por nombre. El registro final de version en HANDOFF va en este commit posterior, solo de documentacion.
+- Version: **V2.1 creada** por `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Menu REGISTRO DATOS para activar los CSV y diagnostico de ciclos lentos del lazo"`, sobre `a361f4c`.
+  - Version V2.1 creada en `..\MiYoke_PD_VERSIONES\V2_1`.
+  - OK existe `..\MiYoke_PD_VERSIONES\V2_1\ACTUALIZACION_V2_1.txt`.
+- Procedimiento de versionado previsto en el plan: checkout temporal limpio `..\MiYoke_PD_version_codex_20261013170531`, con HEAD separado en a361f4c y mismo padre para conservar el destino correcto de MiYoke_PD_VERSIONES. Se ejecuto alli el script original; no se tocaron ni guardaron temporalmente los cambios del usuario. Checkout retirado con git worktree remove tras verificar la version. No se crearon etiquetas ni carpetas de version a mano.
 - Cambios del usuario en `tesis/main.tex`, `tesis/capitulos/11_maquinas_estado.tex`, `tesis/caracterizacion_motores_775.tex` y `graphify-ino/` preservados fuera del commit y de la copia de la version.
 - Observacion para Claude, fuera de los reemplazos literales de §11: el parrafo final de ENSAYOS.md sobre codigos 0/1/2 no explicita la excepcion de telemetry.csv vacio (informe SIN DATOS y salida 1). No se amplio el alcance del diseno.
 - Desvios de implementacion: ninguno nuevo; el desvio ENTRE_CICLOS de Parte 2 ya esta incorporado al diseno (`6671b6a`). Sigue revision de Claude; el usuario carga el UF2 y hace CICLOS.cmd. No se integro a master.
