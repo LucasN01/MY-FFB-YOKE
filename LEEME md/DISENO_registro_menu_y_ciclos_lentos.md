@@ -130,7 +130,10 @@ int formatSlow(char* out,size_t size,uint16_t seq,uint32_t ageMs,const SlowEvent
    formateo siguiente no se atribuya a `SERIE_TX`.
 4. Comienzo del cuerpo, justo después de `lastControlLoopUs = nowUs;` (`:174`):
    - `idleUs = gapUs - prevElapsedUs` (tiempo **fuera** del cuerpo, incluidos `yield()`/`tud_task`; `UsbGuard.h`);
-   - si `idleUs >= YOKE_SLOW_LOOP_US - CONTROL_LOOP_MS*1000`, `push` con `stage=Between`, `stageUs=idleUs`, `lpUs=0`;
+   - si `YokeHealth::slowBetween(gapUs,prevElapsedUs,YOKE_SLOW_LOOP_US)`, es decir `gapUs >= YOKE_SLOW_LOOP_US && prevElapsedUs < YOKE_SLOW_LOOP_US`,
+     `push` con `stage=Between`, `stageUs=idleUs`, `lpUs=0`. (Corrección de 2026-10-13, autorizada por el usuario durante la Parte 2:
+     la condición original `idleUs >= YOKE_SLOW_LOOP_US - CONTROL_LOOP_MS*1000` se cumplía en ciclos normales, 2000−200 = 1800 µs ≥ 1000 µs;
+     la segunda condición evita registrar dos veces un ciclo lento que ya registró `finishLoop`.)
    - luego `stageTimer.begin(nowUs)`.
 5. Nueva función `finishLoop(uint32_t nowUs)`. Reemplaza el par `elapsedUs`/`loopWorstUs` + `YokeHealth::mark(Idle)`
    en las **tres** salidas del cuerpo: los dos `return` tras `calibration.save()` (`:225-228` y `:254-257`, el que
