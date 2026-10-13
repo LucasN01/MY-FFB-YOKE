@@ -44,19 +44,28 @@ $tabla | ForEach-Object { Write-Host $_ }
 Read-Host 'En tierra, antes de F1, presiona Enter para marcar inicio' | Out-Null
 "$([EnsayoReloj]::GetTickCount64()),inicio,inicio" | Add-Content -LiteralPath $marcas -Encoding ASCII
 do {
-    $marca = Read-Host 'Cerrá el simulador (o el puente) y presioná Enter; opcional: numero de fase y Enter para marcar'
+    $marca = Read-Host 'Escribi un numero de fase para marcarla, o FIN para terminar (despues de cerrar el simulador)'
+    if ($marca -eq 'FIN') { break }
+    if (-not $marca) { continue }
     if ($marca) {
         $fase = $fases | Where-Object { $_[0] -eq $marca } | Select-Object -First 1
         if ($fase) { "$([EnsayoReloj]::GetTickCount64()),F$($fase[0]),$($fase[1])" | Add-Content -LiteralPath $marcas -Encoding ASCII }
         else { Write-Host 'Numero de fase fuera de la rutina seleccionada.' }
     }
-} while ($marca)
+} while ($true)
+if (Get-Process -Name YokeSimConnectBridge -ErrorAction SilentlyContinue) { Write-Host 'Esperando a que se cierre el puente (cerra el simulador)... hasta 120 s' }
 $limite = [EnsayoReloj]::GetTickCount64() + 120000
 while ((Get-Process -Name YokeSimConnectBridge -ErrorAction SilentlyContinue) -and [EnsayoReloj]::GetTickCount64() -lt $limite) { Start-Sleep -Milliseconds 250 }
 if (Get-Process -Name YokeSimConnectBridge -ErrorAction SilentlyContinue) { Write-Warning 'El puente sigue abierto tras 120 s; se copian igualmente los registros.' }
 $registros = Join-Path $PSScriptRoot 'SimConnectBridge\bin\Win32\RealismoSC8'
 foreach ($archivo in @('telemetry.csv','pico.csv','ganancias.csv','pico.log','bridge.log')) {
-    Copy-Item -LiteralPath (Join-Path $registros $archivo) -Destination $destino
+    if (Test-Path -LiteralPath (Join-Path $registros $archivo)) {
+        Copy-Item -LiteralPath (Join-Path $registros $archivo) -Destination $destino
+    } else { Write-Host "Falta $archivo; se sigue sin el" }
+}
+if (-not (Test-Path -LiteralPath (Join-Path $destino 'telemetry.csv'))) {
+    Write-Host 'Falta telemetry.csv; no se puede comparar el ensayo.'
+    exit 1
 }
 & (Join-Path $PSScriptRoot 'tests\bin\comparar_ensayo.exe') $destino | Out-Null
 $codigo = $LASTEXITCODE

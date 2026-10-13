@@ -97,21 +97,22 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
 
 \## Última entrega
 
-- Parte 3 implementada (2026-10-12), rama `mejora/registro-ensayo-pico`, sobre `873cfb1`. Alcance: R1–R7 de la revision, scripts, documentacion y version final de las tres partes.
-- Archivos de codigo modificados: `tests/comparar_ensayo.h`, `tests/picolog_checks.h`, `SimConnectBridge/Replay.h`, `SimConnectBridge/main.cpp`; nuevos `ENSAYO.ps1`, `ENSAYO.cmd`, `BANCO.ps1`; `.gitignore` agrega `ensayos/`.
-- R1–R7: B6 solo transiciones armado→desarmado, latencia al primer cero y rearmado anterior dentro de 150 ms no evaluado; B7 usa filas + perdidas y maneja desborde/reinicio de secuencia; skip inicial desde primera fila; watchdog desde rx.fresh antes de feed; cierre replay con opened=false antes de los tres desarmes; tokens -nan / nan(snan) / -nan(snan); fusion posterior de fases iguales, orden 03 RODAJE, SIN DATOS por fase sin reloj Pico y no_emparejadas_drop. Pruebas de regresion agregadas en picolog_checks.h.
-- Scripts: rutina completa de 14 fases o corta de 7, marcas opcionales con GetTickCount64, archivo de rutina, espera del puente hasta 120 s y copia de cinco registros. Banco exclusivo sin Prepar3D/puente previo, deteccion COM por lanzador, entrada archivada y modo monitor predeterminado; armado solo por las condiciones de seguridad del diseno.
-- Documentacion actualizada: reemplazos exactos de §10 en `LEEME md/CALCULO_PICO_SC8.md` y `LEEME md/LEEME_SIMCONNECT.md`; nuevo `LEEME md/ENSAYOS.md` con uso, tabla de fases, columnas y resultados. Todos los textos actuales se encontraron. Tesis no modificada por Codex: sus cambios previos se preservan.
-- Verificacion `powershell -ExecutionPolicy Bypass -File probar.ps1 -Pico -Potentiometers -Encoders -Bridge`:
+- Parte 3b implementada (2026-10-12), rama `mejora/registro-ensayo-pico`, sobre `0886956`. Solo S1–S6 de la revision.
+- S1 aplicado: `ENSAYO.cmd` hace pause siempre, para mantener visible el informe con doble clic.
+- S2 aplicado: `ENSAYO.ps1` ignora Enter vacio, permite marcas por numero y termina solo con FIN sin distinguir mayusculas. Si el puente sigue abierto, avisa antes de la espera existente de hasta 120 s.
+- S3 aplicado: ambos scripts copian solamente los registros existentes y avisan `Falta <archivo>; se sigue sin el`. Ejecutan el comparador si se archivo telemetry.csv; si falta, avisan y salen con codigo 1.
+- S4 aplicado: la prueba de pausa previa al primer armado pone paused=true y armed=false en tel[0].
+- S5 aplicado: no_emparejadas_drop usa aritmetica con signo int64_t y max(0, diferencia).
+- S6 aplicado: BANCO.ps1 cambia ErrorActionPreference a Continue solamente durante la llamada al lanzador y lo restaura en finally.
+- Archivos modificados: `ENSAYO.cmd`, `ENSAYO.ps1`, `BANCO.ps1`, `tests/picolog_checks.h`, `tests/comparar_ensayo.h`, `HANDOFF.md` y `LEEME md/ENSAYOS.md`.
+- Documentacion actualizada: solo la frase de ENSAYOS.md que indicaba Enter para terminar, reemplazada por escribir FIN. Sin cambios en firmware, puente ni tesis. Los cambios previos del usuario en tesis se preservan.
+- Verificacion `powershell -ExecutionPolicy Bypass -File probar.ps1`:
   - OK suite simconnect_checks - PASS: 141297 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
   - OK comparar_ensayo
   - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-  - OK Pico 2 (configurado) - Sketch uses 104500 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22768 bytes (4%) of dynamic memory, leaving 501520 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (encoders) - Sketch uses 104676 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23008 bytes (4%) of dynamic memory, leaving 501280 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (potenciometros) - Sketch uses 104500 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22768 bytes (4%) of dynamic memory, leaving 501520 bytes for local variables. Maximum is 524288 bytes.
-  - OK puente SimConnect
-- OK sintaxis ENSAYO.ps1; OK sintaxis BANCO.ps1; OK tabla de fases y marcas; OK rutina corta: 7 fases. La rutina de vuelo queda para el usuario.
-- Comparador sobre `tmp/vuelo_corto` antes del banco:
+  - OK sintaxis ENSAYO.ps1
+  - OK sintaxis BANCO.ps1
+- Comparador `tests\bin\comparar_ensayo.exe tmp\vuelo_corto`:
   - A fidelidad: OK emparejadas=100.000% q=100.000% gust=100.000% buffet=100.000% ground=100.000% env=100.000% peor=q@91235750:0.000050 excluidas=0 esperadas=4376 no_emparejadas_drop=0
   - B1: OK violaciones=0
   - B2: OK violaciones=0
@@ -123,23 +124,10 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
   - B8: OK violaciones=0
   - B9: OK violaciones=0 lineas=4533 malas=0
   - RESULTADO: OK
-- Banco ejecutado con Pico conectada y Prepar3D cerrado: `powershell -ExecutionPolicy Bypass -File BANCO.ps1 -Entrada tmp\vuelo_corto\telemetry.csv`, sin -Armar ni -Confirmado. Puerto detectado por el lanzador; registros en `ensayos/20261012-213753_banco/`, con entrada.csv y los cinco registros completos. No se cargo firmware ni se armaron los motores.
-  - A fidelidad: SIN DATOS emparejadas=0.000% q=0.000% gust=0.000% buffet=0.000% ground=0.000% env=0.000% peor=q@0:0.000000 excluidas=0 esperadas=0 no_emparejadas_drop=0
-  - B1: OK violaciones=0
-  - B2: OK violaciones=0
-  - B3: OK violaciones=0
-  - B4: OK violaciones=0
-  - B5: OK violaciones=0
-  - B6: SIN DATOS violaciones=0 transiciones=0 evaluadas=0 latencia_max=0ms
-  - B7: OK violaciones=0 pico=0.000% puente=0.000% dropped=0.000
-  - B8: OK violaciones=0
-  - B9: OK violaciones=0 lineas=2297 malas=0
-  - RESULTADO: SIN DATOS
-- C informativo del monitor: us/lp/gap max=286/39252/39297; lp>=2000=1. Se registra el dato, sin atribuir causa ni modificar el firmware fuera del plan.
-- `graphify update .` ejecutado (AST, sin API); grafo actualizado. `git diff --check` sin errores. No corresponde compilar tesis.
-- Commit de implementacion por nombre: `82b5c04` — `Ensayos: rutina de vuelo, banco sin simulador y documentacion de registros de la Pico`. Cierre documental posterior: `HANDOFF: cierre de Parte 3 y version V1.9`, solo HANDOFF.md.
-- Version creada: **V1.9**, etiqueta sobre `82b5c04`. `nueva-version.ps1` ejecutado desde PowerShell sin modificarlo, despues del commit; salida `Version V1.9 creada`. Verificado `..\MiYoke_PD_VERSIONES\V1_9\ACTUALIZACION_V1_9.txt`. Desvio operativo: por los cambios previos de tesis, se uso un checkout temporal limpio y detached del mismo commit, dentro del mismo directorio padre (misma carpeta MiYoke_PD_VERSIONES); se retiro al terminar. La rama de trabajo y los archivos del usuario se preservaron. El campo RAMA del TXT generado queda vacio por ese checkout detached; la rama de origen se indica arriba.
-- Sigue: revision de Claude de Parte 3; banco armado por el usuario con fuente de motores apagada y vuelo con ENSAYO.cmd. No integrado a master.
+- `graphify update .` ejecutado (AST, sin API); `git diff --check` sin errores. No se repitieron compilaciones de firmware/puente ni banco, que no forman parte de 3b. La observacion del ciclo de 39 ms queda fuera de esta tarea, como pide la revision.
+- Commit por nombre: `Ensayos: ventana abierta al terminar, fin con FIN, copia tolerante y pruebas reforzadas`; identificador a registrar tras el commit.
+- Version: pendiente de ejecutar nueva-version.ps1 despues del commit. Se usara el mismo procedimiento de Parte 3: checkout temporal limpio y detached del mismo commit, en el mismo directorio padre, para preservar los cambios previos de tesis y mantener el destino MiYoke_PD_VERSIONES.
+- Sigue: revision de Claude de Parte 3b. No integrado a master.
 
 \## Revisión
 

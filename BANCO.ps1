@@ -17,7 +17,10 @@ if ($Armar -and -not $Confirmado) {
 # Codex solo usa -Confirmado con confirmacion humana de fuente apagada, fechada hoy en HANDOFF.
 $origen = (Resolve-Path -LiteralPath $Entrada).Path
 if (-not $Puerto) {
-    $deteccion = @(& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'Iniciar-Simulador.ps1') -DetectarPlaca 2>&1)
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    try {
+        $deteccion = @(& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'Iniciar-Simulador.ps1') -DetectarPlaca 2>&1)
+    } finally { $ErrorActionPreference = $prev }
     $coincidencia = [regex]::Match(($deteccion -join "`n"), 'Yoke detectado: (COM\d+)')
     if (-not $coincidencia.Success) { throw 'No se detecto la Pico. Indica el puerto con -Puerto COMn.' }
     $Puerto = $coincidencia.Groups[1].Value
@@ -32,7 +35,13 @@ if ($Armar) { $argumentos += '--enable' }
 & (Join-Path $registros 'YokeSimConnectBridge.exe') @argumentos | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "El puente fallo en el banco (codigo $LASTEXITCODE); revisar bridge.log." }
 foreach ($archivo in @('telemetry.csv','pico.csv','ganancias.csv','pico.log','bridge.log')) {
-    Copy-Item -LiteralPath (Join-Path $registros $archivo) -Destination $destino
+    if (Test-Path -LiteralPath (Join-Path $registros $archivo)) {
+        Copy-Item -LiteralPath (Join-Path $registros $archivo) -Destination $destino
+    } else { Write-Host "Falta $archivo; se sigue sin el" }
+}
+if (-not (Test-Path -LiteralPath (Join-Path $destino 'telemetry.csv'))) {
+    Write-Host 'Falta telemetry.csv; no se puede comparar el ensayo.'
+    exit 1
 }
 & (Join-Path $PSScriptRoot 'tests\bin\comparar_ensayo.exe') $destino | Out-Null
 $codigo = $LASTEXITCODE

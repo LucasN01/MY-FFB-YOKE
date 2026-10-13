@@ -81,7 +81,7 @@ static void replayAndComparatorChecks() {
     pause.tel.push_back(pause.tel.back()); pause.tel.back().host=1200; pause.tel.back().armed=true;
     result=YokeEnsayo::compare(pause,"rearmado 100ms");
     CHECK(result.violations[6]==0 && result.report.find("B6: SIN DATOS")!=std::string::npos);
-    pause.tel.resize(2);
+    pause.tel.resize(2); pause.tel[0].paused=true; pause.tel[0].armed=false;
     result=YokeEnsayo::compare(pause,"pausa inicial");
     CHECK(result.violations[6]==0 && result.report.find("transiciones=0 evaluadas=0")!=std::string::npos);
     changed=in; changed.tel.resize(4);

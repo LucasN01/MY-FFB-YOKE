@@ -12,7 +12,7 @@ powershell -ExecutionPolicy Bypass -File ENSAYO.ps1 -Nombre vuelo1 -Rutina corta
 
 `-Rutina completa` es el valor predeterminado; `corta` incluye F1, F3, F4, F5, F7, F8 y F11. Preparar C182RG o avión habitual en cabecera, motor en marcha, frenos puestos, clima sin turbulencia y potes centrados, con `INICIAR SIMULADOR V3.cmd`.
 
-El script crea `ensayos/AAAAMMDD-HHMMSS_<Nombre>/`, `rutina.txt` y `marcas.csv`. Presionar Enter una vez antes de F1. Las fases se detectan automáticamente: durante el vuelo no hace falta volver a la consola. Opcionalmente, escribir un número de fase y Enter en pausa o tierra agrega una marca con el mismo reloj `host_time_ms` de los registros. Al terminar, cerrar el simulador o puente y presionar Enter. Tras esperar hasta 120 s, copia los cinco registros, ejecuta el comparador y muestra `informe.txt`.
+El script crea `ensayos/AAAAMMDD-HHMMSS_<Nombre>/`, `rutina.txt` y `marcas.csv`. Presionar Enter una vez antes de F1. Las fases se detectan automáticamente: durante el vuelo no hace falta volver a la consola. Opcionalmente, escribir un número de fase y Enter en pausa o tierra agrega una marca con el mismo reloj `host_time_ms` de los registros. Al terminar, cerrar el simulador o puente y escribir `FIN`. Tras esperar hasta 120 s, copia los cinco registros, ejecuta el comparador y muestra `informe.txt`.
 
 | Fase | Duración | Qué hacer | Qué debería verse (lo verifica `comparar_ensayo`) |
 | --- | --- | --- | --- |

@@ -174,7 +174,7 @@ inline Result compare(const Input& in,const std::string& name) {
         <<"% buffet="<<std::min(percent(good[3],result.matched),std::min(percent(good[4],result.matched),percent(good[5],result.matched)))
         <<"% ground="<<std::min(percent(good[6],result.matched),percent(good[7],result.matched))<<"% env="<<percent(good[8],result.matched)
         <<"% peor="<<names[worstIndex]<<"@"<<worstTime[worstIndex]<<":"<<std::setprecision(6)<<worst[worstIndex]
-        <<" excluidas="<<result.excluded<<" esperadas="<<result.expected<<" no_emparejadas_drop="<<(eligibleExpected-matchedTimes.size())<<"\n"<<std::setprecision(3);
+        <<" excluidas="<<result.excluded<<" esperadas="<<result.expected<<" no_emparejadas_drop="<<std::max<int64_t>(0,int64_t(eligibleExpected)-int64_t(matchedTimes.size()))<<"\n"<<std::setprecision(3);
     for(size_t i=1;i<=9;++i) {
         const bool missing=i==6 ? !in.picoHost || pauseChecks==0 : (i==9 && !in.bridgeCounts);
         report<<"B"<<i<<": "<<(result.violations[i] ? "FALLO" : (missing ? "SIN DATOS" : "OK"))<<" violaciones="<<result.violations[i];
