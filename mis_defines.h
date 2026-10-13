@@ -223,6 +223,11 @@ static_assert(YOKE_MOTION_FILTER_TAU_S >= 0 && YOKE_MOTION_MAX_SPEED > 0 &&
 #ifndef YOKE_MODEL_LOG
 #define YOKE_MODEL_LOG 1
 #endif
+#define YOKE_RECORD_OPTION (YOKE_MODEL_LOG && SIMCONNECT_ADDITIONS_ENABLED)
+#ifndef YOKE_SLOW_LOOP_US
+#define YOKE_SLOW_LOOP_US 3000
+#endif
+static_assert(YOKE_SLOW_LOOP_US > CONTROL_LOOP_MS*1000, "Umbral de ciclo lento invalido");
 #define MOTION_TELEMETRY_MS 100
 
 static_assert(ROLL_POS_MIN < 0 && ROLL_POS_MAX > 0, "Revisar limites Roll");

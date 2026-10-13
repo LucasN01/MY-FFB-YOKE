@@ -41,6 +41,7 @@ if (-not (Get-Process -Name YokeSimConnectBridge -ErrorAction SilentlyContinue))
     Read-Host 'Presiona Enter para continuar' | Out-Null
 }
 $tabla | ForEach-Object { Write-Host $_ }
+Write-Host 'Verifica en el menu: REGISTRO DATOS = Activado'
 Read-Host 'En tierra, antes de F1, presiona Enter para marcar inicio' | Out-Null
 "$([EnsayoReloj]::GetTickCount64()),inicio,inicio" | Add-Content -LiteralPath $marcas -Encoding ASCII
 do {

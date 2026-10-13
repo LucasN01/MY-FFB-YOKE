@@ -47,8 +47,15 @@ extern "C" void yield() {
 // Fuerzas exclusivamente desde SimConnect. La otra placa envia los ejes al simulador.
 YokeGains::Settings gainSettings;
 YokePots::Settings potSettings;
+#if YOKE_RECORD_OPTION
+YokeRecord::Settings recordSettings;
+#endif
 #if YOKE_CALIBRATION_ENABLED
+#if YOKE_RECORD_OPTION
+YokeCalibration::Controls calibration(gainSettings,potSettings,&recordSettings);
+#else
 YokeCalibration::Controls calibration(gainSettings,potSettings);
+#endif
 #endif
 #if SIMCONNECT_ADDITIONS_ENABLED
 YokeSC::Receiver simTelemetry;
@@ -76,6 +83,36 @@ int bootReason = 0;
 uint32_t bootWd = 0, bootPm = 0;
 uint8_t bootStage = 0;
 bool bootStageValid = false, bootFault = false, bootSent = false;
+
+#if YOKE_RECORD_OPTION
+YokeHealth::StageTimer stageTimer;
+YokeHealth::SlowLog slowLog;
+uint32_t prevElapsedUs=0;
+inline void markStage(uint8_t s) { YokeHealth::mark(s); stageTimer.enter(s,micros()); }
+uint8_t slowFlags() {
+    uint8_t flags;
+    { UsbLock usb; flags=Serial.dtr() ? 1 : 0; }
+    if(simTelemetry.rawAvailable) flags|=2;
+#if YOKE_CALIBRATION_ENABLED
+    if(calibration.menu.active()) flags|=4;
+#endif
+    if(simTelemetry.armed) flags|=8;
+    return flags;
+}
+#else
+inline void markStage(uint8_t s) { YokeHealth::mark(s); }
+#endif
+void finishLoop(uint32_t nowUs) {
+    const uint32_t elapsedUs=micros()-nowUs;
+    if(elapsedUs>loopWorstUs) loopWorstUs=elapsedUs;
+#if YOKE_RECORD_OPTION
+    stageTimer.enter(YokeHealth::Idle,micros());
+    if(elapsedUs>=YOKE_SLOW_LOOP_US)
+        slowLog.push({millis(),elapsedUs,0,stageTimer.worstUs,stageTimer.worst,slowFlags()});
+    prevElapsedUs=elapsedUs;
+#endif
+    YokeHealth::mark(YokeHealth::Idle);
+}
 
 void debugPrintMotion(unsigned long now, const float* motorCommands) {
 #if DEBUG_MOTION_TELEMETRY
@@ -173,10 +210,16 @@ void loop() {
     const uint32_t gapUs=nowUs-lastControlLoopUs;
     if(gapUs>gapWorstUs) gapWorstUs=gapUs;
     lastControlLoopUs = nowUs;
+#if YOKE_RECORD_OPTION
+    const uint32_t idleUs=gapUs-prevElapsedUs;
+    if(YokeHealth::slowBetween(gapUs,prevElapsedUs,YOKE_SLOW_LOOP_US))
+        slowLog.push({millis(),0,idleUs,idleUs,YokeHealth::Between,slowFlags()});
+    stageTimer.begin(nowUs);
+#endif
     const unsigned long now = millis();
 
 #if YOKE_USE_SIMULATION == 2
-    YokeHealth::mark(YokeHealth::PotRead);
+    markStage(YokeHealth::PotRead);
     positionInput.update(); // muestra actual ANTES de procesar OK de calibracion
 #if YOKE_CALIBRATION_ENABLED
     calibration.menu.potReadings(positionInput.raw(0),positionInput.raw(1));
@@ -186,16 +229,16 @@ void loop() {
 #if SIMCONNECT_ADDITIONS_ENABLED
     // USB CDC del mismo cable; no usa los pines de Serial1 de los encoders.
     // Limitar trabajo por ciclo y nunca esperar a que llegue un paquete.
-    YokeHealth::mark(YokeHealth::SerialRx);
+    markStage(YokeHealth::SerialRx);
     {
         UsbLock usb;
         for (uint8_t n = 0; n < 128 && Serial.available(); ++n) {
             const uint8_t b = Serial.read();
             if (b == '?' && simTelemetry.idle()) {
                 if (Serial.availableForWrite() >= 10) {
-                    YokeHealth::mark(YokeHealth::SerialTx);
+                    markStage(YokeHealth::SerialTx);
                     Serial.write("YOKE17SC8\n", 10);
-                    YokeHealth::mark(YokeHealth::SerialRx);
+                    markStage(YokeHealth::SerialRx);
                 }
             } else simTelemetry.feed(b, now);
         }
@@ -206,12 +249,12 @@ void loop() {
 
 #if SIMCONNECT_ADDITIONS_ENABLED
 #if YOKE_CALIBRATION_ENABLED
-    YokeHealth::mark(YokeHealth::Calibration);
+    markStage(YokeHealth::Calibration);
     calibration.update(now,simTelemetry.calibrationAllowed(now,dtr));
     if(calibration.menu.savePending()) {
         // La escritura flash bloquea brevemente CPU/interrupciones: PWM cero antes.
         rollMotor.stop(); pitchMotor.stop();
-        YokeHealth::mark(YokeHealth::FlashSave);
+        markStage(YokeHealth::FlashSave);
 #if defined(ARDUINO_ARCH_RP2040)
         rp2040.wdt_begin(YOKE_WDT_FLASH_MS);
 #endif
@@ -223,25 +266,23 @@ void loop() {
         localMotion[0].reset(); localMotion[1].reset();
 #endif
         simEffects.reset();
-        const uint32_t elapsedUs=micros()-nowUs;
-        if(elapsedUs>loopWorstUs) loopWorstUs=elapsedUs;
-        YokeHealth::mark(YokeHealth::Idle);
+        finishLoop(nowUs);
         return; // recalcular fuerza con hora/telemetria actuales en el proximo ciclo
     }
 #endif
     const uint32_t effectsStartUs=micros();
-    YokeHealth::mark(YokeHealth::Effects);
+    markStage(YokeHealth::Effects);
     simEffects.update(simTelemetry, now, dtr);
     const uint32_t effectsElapsedUs=micros()-effectsStartUs;
     if(effectsElapsedUs>effectsWorstUs) effectsWorstUs=effectsElapsedUs;
 #endif
 
 #if YOKE_CALIBRATION_ENABLED && !SIMCONNECT_ADDITIONS_ENABLED
-    YokeHealth::mark(YokeHealth::Calibration);
+    markStage(YokeHealth::Calibration);
     calibration.update(now,true); // standalone configuration; simulator effects compiled out
     if(calibration.menu.savePending()) {
         rollMotor.stop(); pitchMotor.stop();
-        YokeHealth::mark(YokeHealth::FlashSave);
+        markStage(YokeHealth::FlashSave);
 #if defined(ARDUINO_ARCH_RP2040)
         rp2040.wdt_begin(YOKE_WDT_FLASH_MS);
 #endif
@@ -252,15 +293,13 @@ void loop() {
 #if YOKE_USE_SIMULATION != 1
         localMotion[0].reset(); localMotion[1].reset();
 #endif
-        const uint32_t elapsedUs=micros()-nowUs;
-        if(elapsedUs>loopWorstUs) loopWorstUs=elapsedUs;
-        YokeHealth::mark(YokeHealth::Idle);
+        finishLoop(nowUs);
         return;
     }
 #endif
 
     // Una sola fuente para posicion y velocidad de TODOS los efectos.
-    YokeHealth::mark(YokeHealth::Motion);
+    markStage(YokeHealth::Motion);
 #if YOKE_USE_SIMULATION == 1
     for(uint8_t axis=0;axis<2;++axis) {
 #if SIMCONNECT_ADDITIONS_ENABLED
@@ -287,7 +326,7 @@ void loop() {
     }
 #endif
     // 2) Unica fuente de fuerza: telemetria SimConnect valida y armada.
-    YokeHealth::mark(YokeHealth::Force);
+    markStage(YokeHealth::Force);
     float motorCommands[2] = {0.0f, 0.0f};
 #if SIMCONNECT_ADDITIONS_ENABLED
     for (uint8_t axis = 0; axis < 2; ++axis) {
@@ -303,7 +342,7 @@ void loop() {
     const float motorCommandPitch = motorCommands[1];
 
     // 3) Aplicar polaridad y convertir -1..1 a PWM, respetando PWM_MAX.
-    YokeHealth::mark(YokeHealth::Motor);
+    markStage(YokeHealth::Motor);
     rollMotor.setCommand(ROLL_MOTOR_DIRECTION * motorCommandRoll, PWM_MAX);
     pitchMotor.setCommand(PITCH_MOTOR_DIRECTION * motorCommandPitch, PWM_MAX);
     const int16_t pwmRoll = rollMotor.getLastAppliedPWM();
@@ -316,15 +355,18 @@ void loop() {
             bootWd,bootPm,bootStageValid,bootStage,bootFault);
         UsbLock usb;
         if(n>0 && Serial.availableForWrite()>=n+1) {
-            YokeHealth::mark(YokeHealth::SerialTx);
-            Serial.write((const uint8_t*)bootLine,n+1); bootSent=true;
+            markStage(YokeHealth::SerialTx);
+            Serial.write((const uint8_t*)bootLine,n+1); markStage(YokeHealth::ModelLog); bootSent=true;
         }
     }
-    YokeHealth::mark(YokeHealth::ModelLog);
+    markStage(YokeHealth::ModelLog);
 #if YOKE_MODEL_LOG
     static uint16_t seq=0, drop=0, gainSeq=0, lastBits=0, lastSkip=0;
     static uint32_t lastLoggedRev=0, lastLineMs=0, lastGainsMs=0;
     static bool logSynced=false, lastDtr=false, gainsSent=false;
+    static bool recordSent=false, lastRecordSent=true;
+    static uint32_t lastRecordMs=0, lastSlowMs=0;
+    static uint16_t slowSeq=0;
     static int16_t peak[2]={0,0};
     static uint16_t lastGains[YokeGains::Count]={0};
     const int16_t pwm[2]={pwmRoll,pwmPitch};
@@ -332,13 +374,36 @@ void loop() {
         const int16_t magnitude=pwm[i]<0 ? -pwm[i] : pwm[i];
         if(magnitude>peak[i]) peak[i]=magnitude;
     }
-    if(dtr && !lastDtr) logSynced=false;
+    if(dtr && !lastDtr) { logSynced=false; recordSent=false; gainsSent=false; }
+    if(recordSettings.enabled && !lastRecordSent) { gainsSent=false; logSynced=false; peak[0]=peak[1]=0; }
     lastDtr=dtr;
     const uint32_t r=simEffects.modeledRevision();
     if(r==0) lastLoggedRev=0;
     if(!logSynced) { lastLoggedRev=r; lastSkip=simEffects.skipped(); logSynced=true; }
     bool modelWritten=false;
-    if(dtr && simTelemetry.rawAvailable && (r!=lastLoggedRev || uint32_t(now-lastLineMs)>=100)) {
+    const bool logReady=dtr && simTelemetry.rawAvailable && uint32_t(now-simTelemetry.last)<300;
+    if(logReady) {
+        UsbLock usb;
+        if(Serial.availableForWrite()>=YOKE_LOG_M_MAX) {
+            char line[YOKE_LOG_M_MAX]; YokeHealth::SlowEvent event;
+            if(slowLog.front(event) && uint32_t(now-lastSlowMs)>=20) {
+                const int n=YokeHealth::formatSlow(line,sizeof(line),slowSeq,millis()-event.atMs,event,slowLog.total,slowLog.lost);
+                if(n>0) {
+                    markStage(YokeHealth::SerialTx); Serial.write((const uint8_t*)line,n);
+                    markStage(YokeHealth::ModelLog);
+                    slowLog.pop(); ++slowSeq; lastSlowMs=now; modelWritten=true;
+                }
+            } else if(!recordSent || recordSettings.enabled!=lastRecordSent || uint32_t(now-lastRecordMs)>=5000) {
+                const int n=YokeLog::formatRecord(line,sizeof(line),recordSettings.enabled);
+                if(n>0) {
+                    markStage(YokeHealth::SerialTx); Serial.write((const uint8_t*)line,n);
+                    markStage(YokeHealth::ModelLog);
+                    recordSent=true; lastRecordSent=recordSettings.enabled; lastRecordMs=now; modelWritten=true;
+                }
+            }
+        }
+    }
+    if(!modelWritten && logReady && recordSettings.enabled && recordSent && (r!=lastLoggedRev || uint32_t(now-lastLineMs)>=100)) {
         UsbLock usb;
         if(Serial.availableForWrite()>=YOKE_LOG_M_MAX) {
             const uint16_t nextDrop=YokeLog::nextDrop(drop,r,lastLoggedRev,simEffects.skipped(),lastSkip);
@@ -363,15 +428,16 @@ void loop() {
             char line[YOKE_LOG_M_MAX];
             const int n=YokeLog::formatModel(line,sizeof(line),f);
             if(n>0) {
-                YokeHealth::mark(YokeHealth::SerialTx);
+                markStage(YokeHealth::SerialTx);
                 Serial.write((const uint8_t*)line,n);
+                markStage(YokeHealth::ModelLog);
                 ++seq; drop=nextDrop; if(r!=0) lastLoggedRev=r;
                 lastSkip=simEffects.skipped();
                 lastLineMs=now; peak[0]=peak[1]=0; modelWritten=true;
             }
         }
     }
-    if(!modelWritten && dtr && simTelemetry.rawAvailable) {
+    if(!modelWritten && logReady && recordSettings.enabled && recordSent) {
         uint16_t raw[YokeGains::Count];
         const uint16_t bits=gainSettings.effects();
         bool changed=bits!=lastBits;
@@ -385,8 +451,9 @@ void loop() {
                 char line[YOKE_LOG_M_MAX];
                 const int n=YokeLog::formatGains(line,sizeof(line),gainSeq,bits,raw,YokeGains::Count);
                 if(n>0) {
-                    YokeHealth::mark(YokeHealth::SerialTx);
+                    markStage(YokeHealth::SerialTx);
                     Serial.write((const uint8_t*)line,n);
+                    markStage(YokeHealth::ModelLog);
                     ++gainSeq; gainsSent=true; lastGainsMs=now; lastBits=bits;
                     for(uint8_t i=0;i<YokeGains::Count;++i) lastGains[i]=raw[i];
                 }
@@ -406,16 +473,16 @@ void loop() {
             (unsigned long)loopWorstUs,(unsigned long)gapWorstUs);
         UsbLock usb;
         if(n>0 && n<int(sizeof(modelLine)) && Serial.availableForWrite()>=n) {
-            YokeHealth::mark(YokeHealth::SerialTx);
-            Serial.write((const uint8_t*)modelLine,n); lastModelLog=now;
+            markStage(YokeHealth::SerialTx);
+            Serial.write((const uint8_t*)modelLine,n); markStage(YokeHealth::ModelLog); lastModelLog=now;
         }
     }
 #endif
 
     // 4) Diagnostico serie y pantalla locales; no se envian ejes a Prepar3D.
-    YokeHealth::mark(YokeHealth::DebugLog);
+    markStage(YokeHealth::DebugLog);
     debugPrintMotion(now, motorCommands);
-    YokeHealth::mark(YokeHealth::Lcd);
+    markStage(YokeHealth::Lcd);
 #if YOKE_CALIBRATION_ENABLED
     char menuTop[17], menuBottom[17];
     calibration.menu.rows(menuTop,menuBottom);
@@ -426,7 +493,7 @@ void loop() {
     {
         UsbLock usb;
         if(Serial.availableForWrite()>=2) {
-            YokeHealth::mark(YokeHealth::SerialTx);
+            markStage(YokeHealth::SerialTx);
             Serial.write("S\n",2);
         }
     }
@@ -435,7 +502,7 @@ void loop() {
     static bool testHung=false;
     if(!testHung && now>=YOKE_TEST_HANG_MS && bootReason!=RP2040::WDT_RESET) {
         testHung=true;
-        YokeHealth::mark(YokeHealth::TestHang);
+        markStage(YokeHealth::TestHang);
 #if YOKE_TEST_HANG == 1
         for(;;){}
 #elif YOKE_TEST_HANG == 2
@@ -445,7 +512,5 @@ void loop() {
 #endif
     }
 #endif
-    const uint32_t elapsedUs=micros()-nowUs;
-    if(elapsedUs>loopWorstUs) loopWorstUs=elapsedUs;
-    YokeHealth::mark(YokeHealth::Idle);
+    finishLoop(nowUs);
 }

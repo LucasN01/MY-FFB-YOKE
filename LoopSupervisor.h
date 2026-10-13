@@ -20,6 +20,9 @@ struct StageTimer {
     }
 };
 struct SlowEvent { uint32_t atMs, lpUs, idleUs, stageUs; uint8_t stage, flags; };
+inline bool slowBetween(uint32_t gapUs,uint32_t prevElapsedUs,uint32_t thresholdUs) {
+    return gapUs>=thresholdUs && prevElapsedUs<thresholdUs;
+}
 struct SlowLog {
     SlowEvent e[4]; uint8_t head=0, count=0; uint16_t total=0, lost=0;
     void push(const SlowEvent& event) {

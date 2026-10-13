@@ -257,6 +257,10 @@ inline bool load(const std::string& folder,Input& in,std::string& error) {
         if(!YokeReplay::parseRow(line,r) || (!in.tel.empty() && r.host<in.tel.back().host)) { error="telemetry.csv: fila invalida"; return false; }
         in.tel.push_back(r);
     }
+    if(in.tel.empty()) {
+        error="REGISTRO: sin filas en telemetry.csv (REGISTRO DATOS desactivado en el menu?)\nRESULTADO: SIN DATOS\n";
+        return false;
+    }
     std::ifstream pico(path("pico.csv"));
     if(pico) {
         if(!std::getline(pico,line) || YokeReplay::clean(line)!=YokeCsv::modelHeader) { error="pico.csv: cabecera invalida"; return false; }
@@ -303,7 +307,10 @@ inline bool load(const std::string& folder,Input& in,std::string& error) {
 }
 inline int run(const std::string& folder) {
     Input in; std::string error; Result result;
-    if(!load(folder,in,error)) { result.report="A fidelidad: FALLO "+error+"\nRESULTADO: FALLO\n"; result.bOk=false; }
+    if(!load(folder,in,error)) {
+        result.report=error.compare(0,9,"REGISTRO:")==0 ? error : "A fidelidad: FALLO "+error+"\nRESULTADO: FALLO\n";
+        result.bOk=false;
+    }
     else result=compare(in,folder);
     std::ofstream report(folder+"/informe.txt"),phases(folder+"/resumen_fases.csv");
     if(!report || !phases) { std::fprintf(stderr,"No se pudieron escribir los informes.\n"); return 1; }

@@ -25,8 +25,8 @@ static_assert(valid(),"Pines de calibracion duplicados, no expuestos o en confli
 }
 class Controls {
 public:
-    Controls(YokeGains::Settings& values,YokePots::Settings& pots)
-        :menu(values,&pots),settings(values),potSettings(pots) {}
+    Controls(YokeGains::Settings& values,YokePots::Settings& pots,YokeRecord::Settings* record=nullptr)
+        :menu(values,&pots,record),settings(values),potSettings(pots),recordSettings(record) {}
     void begin() {
         // LEDs reflect mode, not simulator connection or whether forces are armed.
         pinMode(YOKE_LED_NORMAL_PIN,OUTPUT); pinMode(YOKE_LED_CALIBRATION_PIN,OUTPUT);
@@ -42,6 +42,11 @@ public:
         uint8_t potRecord[YokePots::recordSize];
         for(uint8_t i=0;i<sizeof(potRecord);++i) potRecord[i]=EEPROM.read(YokePots::recordOffset+i);
         YokePots::decode(potRecord,potSettings);
+        if(recordSettings) {
+            uint8_t record[YokeRecord::recordSize];
+            for(uint8_t i=0;i<sizeof(record);++i) record[i]=EEPROM.read(YokeRecord::recordOffset+i);
+            YokeRecord::decode(record,*recordSettings);
+        }
     }
     void update(uint32_t now,bool paused) {
         menu.update(now,paused);
@@ -63,10 +68,12 @@ public:
         static_assert(YokeGains::recordSize<=YokePots::recordOffset &&
                       YokePots::recordOffset+YokePots::recordSize<=256,"EEPROM solapada");
         uint8_t record[64], previous[64];
+        const bool recording=menu.savingRecord();
         const bool pots=menu.savingPots();
-        const uint16_t offset=pots ? YokePots::recordOffset : 0;
-        const uint8_t size=pots ? YokePots::recordSize : YokeGains::recordSize;
-        if(pots) YokePots::encode(menu.potCandidate(),record);
+        const uint16_t offset=recording ? YokeRecord::recordOffset : (pots ? YokePots::recordOffset : 0);
+        const uint8_t size=recording ? YokeRecord::recordSize : (pots ? YokePots::recordSize : YokeGains::recordSize);
+        if(recording) YokeRecord::encode(menu.recordCandidate(),record);
+        else if(pots) YokePots::encode(menu.potCandidate(),record);
         else YokeGains::encode(menu.candidate(),record);
         for(uint8_t i=0;i<size;++i) {
             previous[i]=EEPROM.read(offset+i); EEPROM.write(offset+i,record[i]);
@@ -84,6 +91,7 @@ private:
     }
     YokeGains::Settings& settings;
     YokePots::Settings& potSettings;
+    YokeRecord::Settings* recordSettings;
     DebouncedButton buttons[5];
 };
 }

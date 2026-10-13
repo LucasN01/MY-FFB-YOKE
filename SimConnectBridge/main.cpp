@@ -15,6 +15,7 @@
 #include "SerialLink.h"
 #include "PicoCsv.h"
 #include "Replay.h"
+#include "../LoopSupervisor.h"
 
 FILE* logFile=nullptr;
 void Log(const char* format, ...) {
@@ -34,7 +35,10 @@ FILE* csv=nullptr;
 FILE* picoLog=nullptr;
 FILE* picoCsv=nullptr;
 FILE* gainsCsv=nullptr;
-unsigned picoLines=0, badPicoLines=0;
+unsigned picoLines=0, badPicoLines=0, slowCycles=0, badCsvRows=0;
+YokeCsv::CsvGate gate;
+void WriteCsv(const std::string& row) { if(csv) std::fputs(row.c_str(),csv); }
+void FinishCsv() { gate.finish(WriteCsv); if(csv) { std::fflush(csv); std::fclose(csv); csv=nullptr; } }
 ULONGLONG lastCsvFlush=0;
 YokeCsv::LineSplitter picoSplitter;
 YokeRaw::Sample latest;
@@ -68,10 +72,18 @@ bool Check(HRESULT hr, const char* op) {
 // Raw input records and selected outgoing packets; no estimated forces on PC.
 void Record(bool sent,bool armed) {
     if(!csv) return;
-    std::fprintf(csv,"%llu,%lu,%u",GetTickCount64(),(unsigned long)latest.timeMs,samples);
-    for(int i=0;i<YokeRaw::Count;++i) std::fprintf(csv,",%.9g",double(latest.value[i]));
-    std::fprintf(csv,",%d,%d,%d,%d,%.3f,%.3f,%.3f,%d,%d\n",paused,running,armed,sent,
+    char row[1024];
+    int n=std::snprintf(row,sizeof(row),"%llu,%lu,%u",GetTickCount64(),(unsigned long)latest.timeMs,samples);
+    if(n<=0 || n>=int(sizeof(row))) { ++badCsvRows; return; }
+    for(int i=0;i<YokeRaw::Count;++i) {
+        const int added=std::snprintf(row+n,sizeof(row)-size_t(n),",%.9g",double(latest.value[i]));
+        if(added<=0 || size_t(added)>=sizeof(row)-size_t(n)) { ++badCsvRows; return; }
+        n+=added;
+    }
+    const int added=std::snprintf(row+n,sizeof(row)-size_t(n),",%d,%d,%d,%d,%.3f,%.3f,%.3f,%d,%d\n",paused,running,armed,sent,
         referenceKnots,gustGain,gustLongitudinal,gusts,buffets);
+    if(added<=0 || size_t(added)>=sizeof(row)-size_t(n)) { ++badCsvRows; return; }
+    gate.row(row,GetTickCount64(),WriteCsv);
     // Flush on each transmitted snapshot, not on every queued simulator callback.
     if(sent) std::fflush(csv);
 }
@@ -190,14 +202,35 @@ void PollPort(ULONGLONG now) {
             if(picoLog) { std::fwrite(b,1,n,picoLog); std::fflush(picoLog); }
             bootScanner.feed(b,n,[](const char* l){ char t[16]; Stamp(t); Log("[%s] Pico: %s\n",t,l); });
             picoSplitter.feed(b,n,[](const char* l) {
-                if((l[0]!='M' && l[0]!='G') || l[1]!=',') return;
+                if((l[0]!='M' && l[0]!='G' && l[0]!='L' && l[0]!='W') || l[1]!=',') return;
                 ++picoLines; char row[512];
+                if(l[0]=='L') {
+                    bool on;
+                    if(!YokeCsv::recordLine(l,on)) { ++badPicoLines; return; }
+                    const auto previous=gate.state;
+                    gate.recordState(on,WriteCsv); if(csv) std::fflush(csv);
+                    if(previous!=gate.state) {
+                        char t[16]; Stamp(t);
+                        Log("[%s] Pico: registro CSV %s\n",t,on ? "ACTIVADO" : "DESACTIVADO");
+                    }
+                    return;
+                }
+                if(l[0]=='W') {
+                    uint32_t v[9];
+                    if(!YokeCsv::slowLine(l,v)) { ++badPicoLines; return; }
+                    if(v[4]>14) { ++badPicoLines; return; }
+                    ++slowCycles; char t[16]; Stamp(t);
+                    Log("[%s] Pico: ciclo lento lp=%u us fuera=%u us etapa=%u:%s (%u us) hace %u ms flags=0x%X total=%u perdidos=%u\n",
+                        t,unsigned(v[2]),unsigned(v[3]),unsigned(v[4]),YokeHealth::stageName(uint8_t(v[4])),
+                        unsigned(v[5]),unsigned(v[1]),unsigned(v[6]),unsigned(v[7]),unsigned(v[8]));
+                    return;
+                }
                 const bool model=l[0]=='M';
                 if(!(model ? YokeCsv::modelRow(l,row,sizeof(row)) : YokeCsv::gainsRow(l,row,sizeof(row)))) {
                     ++badPicoLines; return;
                 }
                 FILE* target=model ? picoCsv : gainsCsv;
-                if(target) std::fprintf(target,"%llu,%s\n",GetTickCount64(),row);
+                if(target && gate.writesPico()) std::fprintf(target,"%llu,%s\n",GetTickCount64(),row);
             });
         }
     }
@@ -207,9 +240,12 @@ void PollPort(ULONGLONG now) {
             const ULONGLONG t=GetTickCount64(); char s[16]; Stamp(s);
             Log("[%s] Enlace USB recuperado en %s tras %.1f s; armado diferido %llu ms.\n",
                 s,com.c_str(),(t-reconnect.lostAtMs)/1000.0,(unsigned long long)YokeLink::kRearmHoldoffMs);
-            reconnect.onReopened(t); link.reset(); bootScanner=YokeLink::BootLineScanner{}; picoSplitter=YokeCsv::LineSplitter{};
+            gate.reopen(); reconnect.onReopened(t); link.reset(); bootScanner=YokeLink::BootLineScanner{}; picoSplitter=YokeCsv::LineSplitter{};
         } else reconnect.onAttemptFailed(GetTickCount64());
     }
+    const auto previous=gate.state;
+    gate.tick(now,WriteCsv);
+    if(previous==YokeCsv::CsvGate::State::Pending && gate.state==YokeCsv::CsvGate::State::On && csv) std::fflush(csv);
     if(now-lastCsvFlush>=200) {
         if(picoCsv) std::fflush(picoCsv);
         if(gainsCsv) std::fflush(gainsCsv);
@@ -300,7 +336,8 @@ int main(int argc,char** argv) {
     Log("Yoke SimConnect SC8: transporte de telemetria; todos los modelos en Pico 2 | %s\n",enable?"HABILITADO":"SOLO MONITOR");
     Log("Ajustes enviados: referencia %.1f kt, gustGain %.2f, longitudinal %.2f, gusts=%d buffets=%d\n",
         referenceKnots,gustGain,gustLongitudinal,gusts,buffets);
-    if(!com.empty()&&!OpenPort(com,3000)) { Log("No se identifico firmware YOKE17SC8 en %s. No se enviaron fuerzas.\n",com.c_str()); ClosePort(); if(csv)std::fclose(csv); if(logFile)std::fclose(logFile); if(picoLog)std::fclose(picoLog); if(picoCsv)std::fclose(picoCsv); if(gainsCsv)std::fclose(gainsCsv); return 3; }
+    gate.start(!com.empty());
+    if(!com.empty()&&!OpenPort(com,3000)) { Log("No se identifico firmware YOKE17SC8 en %s. No se enviaron fuerzas.\n",com.c_str()); ClosePort(); FinishCsv(); if(logFile)std::fclose(logFile); if(picoLog)std::fclose(picoLog); if(picoCsv)std::fclose(picoCsv); if(gainsCsv)std::fclose(gainsCsv); return 3; }
     SetConsoleCtrlHandler(Stop,TRUE);
     const ULONGLONG start=GetTickCount64();
     if(!replayFile.empty()) {
@@ -348,11 +385,14 @@ int main(int argc,char** argv) {
         opened=false; Send(false); SimConnect_Close(sim);
     }
     ClosePort();
-    if(csv) std::fclose(csv);
+    FinishCsv();
     if(picoLog) std::fclose(picoLog);
     if(picoCsv) std::fclose(picoCsv);
     if(gainsCsv) std::fclose(gainsCsv);
-    Log("Fin: muestras=%u error=%d reconexiones=%u lineas_pico=%u lineas_pico_malas=%u\n",samples,failed,reconnect.reconnections,picoLines,badPicoLines);
+    const char* recordState=gate.state==YokeCsv::CsvGate::State::On ? "ACTIVADO" :
+        (gate.state==YokeCsv::CsvGate::State::Off ? "DESACTIVADO" : "PENDIENTE");
+    Log("Fin: muestras=%u error=%d reconexiones=%u lineas_pico=%u lineas_pico_malas=%u registro=%s ciclos_lentos=%u filas_csv_malas=%u\n",
+        samples,failed,reconnect.reconnections,picoLines,badPicoLines,recordState,slowCycles,badCsvRows);
     return reconnect.lost ? 4 : (failed||samples==0 ? 1 : 0);
 }
 

@@ -2,6 +2,7 @@
 #include "../LoopSupervisor.h"
 #include "../SimConnectBridge/PicoCsv.h"
 #include "comparar_ensayo.h"
+#include <filesystem>
 static std::string replayLine(const YokeReplay::ReplayRow& r,unsigned index) {
     std::ostringstream line; line<<std::setprecision(9)<<r.host<<","<<r.sample<<","<<index;
     for(float v:r.v) line<<","<<v;
@@ -117,6 +118,9 @@ static void recordAndSlowChecks() {
     timer.begin(100); CHECK(timer.current==YokeHealth::Idle && timer.worst==YokeHealth::Idle && timer.worstUs==0);
     CHECK(std::strcmp(YokeHealth::stageName(YokeHealth::Between),"ENTRE_CICLOS")==0);
     YokeHealth::SlowLog log; YokeHealth::SlowEvent event{};
+    CHECK(!YokeHealth::slowBetween(2000,200,3000));
+    CHECK(YokeHealth::slowBetween(4000,200,3000));
+    CHECK(!YokeHealth::slowBetween(4000,3500,3000));
     CHECK(!log.front(event)); log.pop(); CHECK(log.count==0);
     for(uint32_t i=0;i<6;++i) log.push({i,39000,2000,37000,YokeHealth::Lcd,15});
     CHECK(log.total==6 && log.lost==2 && log.count==4);
@@ -160,6 +164,17 @@ static void recordAndSlowChecks() {
 static void picoLogChecks() {
     recordAndSlowChecks();
     replayAndComparatorChecks();
+    const std::string emptyFolder="tmp/registro_vacio_checks";
+    std::filesystem::create_directories(emptyFolder);
+    { std::ofstream telemetry(emptyFolder+"/telemetry.csv"); telemetry<<YokeReplay::header<<"\n"; }
+    YokeEnsayo::Input emptyInput; std::string emptyError;
+    CHECK(!YokeEnsayo::load(emptyFolder,emptyInput,emptyError));
+    CHECK(emptyError=="REGISTRO: sin filas en telemetry.csv (REGISTRO DATOS desactivado en el menu?)\nRESULTADO: SIN DATOS\n");
+    CHECK(YokeEnsayo::run(emptyFolder)==1);
+    std::ifstream emptyReport(emptyFolder+"/informe.txt");
+    std::string reportLine; std::getline(emptyReport,reportLine);
+    CHECK(reportLine=="REGISTRO: sin filas en telemetry.csv (REGISTRO DATOS desactivado en el menu?)");
+    std::getline(emptyReport,reportLine); CHECK(reportLine=="RESULTADO: SIN DATOS");
     uint16_t drop=0; uint32_t lastLoggedRev=0;
     const uint32_t revisions[]={5,0,0,9};
     for(uint32_t r:revisions) {

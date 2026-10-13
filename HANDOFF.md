@@ -109,20 +109,33 @@ Se divide en **3 partes**, porque hay estado nuevo en firmware y en puente, un r
 
 \## Última entrega
 
-- Parte 1 completada (2026-10-13): encabezados puros y pruebas, sin integrar firmware ni puente.
-- Archivos modificados: `RecordSetting.h`, `CalibrationMenu.h`, `LoopSupervisor.h`, `PicoLog.h`, `SimConnectBridge/PicoCsv.h`, `tests/calibration_checks.h`, `tests/picolog_checks.h` y `HANDOFF.md`.
-- Implementado: registro YREC de 8 B con CRC y validacion sin modificar la salida ante error; cuarta lista REGISTRO DATOS con guardado/reintento; StageTimer, anillo SlowLog de 4 eventos y formato W; formato L; CsvGate y parsers L/W estrictos.
-- Pruebas ejecutadas con `powershell -ExecutionPolicy Bypass -File probar.ps1`:
-  - OK suite simconnect_checks - PASS: 143412 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+- Parte 2 completada (2026-10-13), sobre Parte 1 `629e5a4` y revision aprobada de Claude. Rama: `mejora/registro-menu-y-ciclos-lentos`.
+- Archivos modificados: `CalibrationControls.h`, `mis_defines.h`, `MiYoke_PD.ino`, `LoopSupervisor.h`, `SimConnectBridge/main.cpp`, `tests/comparar_ensayo.h`, `tests/picolog_checks.h`, `tests/calibration_checks.h`, `ENSAYO.ps1`, `CICLOS.ps1`, `CICLOS.cmd` y `HANDOFF.md`.
+- [Código] Integracion de carga/guardado del registro persistente en `CalibrationControls.h`; en `MiYoke_PD.ino:105` y `:384`, finalizacion de las tres salidas, medicion por etapas, eventos W y prioridad W/L/M/G con condicion de enlace reciente. M/G dependen del registro activo y L enviado; W permanece independiente.
+- [Código] Puente: filas de telemetria completas mediante CsvGate, reconexion y cierre con volcado; parsers L/W, control de escritura M/G y contadores finales (`SimConnectBridge/main.cpp:76`, `:204`, `:394`). Telemetria vacia produce la linea REGISTRO y RESULTADO: SIN DATOS, salida 1 (`tests/comparar_ensayo.h:260`).
+- Scripts: aviso de REGISTRO DATOS en ENSAYO; CICLOS con tabla literal de §7, marcas P0-P9, copia de logs actuales/anteriores y extraccion de ciclos lentos y cambios de registro. No ejecuta el comparador.
+- Revision Parte 1, punto 5b: aplicados los ciclos desde Edit/EditEffect/CalibratePots con y sin registro, filas completas con relleno y strncmp, decode invalido con salida inicial false que permanece false, y descarte inmediato de v si slowLine falla.
+- Desvio autorizado por el usuario en esta sesion: sustituir la condicion de §4.2 por `gapUs >= YOKE_SLOW_LOOP_US && prevElapsedUs < YOKE_SLOW_LOOP_US`, manteniendo `stageUs=idleUs` y `lpUs=0`. Evita eventos en un gap normal y duplicados de un cuerpo lento ya registrado por finishLoop. La condicion compartida y probada esta en `LoopSupervisor.h:23` (`slowBetween`), usada en `MiYoke_PD.ino:215`; por ello `LoopSupervisor.h` se agrega al commit de esta parte. Pruebas: 2000/200 sin evento, 4000/200 ENTRE_CICLOS y 4000/3500 sin evento ENTRE_CICLOS (`tests/picolog_checks.h:121`). No se modifico el documento de diseno de Claude.
+- Verificaciones: se ejecuto `probar.ps1 -Pico -Potentiometers -Encoders -Bridge`. La primera compilacion de suite fallo por un include <string> omitido en la prueba nueva; corregido. Suite repetida despues del ultimo cambio. Configurado y encoders se recompilaron despues del desvio autorizado; potes y puente ya habian pasado con su codigo final y no se repitieron. Tambien se compilo una vez con YOKE_MODEL_LOG 0 y se restauro a 1 antes de las compilaciones finales.
+  - OK suite simconnect_checks - PASS: 143428 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
   - OK comparar_ensayo
   - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-- `git diff --check`: sin errores. `graphify update .` ejecutado: 1145 nodos, 1499 aristas. No se edito el .ino.
-- Documentacion: HANDOFF actualizado; los reemplazos de documentos funcionales y tesis corresponden a la Parte 3 segun el plan. No se edito .tex ni se compilo la tesis.
-- Firmware y puente: no compilados en esta parte, segun el plan; integracion pendiente de Parte 2.
-- Commit: el de esta entrega, mensaje "Menu REGISTRO DATOS, registro persistente y medicion de ciclos lentos: partes puras y pruebas", en `mejora/registro-menu-y-ciclos-lentos`.
-- Version: no creada, tal como exige la Parte 1; `nueva-version.ps1` queda para la Parte 3.
+  - OK Pico 2 (configurado) - Sketch uses 105820 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22892 bytes (4%) of dynamic memory, leaving 501396 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (encoders) - Sketch uses 105988 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23128 bytes (4%) of dynamic memory, leaving 501160 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (potenciometros) - Sketch uses 105820 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22892 bytes (4%) of dynamic memory, leaving 501396 bytes for local variables. Maximum is 524288 bytes.
+  - OK puente SimConnect
+  - YOKE_MODEL_LOG 0: OK Pico 2 (configurado) - Sketch uses 103604 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22572 bytes (4%) of dynamic memory, leaving 501716 bytes for local variables. Maximum is 524288 bytes.
+  - OK sintaxis CICLOS.ps1
+  - OK sintaxis ENSAYO.ps1
+  - OK tabla CICLOS y configuracion YOKE_MODEL_LOG 1
+  - `tests\bin\comparar_ensayo.exe tmp\vuelo_corto`: RESULTADO: OK
+- Tamano configurado frente a V2.0 (104500 B): +1320 B, dentro del limite de +6 kB.
+- `git diff --check`: sin errores. `graphify-sync.cmd` y `graphify update .` ejecutados tras los cambios; grafo actualizado (1153 nodos, 1517 aristas), sin errores de sintaxis del .ino en la extraccion final.
+- Documentacion actualizada: HANDOFF. Los documentos funcionales y reemplazos exactos de .tex corresponden a la Parte 3 segun el plan; no se edito .tex ni se compilo la tesis.
+- Commit: el de esta entrega, mensaje "Pico y puente: registro CSV activable desde el menu y eventos de ciclos lentos", con los archivos listados por nombre.
+- Version: no creada, segun Parte 2; `nueva-version.ps1` queda para Parte 3.
 - Cambios del usuario en `tesis/main.tex`, `tesis/capitulos/11_maquinas_estado.tex`, `tesis/caracterizacion_motores_775.tex` y `graphify-ino/` preservados fuera del commit.
-- Desvios: ninguno. Sigue Parte 2 (integracion firmware, puente, comparador y scripts).
+- Sigue: revision de Claude y Parte 3 (documentacion, ajustes menores pendientes y version). El ensayo CICLOS en hardware sigue pendiente del usuario despues de la entrega final; no se integro a master.
 
 \## Revisión
 
