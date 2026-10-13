@@ -72,6 +72,11 @@ Se divide en **3 partes**, porque hay estado nuevo en firmware y en puente, un r
   3. `tests/comparar_ensayo.h` (§6.1) y su prueba en `tests/picolog_checks.h`.
   4. `ENSAYO.ps1` (§6.2).
   5. `CICLOS.ps1` y `CICLOS.cmd` (§6.3).
+  5b. Pruebas menores de la revisión de la Parte 1, en `tests/calibration_checks.h`:
+     - ciclo de CALIBRACIÓN partiendo de Edit, EditEffect y CalibratePots, con 4 listas y con 3;
+     - comprobar los textos de `rows()` completos (`strncmp` con el texto esperado más el relleno de espacios), no solo `strlen<=16`;
+     - en la prueba de `decode` inválido, iniciar `loaded=false` y verificar que siga en `false`.
+     En el puente, descartar `v` cuando `slowLine` devuelve `false`.
   6. `graphify-sync.cmd` (se editó el `.ino`) y `graphify update .`.
 - Pruebas:
   - `probar.ps1 -Pico -Potentiometers -Encoders -Bridge`: todo OK. Anotar el tamaño frente a 104 500 B.
@@ -121,7 +126,18 @@ Se divide en **3 partes**, porque hay estado nuevo en firmware y en puente, un r
 
 \## Revisión
 
-- (vacío: tarea nueva)
+- Revisor: Claude (2026-10-13), con Code Reviewer. **Parte 1 (`629e5a4`): APROBADA.**
+  - **Diseño:** `RecordSetting.h`, `CalibrationMenu.h`, `LoopSupervisor.h`, `PicoLog.h` y `PicoCsv.h` cumplen §2, §3.1, §4.1, §4.3 y §5.1.
+    - Menú: ciclo con 4 y 3 listas; los bloques del registro van antes del de Browse; la rama de guardado del registro va primero; RecordSaved se evalúa antes que las pantallas; todos los textos ≤ 16. Las otras listas no cambian de comportamiento.
+    - Anillo y temporizador: correctos, con resta sin signo y saturación.
+    - Parsers: estrictos.
+  - **Firmware:** el firmware no incluye STL; `PicoCsv.h` no llega al `.ino`.
+  - **Suite:** 143412 comprobaciones OK según Codex; no se recompiló.
+  - **Observaciones menores** (pasan a la Parte 2, punto 5b):
+    - falta probar el ciclo desde las pantallas de edición;
+    - la comprobación de `strlen` no puede fallar porque `padded` trunca;
+    - la prueba de `decode` inválido no detecta que se escriba `true`;
+    - descartar `v` si `slowLine` falla.
 
 \## Ensayos del usuario
 
