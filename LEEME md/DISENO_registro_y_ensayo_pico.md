@@ -175,6 +175,11 @@ margen ×4. **Cambiar el buffer de lectura del puente a 4096 B** para tener marg
    - Nuevo `SimConnectBridge/Replay.h` puro: `struct ReplayRow { uint64_t host; uint32_t sample; float v[22]; bool paused,running,armed,sent,gusts,buffets; double ref,gain,longi; };`
      `bool parseHeader(const std::string&)` exige la cabecera exacta de `main.cpp:222`;
      `bool parseRow(const std::string&, ReplayRow&)` exige 34 campos.
+     Debe aceptar los tokens no finitos que escribe MSVC con `%.9g` (`nan`, `-nan(ind)`, `inf`, `-inf`, sin
+     distinguir mayúsculas) y convertirlos a NaN/±Inf: el C182 de P3D informa `spoiler_left/right` como
+     `-nan(ind)` en casi todas las filas (vuelo corto del 12/10), y `YokeRaw::valid` lo admite a propósito
+     (`RawTelemetry.h:48`). Cualquier otro texto no numérico rechaza la fila. El comparador (§4) usa el mismo
+     lector.
    - En `main`: si hay `--replay`, cargar todas las filas con `sent=1`; si la cabecera no coincide o no hay
      filas, `Log` y `return 2`. No llamar `SimConnect_Open`.
    - Con `--replay` se rechazan (`return 2`) `--gusts`, `--gust-gain`, `--gust-longitudinal`, `--reference-knots`,

@@ -62,6 +62,7 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
 - Código a leer: `SimConnectBridge/main.cpp` (completo), `tests/raw_checks.h:1-20`, `SimTelemetry.h:30-110`, `PicoForceModels.h`, `tests/simconnect_checks.vcxproj`, `probar.ps1:50-65`.
 - Alcance:
   1. Crear `SimConnectBridge/Replay.h` y agregar `--replay` en `SimConnectBridge/main.cpp` (§3.2.5); enlazar `winmm.lib` en `SimConnectBridge/YokeSimConnectBridge.vcxproj`.
+     `parseRow` acepta `nan`, `-nan(ind)`, `inf` y `-inf` (§3.2.5); agregar a `tests/picolog_checks.h` un caso con `spoiler_left=-nan(ind)` que se lea como NaN y uno con `abc` que se rechace.
   2. Crear `tests/comparar_ensayo.h` (lógica), `tests/comparar_ensayo.cpp` (main) y `tests/comparar_ensayo.vcxproj` (§4, §7).
   3. Casos 7-8 de §7 en `tests/picolog_checks.h`.
   4. `probar.ps1`: compilar también `tests\comparar_ensayo.vcxproj` en el paso 1 y reportar `OK comparar_ensayo`.
@@ -145,5 +146,26 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
   - **Usuario:** ya puede cargar `build-pico2-potentiometers/MiYoke_PD.ino.uf2` (12/10 20:44) y hacer el vuelo corto de 2 min, con la fuente de motores apagada.
 
 \## Ensayos del usuario
+
+- Vuelo corto (usuario, 2026-10-12 20:52; firmware `fd46a9d`, fuente de motores apagada). Análisis de Claude con Test Results Analyzer, sobre los registros de `SimConnectBridge/bin/Win32/RealismoSC8/`:
+  - **Datos del vuelo:**
+    - 225 s; rodaje, despegue a 70,8 s y vuelo hasta 156 kt; 2 pausas, la segunda al cerrar.
+    - Bridge `Fin: muestras=21395 error=1 reconexiones=0 lineas_pico=4533 lineas_pico_malas=0`. `error=1` se debe al `ERROR Dispatch 0xC00000B0` (pipe desconectado) al cerrar el simulador, después de la pausa y de `running=0`: es el cierre normal.
+  - **pico.csv:**
+    - 4487 filas, de las cuales 4382 están modeladas;
+    - `dropped=0`, `skipped=0`, sin saltos de `seq` ni NonFinite;
+    - unas 20 filas/s;
+    - todas las filas modeladas tienen su `sample_time_ms` en `telemetry.csv`.
+  - **ganancias.csv:** 46 filas, sin cambios.
+  - **Invariantes:**
+    - B1-B5 sin violaciones; B6: comando a 0 a los 47 ms y a los 62 ms de cada pausa; `dropped` sigue en 0 al reanudar.
+    - Presión: 100 % dentro de 2e-4 (peor diferencia 5,2e-5).
+    - Suelo solo en rodaje (envolvente hasta 1,0; peak 23/4 PWM roll/pitch).
+    - buffet_stall hasta 0,68 solo en vuelo con AoA de 11,7 a 18,2° y 45-53 kt; buffet de tren con el tren extendido; ráfagas 0 (sin viento).
+  - **Tiempos (SC8):** us=286, lp=2412, gap=2429 µs (máximos acumulados de todo el vuelo). El vuelo V1.8 del 11/10 tenía us=186 y lp=38948, en condiciones distintas, así que el criterio de "+100 µs" no se puede atribuir: el registro M/G no está dentro de `Effects::update` (`us`). `lp` > 2000 µs una vez: queda como dato a seguir en el banco.
+  - **Observaciones:**
+    - `spoiler_left/right` = `-nan(ind)` en casi todo `telemetry.csv`. Es esperado (C182 sin spoilers; `RawTelemetry.h:48` lo admite y la Pico da buffet_spoiler=0), pero el lector de la Parte 2 tiene que aceptarlo: se agregó a §3.2.5 y a la Parte 2, punto 1.
+    - Corte de armado de 0,3 s a los 25 s, en tierra y detenido, sin pausa: la Pico respondió con cmd=0. Compatible con el desarme del puente cuando no llegan datos por más de 250 ms (`main.cpp:240`), por ejemplo durante una carga del simulador.
+  - **Conclusión:** los registros nuevos funcionan. Se puede hacer la Parte 2. Los registros de este vuelo sirven como entrada del comparador y del banco: copiarlos a `tmp\vuelo_corto\` (lo indica la Parte 2).
 
 - (el usuario o Codex anotan acá: resultado del vuelo corto, confirmación "fuente de motores apagada" con fecha, y la carpeta de cada ensayo en `ensayos\`)
