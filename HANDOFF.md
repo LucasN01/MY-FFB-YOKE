@@ -80,7 +80,7 @@ Se divide en **2 partes**: firmware con manejador en ensamblador + compilación 
 
 \## Última entrega
 
-- Parte 1 completada (Codex, 2026-10-13), rama `mejora/diagnostico-hardfault`. Commit de implementacion: pendiente de registrar al crear el commit.
+- Parte 1 completada (Codex, 2026-10-13), rama `mejora/diagnostico-hardfault`. Commit de implementacion: `b6db398` (codigo y HANDOFF); esta anotacion del hash se guarda en un commit posterior de HANDOFF.
 - Archivos modificados: `MiYoke_PD.ino`, `LoopSupervisor.h`, `mis_defines.h`, `Build-Pico2.ps1`, `probar.ps1`, `tests/health_checks.h`, `tests/picolog_checks.h` y `HANDOFF.md`.
 - Implementado: apagado EN/PWM y captura PC/LR/CFSR/excepcion en HardFault ARM; lectura y limpieza de scratch al arrancar; BOOT ampliado solo con falla; pintado y medicion del stack, linea S despues de W; variante `-PruebaFalla` con potes y trap a los 20 s. Constantes de seguridad sin cambios.
 - Documentacion: esta entrega actualizada. Los cambios de manuales quedan en Parte 2, como indica el plan; no se editaron .tex. Cambios del usuario en tesis/ y graphify-ino/ conservados y fuera del commit.
