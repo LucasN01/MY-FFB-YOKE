@@ -64,6 +64,8 @@ if (-not $msbuild) {
         $r = Ejecutar { & 'tests\bin\simconnect_checks.exe' }
         $fallos += Resumir 'suite simconnect_checks' $r.Codigo $r.Salida '^PASS' 'FAIL'
     }
+    $r = Ejecutar { & $msbuild 'tests\comparar_ensayo.vcxproj' /p:Configuration=Release /p:Platform=Win32 /verbosity:quiet /nologo }
+    $fallos += Resumir 'comparar_ensayo' $r.Codigo $r.Salida '^$' '(error|warning) [A-Z]+\d+'
 }
 
 # 2. Pruebas del lanzador (solo funciones, sin puertos)

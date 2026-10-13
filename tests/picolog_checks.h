@@ -1,6 +1,60 @@
 #include "../PicoLog.h"
 #include "../SimConnectBridge/PicoCsv.h"
+#include "comparar_ensayo.h"
+static std::string replayLine(const YokeReplay::ReplayRow& r,unsigned index) {
+    std::ostringstream line; line<<std::setprecision(9)<<r.host<<","<<r.sample<<","<<index;
+    for(float v:r.v) line<<","<<v;
+    line<<","<<r.paused<<","<<r.running<<","<<r.armed<<","<<r.sent<<","<<r.ref<<","<<r.gain<<","<<r.longi<<","<<r.gusts<<","<<r.buffets;
+    return line.str();
+}
+static void replayAndComparatorChecks() {
+    CHECK(YokeReplay::parseHeader(YokeReplay::header));
+    std::string header=YokeReplay::header; header[0]='X'; CHECK(!YokeReplay::parseHeader(header));
+    YokeReplay::ReplayRow r; r.host=1000; r.sample=100; r.armed=r.running=r.sent=r.buffets=true;
+    r.v[YokeRaw::OnGround]=1; r.v[YokeRaw::PressurePSF]=100; r.v[YokeRaw::GroundSpeed]=40;
+    YokeReplay::ReplayRow decoded; const std::string valid=replayLine(r,1);
+    CHECK(YokeReplay::parseRow(valid,decoded) && decoded.sample==100 && decoded.armed);
+    CHECK(!YokeReplay::parseRow(valid.substr(0,valid.rfind(',')),decoded));
+    auto fields=YokeReplay::split(valid);
+    auto joined=[&]() { std::string s; for(const auto& f:fields) { if(!s.empty()) s+=","; s+=f; } return s; };
+    fields[3+YokeRaw::SpoilerLeft]="-nan(ind)";
+    CHECK(YokeReplay::parseRow(joined(),decoded) && std::isnan(decoded.v[YokeRaw::SpoilerLeft]));
+    fields[3+YokeRaw::SpoilerLeft]="NaN";
+    CHECK(YokeReplay::parseRow(joined(),decoded) && std::isnan(decoded.v[YokeRaw::SpoilerLeft]));
+    fields[3+YokeRaw::SpoilerLeft]="INF";
+    CHECK(YokeReplay::parseRow(joined(),decoded) && std::isinf(decoded.v[YokeRaw::SpoilerLeft]) && decoded.v[YokeRaw::SpoilerLeft]>0);
+    fields[3+YokeRaw::SpoilerLeft]="-inf";
+    CHECK(YokeReplay::parseRow(joined(),decoded) && std::isinf(decoded.v[YokeRaw::SpoilerLeft]) && decoded.v[YokeRaw::SpoilerLeft]<0);
+    fields[3+YokeRaw::SpoilerLeft]="abc"; CHECK(!YokeReplay::parseRow(joined(),decoded));
+    YokeEnsayo::Input in; in.bridgeCounts=true; in.lines=30; in.gains=1;
+    YokeSC::PicoForceModels models;
+    for(unsigned i=0;i<30;++i) {
+        r.host=1000+i*20; r.sample=100+i*20; r.v[YokeRaw::AccelX]=float(std::sin(i*.4)*4);
+        r.v[YokeRaw::AccelY]=float(std::cos(i*.3)*6);
+        CHECK(YokeReplay::parseRow(replayLine(r,i+1),decoded)); in.tel.push_back(decoded);
+        models.update(YokeReplay::payload(decoded));
+        YokeLog::Frame f{}; f.seq=uint16_t(i+1); f.t=r.sample; f.rev=i+1;
+        f.flags=YokeLog::Active|YokeLog::Armed|YokeLog::Dtr|YokeLog::Raw|YokeLog::Modeled;
+        f.q=models.pressure; f.env=models.groundEnvelope;
+        for(int axis=0;axis<2;++axis) { f.gust[axis]=models.gust[axis]; f.ground[axis]=models.ground[axis]; }
+        for(int j=0;j<3;++j) f.buffet[j]=models.buffet[j];
+        char line[YOKE_LOG_M_MAX],row[512]; const int n=YokeLog::formatModel(line,sizeof(line),f);
+        CHECK(n>0); line[n-1]=0; CHECK(YokeCsv::modelRow(line+1,row,sizeof(row)));
+        YokeEnsayo::PicoRow p; CHECK(YokeEnsayo::picoRow(std::to_string(r.host)+","+row,p)); in.pico.push_back(p);
+    }
+    auto result=YokeEnsayo::compare(in,"sintetico");
+    CHECK(result.aOk && result.bOk && result.code()==0 && result.matched==30);
+    auto changed=in; changed.pico[10].v[10]+=.01;
+    result=YokeEnsayo::compare(changed,"alterado");
+    CHECK(!result.aOk && result.report.find("groundR@300:")!=std::string::npos);
+    changed=in; for(size_t i=5;i<changed.pico.size();++i) changed.pico[i].v[25]=1;
+    result=YokeEnsayo::compare(changed,"skip"); CHECK(result.excluded>0 && result.aOk);
+    changed=in; for(auto& row:changed.tel) row.armed=false;
+    result=YokeEnsayo::compare(changed,"monitor");
+    CHECK(result.noData && result.code()==2 && result.report.find("RESULTADO: SIN DATOS")!=std::string::npos);
+}
 static void picoLogChecks() {
+    replayAndComparatorChecks();
     uint16_t drop=0; uint32_t lastLoggedRev=0;
     const uint32_t revisions[]={5,0,0,9};
     for(uint32_t r:revisions) {
@@ -92,7 +146,8 @@ static void picoLogChecks() {
     effects.update(rx,118,true); // Keep control ticks equal, before the batched arrival.
     sequentialEffects.update(sequentialRx,118,true);
     rawFeed(rx,packet,120); // Both new frames arrive before the next update.
-    sample.timeMs=140; rawFrame(packet,sample,3); rawFeed(rx,packet,120); rawFeed(sequentialRx,packet,120);
+    sample.timeMs=140; sample.value[YokeRaw::PressurePSF]=150;
+    rawFrame(packet,sample,3); rawFeed(rx,packet,120); rawFeed(sequentialRx,packet,120);
     effects.update(rx,120,true); sequentialEffects.update(sequentialRx,120,true);
     CHECK(effects.skipped()==1 && effects.modeledRevision()==rx.revision);
     CHECK(sequentialEffects.skipped()==0);

@@ -336,7 +336,7 @@ void loop() {
     lastDtr=dtr;
     const uint32_t r=simEffects.modeledRevision();
     if(r==0) lastLoggedRev=0;
-    if(!logSynced) { lastLoggedRev=r; logSynced=true; }
+    if(!logSynced) { lastLoggedRev=r; lastSkip=simEffects.skipped(); logSynced=true; }
     bool modelWritten=false;
     if(dtr && simTelemetry.rawAvailable && (r!=lastLoggedRev || uint32_t(now-lastLineMs)>=100)) {
         UsbLock usb;

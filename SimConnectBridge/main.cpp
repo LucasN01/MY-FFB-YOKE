@@ -1,4 +1,7 @@
 #include <Windows.h>
+#include <mmsystem.h>
+#include <fstream>
+#include <vector>
 #include <cstdio>
 #include <cstring>
 #include <cmath>
@@ -11,6 +14,7 @@
 #include "RawTelemetry.h"
 #include "SerialLink.h"
 #include "PicoCsv.h"
+#include "Replay.h"
 
 FILE* logFile=nullptr;
 void Log(const char* format, ...) {
@@ -213,9 +217,11 @@ void PollPort(ULONGLONG now) {
     }
 }
 int main(int argc,char** argv) {
+    std::string replayFile; std::vector<YokeReplay::ReplayRow> replayRows; bool replayOptions=false;
     double duration=20; bool durationSpecified=false; // Double click: 20-second monitor, no motor commands.
     for(int i=1;i<argc;++i) {
         const std::string arg=argv[i];
+        if(arg=="--gusts" || arg=="--gust-gain" || arg=="--gust-longitudinal" || arg=="--reference-knots" || arg=="--no-buffets" || arg=="--seconds") replayOptions=true;
         if(arg=="--enable") enable=true;
         else if(arg=="--gusts") gusts=true;
         else if(arg=="--no-buffets") buffets=false;
@@ -233,14 +239,41 @@ int main(int argc,char** argv) {
                 Log("--gust-longitudinal debe estar entre -1 y 1.\n"); return 2;
             }
         }
+        else if(arg=="--replay"&&i+1<argc) {
+            replayFile=argv[++i];
+            if(replayFile.empty()) { Log("--replay requiere un archivo.csv.\n"); return 2; }
+        }
         else if(arg=="--port"&&i+1<argc) com=argv[++i];
         else if(arg=="--seconds"&&i+1<argc) { duration=std::atof(argv[++i]); durationSpecified=true; }
         else if(arg=="--reference-knots"&&i+1<argc) referenceKnots=std::atof(argv[++i]);
-        else { Log("Uso: Bridge.exe [--seconds 20] [--port COMn --enable] [--gusts --gust-gain 0..10 --gust-longitudinal -1..1] [--reference-knots 120] [--no-buffets]\n"); return 2; }
+        else { Log("Uso: Bridge.exe [--seconds 20] [--port COMn --enable] [--gusts --gust-gain 0..10 --gust-longitudinal -1..1] [--reference-knots 120] [--no-buffets] | --replay archivo.csv --port COMn [--enable]\n"); return 2; }
     }
     if(!com.empty()&&!durationSpecified) duration=0;
     if(!std::isfinite(referenceKnots)||referenceKnots<40||referenceKnots>250||!std::isfinite(duration)||duration<0|| (enable&&com.empty())) return 2;
     char file[MAX_PATH]; GetModuleFileNameA(nullptr,file,MAX_PATH); char* tail=std::strrchr(file,'\\');
+    if(!replayFile.empty()) {
+        if(com.empty() || replayOptions) { Log("--replay requiere --port y no acepta ajustes ni --seconds.\n"); return 2; }
+        if(!tail) { Log("No se pudo resolver la carpeta del EXE.\n"); return 2; }
+        char target[MAX_PATH]; strcpy_s(target,file);
+        strcpy_s(target+(tail+1-file),MAX_PATH-(tail+1-file),"telemetry.csv");
+        char inputPath[MAX_PATH],outputPath[MAX_PATH];
+        const DWORD inputSize=GetFullPathNameA(replayFile.c_str(),MAX_PATH,inputPath,nullptr);
+        const DWORD outputSize=GetFullPathNameA(target,MAX_PATH,outputPath,nullptr);
+        if(!inputSize || inputSize>=MAX_PATH || !outputSize || outputSize>=MAX_PATH || _stricmp(inputPath,outputPath)==0) {
+            Log("La entrada replay no puede ser telemetry.csv de la carpeta del EXE.\n"); return 2;
+        }
+        std::ifstream input(replayFile); std::string line;
+        if(!std::getline(input,line) || !YokeReplay::parseHeader(line)) { Log("REPLAY: cabecera invalida o archivo ausente.\n"); return 2; }
+        uint64_t lastHost=0; bool haveHost=false;
+        while(std::getline(input,line)) {
+            YokeReplay::ReplayRow row;
+            if(!YokeReplay::parseRow(line,row) || (haveHost && row.host<lastHost)) { Log("REPLAY: fila invalida o tiempo fuera de orden.\n"); return 2; }
+            lastHost=row.host; haveHost=true;
+            if(row.sent) replayRows.push_back(row);
+        }
+        if(replayRows.empty()) { Log("REPLAY: no hay filas sent=1.\n"); return 2; }
+    }
+
     if(tail) {
         strcpy_s(tail+1,MAX_PATH-(tail+1-file),"pico.log");
         WIN32_FILE_ATTRIBUTE_DATA attributes{};
@@ -263,13 +296,37 @@ int main(int argc,char** argv) {
     if(tail) { strcpy_s(tail+1,MAX_PATH-(tail+1-file),"ganancias.csv"); fopen_s(&gainsCsv,file,"w"); }
     if(picoCsv) std::fprintf(picoCsv,"%s\n",YokeCsv::modelHeader);
     if(gainsCsv) std::fprintf(gainsCsv,"%s\n",YokeCsv::gainsHeader);
-    if(csv) std::fprintf(csv,"host_time_ms,sample_time_ms,sample_index,pressure_psf,ias_knots,wind_x_knots,wind_y_knots,wind_z_knots,on_ground,slew,aoa_deg,stall_alpha_deg,flap_left,flap_right,vs0_knots,vs1_knots,gear_fraction,gear_retractable,spoiler_left,spoiler_right,ground_speed_knots,yoke_roll,yoke_pitch,ground_accel_x_ft_s2,ground_accel_y_ft_s2,paused,running,armed,sent,reference_knots,gust_gain,gust_longitudinal,gusts_enabled,buffets_enabled\n");
+    if(csv) std::fprintf(csv,"%s\n",YokeReplay::header);
     Log("Yoke SimConnect SC8: transporte de telemetria; todos los modelos en Pico 2 | %s\n",enable?"HABILITADO":"SOLO MONITOR");
     Log("Ajustes enviados: referencia %.1f kt, gustGain %.2f, longitudinal %.2f, gusts=%d buffets=%d\n",
         referenceKnots,gustGain,gustLongitudinal,gusts,buffets);
     if(!com.empty()&&!OpenPort(com,3000)) { Log("No se identifico firmware YOKE17SC8 en %s. No se enviaron fuerzas.\n",com.c_str()); ClosePort(); if(csv)std::fclose(csv); if(logFile)std::fclose(logFile); if(picoLog)std::fclose(picoLog); if(picoCsv)std::fclose(picoCsv); if(gainsCsv)std::fclose(gainsCsv); return 3; }
     SetConsoleCtrlHandler(Stop,TRUE);
     const ULONGLONG start=GetTickCount64();
+    if(!replayFile.empty()) {
+        timeBeginPeriod(1);
+        Log("REPLAY %s: %u filas enviadas, %.1f s | %s\n",replayFile.c_str(),unsigned(replayRows.size()),
+            double(replayRows.back().host-replayRows.front().host)/1000,enable ? "HABILITADO" : "SOLO MONITOR");
+        for(const auto& row:replayRows) {
+            const ULONGLONG due=start+(row.host-replayRows.front().host);
+            while(!quit && GetTickCount64()<due) { PollPort(GetTickCount64()); Sleep(1); }
+            if(quit) break;
+            opened=true; pauseKnown=true; paused=row.paused; running=row.running;
+            referenceKnots=row.ref; gustGain=row.gain; gustLongitudinal=row.longi; gusts=row.gusts; buffets=row.buffets;
+            for(int i=0;i<YokeRaw::Count;++i) latest.value[i]=row.v[i];
+            latest.timeMs=row.sample; ++samples; Send(enable && row.armed);
+            PollPort(GetTickCount64());
+        }
+        for(int i=0;i<3;++i) {
+            Send(false);
+            if(i<2) {
+                const ULONGLONG until=GetTickCount64()+50;
+                do { PollPort(GetTickCount64()); Sleep(1); } while(GetTickCount64()<until);
+            }
+        }
+        PollPort(GetTickCount64()); opened=false;
+        timeEndPeriod(1);
+    } else
     if(Check(SimConnect_Open(&sim,"Yoke SC8 raw telemetry",nullptr,0,nullptr,SIMCONNECT_OPEN_CONFIGINDEX_LOCAL),"Open")) {
         while(!quit) {
             if(!Check(SimConnect_CallDispatch(sim,Receive,nullptr),"Dispatch")) break;

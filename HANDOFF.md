@@ -94,22 +94,37 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
 
 \## Última entrega
 
-- Parte 1b completada (2026-10-12) en `mejora/registro-ensayo-pico`, sobre `af146fd`. Hallazgos H1-H4 aplicados; pendiente de revision de Claude.
-- H1 aplicado: cada ciclo con revision modelada 0 reinicia `lastLoggedRev` ([INO] `MiYoke_PD.ino:338`), para no contar revisiones sin modelo tras pausa, desarme, slew o dt>50.
-- H2 aplicado: funcion pura inline `YokeLog::nextDrop` ([Codigo] `PicoLog.h:15`), resta el aumento de skip sin bajar de cero y satura en 65535. El firmware usa la funcion y actualiza `lastSkip` al escribir M ([INO] `MiYoke_PD.ino:344,369`).
-- H3 aplicado: dos Effects con las mismas tramas y los mismos ticks de control, uno modela las muestras en secuencia y otro saltea la intermedia. En la muestra comun, se comprueba igualdad de command con centrado, posicion .5 y presion >0, y salida distinta de cero ([Codigo] `tests/picolog_checks.h:81-101`).
-- H4 aplicado: caso de formato verifica tambien seq, t/rev de 32 bits, PWM positivo/negativo y drop/skip en 65535 ([Codigo] `tests/picolog_checks.h:31-33`).
-- Pruebas de nextDrop: 5,0,0,9 sin perdidas; 5->8 suma 2 sin skip y 1 con skip +1; skip mayor que el salto suma 0; saturacion y revision repetida.
-- Archivos modificados: `PicoLog.h`, `MiYoke_PD.ino`, `tests/picolog_checks.h`, `HANDOFF.md`. Documentacion actualizada: este HANDOFF; el diseno §2.3 ya fue corregido por Claude. Tesis y cambios previos del usuario preservados y fuera del commit.
-- Verificacion final: `powershell -ExecutionPolicy Bypass -File probar.ps1 -Pico -Potentiometers -Encoders` (codigo 0):
-  - OK suite simconnect_checks - PASS: 141150 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+- Parte 2 implementada (2026-10-12), rama `mejora/registro-ensayo-pico`, sobre `48cc38e`. Precondiciones cumplidas: Parte 1b aprobada y vuelo corto registrado por Claude.
+- Replay: lector puro de 34 campos y cabecera exacta, con nan / -nan(ind) / inf / -inf sin distinguir mayusculas; rechazo de texto no numerico. Puente --replay con --port, ajustes desde cada fila, solo sent=1, reloj original sample_time_ms y programacion por host_time_ms, PollPort, salida por Ctrl+C y tres Send(false) separados 50 ms. Sin SimConnect_Open en replay; proteccion de entrada contra telemetry.csv del EXE, rechazo de opciones incompatibles y enlace winmm.lib.
+- Comparador: receptor SC8 y modelos compartidos con firmware, emparejamiento por sample_time_ms y deduplicacion por revision, exclusiones por skip y tolerancias A, B1-B9, datos C, fases automaticas y marcas opcionales. Lee M de pico.log si falta pico.csv (B6 SIN DATOS). Escribe informe.txt y resumen_fases.csv.
+- Pruebas nuevas: casos 7-8, lectura de -nan(ind) y abc, ensayo sintetico OK, desvio de ground de 0.01 detectado, exclusion de tramo con skip sin penalizar A, monitor sin filas armadas da SIN DATOS.
+- Ajustes menores de Claude aplicados: sincronizacion de lastSkip junto a lastLoggedRev en dtr ([INO] `MiYoke_PD.ino:339`); trama 3 de H3 con presion 150 frente a 100 en trama 2 ([Codigo] `tests/picolog_checks.h:149`).
+- Archivos modificados: `SimConnectBridge/Replay.h`, `SimConnectBridge/main.cpp`, `SimConnectBridge/YokeSimConnectBridge.vcxproj`, `tests/comparar_ensayo.h`, `tests/comparar_ensayo.cpp`, `tests/comparar_ensayo.vcxproj`, `tests/picolog_checks.h`, `probar.ps1`, `MiYoke_PD.ino`, `HANDOFF.md`.
+- Documentacion actualizada: este HANDOFF; LEEME quedan para Parte 3. No se toco tesis ni constantes de seguridad. Cambios previos del usuario preservados.
+- Verificacion: corrida `probar.ps1 -Pico -Potentiometers -Encoders -Bridge` y corrida final `probar.ps1` (suite/comparador/lanzador). La primera termino codigo 1 porque al iniciar faltaba el include directo de mis_defines.h en el comparador standalone; se corrigio, y la corrida final sin flags termino codigo 0. No se repitieron compilaciones de firmware/puente que ya dieron OK y cuyo codigo no cambio. Resultados finales:
+  - OK suite simconnect_checks - PASS: 141283 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+  - OK comparar_ensayo
   - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-  - OK Pico 2 (configurado) - Sketch uses 104492 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22768 bytes (4%) of dynamic memory, leaving 501520 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (encoders) - Sketch uses 104668 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23008 bytes (4%) of dynamic memory, leaving 501280 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (potenciometros) - Sketch uses 104492 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22768 bytes (4%) of dynamic memory, leaving 501520 bytes for local variables. Maximum is 524288 bytes.
-- Tamano frente a Parte 1: +24 B configurado/potenciometros, +48 B encoders. Ejecutados graphify-sync.cmd y graphify update .; git diff --check sin errores.
-- Commit por nombre, mensaje: `Pico: contador de lineas perdidas sin falsos tras pausa ni doble conteo de muestras salteadas`. Sin version, segun Parte 1b; la version queda para Parte 3. Sin desvios pendientes ni cambios en fuerzas/constantes de seguridad.
-- Sigue: revision de Claude de Parte 1b. El usuario NO carga el UF2 hasta que Claude apruebe. Despues: vuelo corto de 2 min y registrar en Ensayos del usuario la linea Fin: de bridge.log y las 3 primeras filas de pico.csv antes de Parte 2.
+  - OK Pico 2 (configurado) - Sketch uses 104500 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22768 bytes (4%) of dynamic memory, leaving 501520 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (encoders) - Sketch uses 104676 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23008 bytes (4%) of dynamic memory, leaving 501280 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (potenciometros) - Sketch uses 104500 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22768 bytes (4%) of dynamic memory, leaving 501520 bytes for local variables. Maximum is 524288 bytes.
+  - OK puente SimConnect
+- Registros actuales del vuelo corto copiados a `tmp/vuelo_corto/`: telemetry.csv, pico.csv, ganancias.csv, pico.log y bridge.log. Ejecutado comparador final sobre esa carpeta (codigo 1); informes generados alli:
+  - A fidelidad: OK emparejadas=100.000% q=100.000% gust=100.000% buffet=100.000% ground=100.000% env=100.000% peor=q@91235750:0.000050 excluidas=0 esperadas=4376
+  - B1: OK violaciones=0
+  - B2: OK violaciones=0
+  - B3: OK violaciones=0
+  - B4: OK violaciones=0
+  - B5: OK violaciones=0
+  - B6: FALLO violaciones=1 comprobaciones=4
+  - B7: OK violaciones=0 pico=0.000% puente=0.000% dropped=0.000
+  - B8: OK violaciones=0
+  - B9: OK violaciones=0 lineas=4533 malas=0
+  - RESULTADO: FALLO
+- Dato para revision de Claude: B6 se aplica literalmente como §4.2. La pausa inicial de telemetry.csv es host 91043093 (sample 0, nunca armado aun); despues hay armado en 91043187. La primera fila pico con host >=91043243 es 91043265, flags 179 y cmd -0.0007 / 0.0017, por eso B6 falla. Pico ya habia emitido cmd=0 en 91043109, pero se rearmo antes de +150 ms. Las otras tres transiciones comprobadas tienen cmd=0. No se cambio el criterio B6 ni se oculto el resultado; Claude debe evaluar el tratamiento del arranque/rearmado antes del umbral.
+- Ejecutados graphify-sync.cmd y graphify update . despues de los cambios correspondientes; git diff --check sin errores. No se ejecuto replay hacia hardware; el banco corresponde a Parte 3.
+- Commit por nombre, mensaje: `Puente: modo replay sin simulador y comparador de ensayos contra el modelo de la Pico`. Sin version, segun el plan; la version queda para Parte 3. No integrado a master.
+- Sigue: revision de Claude de Parte 2 y evaluacion del resultado B6; luego Parte 3 (scripts, documentacion y version).
 
 \## Revisión
 
