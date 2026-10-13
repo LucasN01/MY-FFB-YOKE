@@ -225,6 +225,28 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
 
 \## Ensayos del usuario
 
+- Vuelo completo con `ENSAYO.cmd` (usuario, 2026-10-12, V2.0, fuente de motores apagada). Carpeta: `ensayos/20261012-220623_vuelo1/`. Análisis de Claude con Test Results Analyzer.
+  - **Resultado:** `RESULTADO: OK`.
+    - Fidelidad 100 % en 14974 revisiones; B1-B9 OK.
+    - B6: 13 desarmes (pausas, datos viejos, slew, simulador detenido) en 31-63 ms; las reactivaciones, en 15-16 ms.
+    - Sin pérdidas ni líneas malas; us/lp/gap máximos 277/2377/2404 µs; ningún ciclo ≥ 10 ms.
+  - **Por fase:**
+    - Menú: 13,1 s con cmd=pwm=0; ganancias sin cambios (se salió sin guardar).
+    - Suelo: aporte máximo 40,0 PWM en roll y 4,0 en pitch (techo respetado en todas las filas); 0 en las 9565 filas en el aire.
+    - Centrado: rigidez 0,150 en tierra frente a 0,713 de media en vuelo; signo opuesto a la posición 95-100 %.
+    - Turbulencia solo en F13 (RMS 0,13 roll y 0,14 pitch).
+    - Buffet de tren: 0 con el tren arriba; satura desde 150 kt.
+    - Buffet de pérdida desde aoa ≈ stall_alpha − 3,9°.
+  - **Observaciones del ensayo:**
+    - Las marcas se pusieron al terminar cada fase (no al empezarla); el resumen por fase se lee desplazado una fase.
+    - Durante el slew, P3D deja de enviar muestras (`running=0`), así que `slew≠0` nunca llega. La Pico desarmó igual en 46 ms. El comparador lo clasifica como el tramo anterior: pendiente menor, clasificar `DETENIDO` con `running=0` o `armed=0`.
+    - Crucero con el tren arriba muy breve (tramo VUELO de 3,5 s); se voló hasta 190 kt con el tren abajo.
+  - **HALLAZGO IMPORTANTE (antes de encender motores):** el pote de pitch, **en la lectura de la Pico** (ADC), tiene 4 picos de una sola muestra hacia valores extremos (p. ej. 0,84 → −1,00 → 0,85 en host 95754046). El `yoke_pitch` del simulador (Arduino UNO, mismo cursor) no tiene ninguno, y roll tampoco. Esos picos cambian el comando de pitch hasta ~275 PWM durante ~47 ms; con motores sería un golpe. Hipótesis: contacto o divisor en el tramo cursor → Pico (ADC1/GPIO27, AGND) o ruido del ADC; pico.csv registra a ~20 Hz, así que a 500 Hz puede haber más. A investigar con `depuracion-sistematica` en una tarea propia (hardware y, si corresponde, filtro de picos en `PotentiometerPosition`).
+  - **Otros pendientes para tareas futuras:**
+    - ciclo de 39 ms visto una vez entre ensayos;
+    - rigidez de centrado hasta 2,25 a 190 kt (con el pote a tope el comando se recortaría): revisar con TelemFFB antes de usar motores;
+    - menores del comparador: S4, `FIN` con espacios, `SIN DATOS` en el signo de centrado.
+
 - Banco armado (usuario, 2026-10-12, firmware V2.0 cargado, fuente de motores apagada confirmada con `APAGADA`). Carpeta: `ensayos/20261012-215853_banco/`.
   - **Resultado:** `RESULTADO: OK`.
     - A: 100 % en 4376 revisiones (peor 5e-5).
