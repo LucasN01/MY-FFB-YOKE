@@ -196,4 +196,33 @@ Se divide en **3 partes**, porque hay estado nuevo en firmware y en puente, un r
 
 \## Ensayos del usuario
 
+- Ensayo de ciclos lentos con `CICLOS.cmd` (usuario, 2026-10-13, V2.1, motores apagados). Carpeta: `ensayos/20261013-171626_ciclos/`; Claude copió ahí también los 6 CSV de las dos sesiones. Análisis de Claude.
+  - **Marcas:** el usuario marcó cada paso **al terminarlo**: la ventana de Pn va de la marca P(n-1) a la marca Pn.
+  - **Eventos `W`:** 4 en total (`total=4`, `perdidos=0`), todos en la etapa **FLASH**, de 37 635 a 39 304 µs. Todos coinciden con los guardados que hizo el usuario:
+    - 2 en P2 (17:28:48 y 17:29:23);
+    - 1 en P8: llegó a las 18:04:43 con `hace=144 745` ms, o sea que ocurrió a las 18:02:18, dentro de la ventana de P8; `flags=0x6` (sin `dtr`, menú activo);
+    - 1 en P9 (18:07:14).
+  - **Sin eventos:**
+    - P1 (control negativo, 10 min);
+    - P3 (menú ×3 con puente);
+    - P4 (vuelo);
+    - P5 (Pico sola 15 min);
+    - P6 (menú ×3 sin puente);
+    - P7 (detección de puerto ×3).
+  - **Validez del instrumento:** controles negativo y positivo correctos; la antigüedad (`hace`) es coherente; `perdidos=0`.
+  - **Conclusión sobre el ciclo de ~39 ms:** corresponde al **guardado en flash del menú** (FLASH ≈ 38-39 ms, igual que los 38 948 y 39 252 µs de antes).
+    - Es un comportamiento esperado: el firmware pone los motores en 0 antes de guardar y amplía el watchdog (`MiYoke_PD.ino`, bloque `savePending`), y el menú solo funciona en pausa o sin puente.
+    - Se descartan H1, H2 y H3 como disparadores deterministas. En ~50 min de observación no hubo ningún ciclo ≥ 3 ms fuera de los guardados.
+    - Probablemente el 39 ms del 12/10 vino de un guardado entre el vuelo corto y el banco. No hay registro que lo confirme, pero es la única etapa medida con esa duración.
+  - **REGISTRO DATOS en hardware:**
+    - Desactivado de 17:28:48 a 17:29:23: hueco de ~35 s en los **tres** CSV (`telemetry` 34 953 ms, `pico` 35 000 ms, `ganancias` 35 031 ms), sin filas.
+    - En la sesión P9, que arrancó con el registro desactivado, no hay filas hasta reactivarlo (18:07:14); después, 17 s de filas.
+    - `bridge.log` informa cada cambio, y `Fin:` dice `registro=ACTIVADO ciclos_lentos=2 filas_csv_malas=0` en ambas sesiones.
+  - **HALLAZGO NUEVO:** al conectar a las 17:17:33, la Pico informó `BOOT reset=WDT wd=0x1 pm=0x10000 etapa=0:INACTIVO falla=1`.
+    - Los arranques anteriores después de cargar un UF2 decían `reset=ENCENDIDO` (12/10, dos veces).
+    - Significa que la ejecución anterior de la Pico terminó en un **HardFault** (`isr_hardfault` marca el bit) y la reinició el watchdog. Pasó antes de las 17:17:33, probablemente en el primer arranque de V2.1 tras cargar el UF2.
+    - La etapa `INACTIVO` indica que fue fuera del cuerpo del lazo (entre vueltas: `yield()`/`tud_task` o una interrupción USB) o en `setup()` después de `mark(Idle)` (aunque entonces el watchdog todavía no corre).
+    - **Importa antes de conectar motores:** durante un HardFault el PWM queda en su último valor hasta que actúa el watchdog (250 ms).
+    - Siguiente paso propuesto: tarea propia con `depuracion-sistematica`. Reproducirlo (cargar el UF2 dos veces; desenchufar y enchufar) y agregar al diagnóstico de HardFault la dirección de la instrucción que falló (PC apilado en `scratch[1]`), para ubicarlo en el código.
+
 - (vacío: tarea nueva. Los resultados de la tarea anterior, registro/ensayo de la Pico V1.9-V2.0, están en `master`, commit `66a4a51`.)
