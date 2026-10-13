@@ -84,7 +84,7 @@ Se divide en **2 partes**: firmware con manejador en ensamblador + compilación 
 
 \## Última entrega
 
-- Parte 2 implementada (Codex, 2026-10-13), rama `mejora/diagnostico-hardfault`. Parte 1 aprobada por Claude en `9ea9978` (implementacion `b6db398`). Commit de Parte 2: se registra despues de crearlo.
+- Parte 2 completada (Codex, 2026-10-13), rama `mejora/diagnostico-hardfault`. Parte 1 aprobada por Claude en `9ea9978` (implementacion `b6db398`). Commit de Parte 2: `97d26e8` (codigo, documentacion y HANDOFF); esta anotacion final se guarda en un commit posterior de HANDOFF.
 - Archivos modificados: `MiYoke_PD.ino`, `.gitignore`, `SimConnectBridge/PicoCsv.h`, `SimConnectBridge/main.cpp`, `tests/picolog_checks.h`, `FALLA.ps1`, `ARRANQUE.ps1`, `ARRANQUE.cmd`, `LEEME md/CALCULO_PICO_SC8.md`, `LEEME md/ENSAYOS.md`, `LEEME md/LEEME_PICO2.md` y `HANDOFF.md`.
 - [Codigo] `SimConnectBridge/PicoCsv.h:48`: stackLine acepta S mas un entero uint32 sin signo, rechaza vacios, signo, campos extra y desbordes. `SimConnectBridge/main.cpp:227-238,406-410`: acepta S, registra cada valor distinto en bridge.log y conserva el minimo de toda la sesion para Fin (o - si no recibio valores).
 - [INO] `MiYoke_PD.ino:420-425`: reinicia lastStackBytes en el flanco DTR para reenviar S tras reconexion. `.gitignore` excluye build-pico2-prueba-falla/. Constantes de seguridad sin cambios.
@@ -119,7 +119,7 @@ PC 0x100067dc -> loop (D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODI
 
 - Adicional: FALLA con PC 0x20000110 y LR 0x2000015d del ELF configurado devuelve hardfaultCapture e isr_hardfault (LR limpio 0x2000015c), codigo 0. ELF de prueba final confirma `20000110 T hardfaultCapture` y `2000015c T isr_hardfault`: RAM y simbolos fuertes. Stack verificado en Parte 1: 2048 B, no 4 KB.
 - `git diff --check`: sin errores. Sin desvios del alcance. ARRANQUE no se ejecuto en hardware; no se cargo firmware ni se integro a master.
-- Version: pendiente del paso inmediato `nueva-version.ps1`, desde checkout temporal limpio debido a los cambios del usuario en tesis/ (procedimiento autorizado en el plan).
+- Version: **V2.2**, creada por `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Diagnostico de HardFault con PC y excepcion, motores a 0 V en la falla y stack libre"`. Salida: `Version V2.2 creada`. Verificada la existencia de `../MiYoke_PD_VERSIONES/V2_2/ACTUALIZACION_V2_2.txt` y su primera linea `VERSION: V2.2`; etiqueta sobre `97d26e8`. Se ejecuto desde el checkout temporal limpio `../MiYoke_PD-versionado-hardfault-codex`, en la misma rama, para conservar los cambios del usuario en tesis/. El checkout temporal fue retirado despues de verificar la version.
 - Sigue: revision de Claude de Parte 2 y protocolo del usuario V1, R1-R3 (§5), con motores apagados.
 
 \## Revisión
