@@ -225,6 +225,17 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
 
 \## Ensayos del usuario
 
+- Banco armado (usuario, 2026-10-12, firmware V2.0 cargado, fuente de motores apagada confirmada con `APAGADA`). Carpeta: `ensayos/20261012-215853_banco/`.
+  - **Resultado:** `RESULTADO: OK`.
+    - A: 100 % en 4376 revisiones (peor 5e-5).
+    - B1-B9 OK; B6: 3 transiciones, latencia máxima 47 ms.
+    - Sin pérdidas (B7 0 %) ni líneas malas (B9: 4535 líneas, 0 malas).
+  - **Tiempos:** us/lp/gap máximos = 277/2303/2333 µs; un solo ciclo de lazo ≥ 2000 µs. En este arranque no se repitió el ciclo de 39 ms.
+  - **Fases:** coherentes con el vuelo grabado: buffet de pérdida 0,68 en PERDIDA; buffet de tren hasta 1,0 a 150 kt con tren extendido; suelo solo en RODAJE; comando 0 en las 3 pausas.
+  - **Observaciones:**
+    - `centrado signo R=0% P=0%` no indica un error. En el banco los potes estuvieron quietos (pos_roll entre -0,025 y 0,018; pos_pitch entre -0,170 y -0,132), así que ninguna fila cumple |pos| > 0,2 y el 0 % sale de 0/0. Pendiente menor: informar `SIN DATOS` cuando no haya filas.
+    - Con los potes en reposo, pitch lee alrededor de -0,15. Revisar el centro calibrado del pote de pitch o su posición física antes del vuelo; si no, el centrado empuja siempre en pitch.
+
 - Vuelo corto (usuario, 2026-10-12 20:52; firmware `fd46a9d`, fuente de motores apagada). Análisis de Claude con Test Results Analyzer, sobre los registros de `SimConnectBridge/bin/Win32/RealismoSC8/`:
   - **Datos del vuelo:**
     - 225 s; rodaje, despegue a 70,8 s y vuelo hasta 156 kt; 2 pausas, la segunda al cerrar.
