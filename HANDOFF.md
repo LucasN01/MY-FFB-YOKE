@@ -66,13 +66,17 @@ Se divide en **2 partes**: firmware con manejador en ensamblador + compilación 
   2. Prueba de `stackLine` en `tests/picolog_checks.h`.
   3. Crear `FALLA.ps1`, `ARRANQUE.ps1` y `ARRANQUE.cmd` (§4).
   4. Documentación de §8: el reemplazo exacto en `LEEME md/CALCULO_PICO_SC8.md`, la sección nueva en `LEEME md/ENSAYOS.md` y la línea en `LEEME md/LEEME_PICO2.md`. Si un TEXTO ACTUAL no aparece, anotarlo y seguir.
-  5. `graphify update .`.
+  5. Ajustes de la revisión de la Parte 1:
+     - en `MiYoke_PD.ino`, en la línea del flanco de subida de `dtr` (`if(dtr && !lastDtr) {...}`), agregar `lastStackBytes=0xFFFFFFFFu;`, para que una reconexión reciba la línea `S` enseguida (si hace falta, mover la declaración `static` de `lastStackBytes` antes de esa línea);
+     - agregar `build-pico2-prueba-falla/` a `.gitignore`;
+     - ejecutar `graphify-sync.cmd`.
+  6. `graphify update .`.
 - Pruebas:
   - `probar.ps1 -Pico -Potentiometers -Encoders -Bridge -PruebaFalla`: todo OK;
   - sintaxis de `FALLA.ps1` y `ARRANQUE.ps1`;
   - `FALLA.ps1 -Pc 0x<direccion de loop tomada del .map de build-pico2-prueba-falla> -Elf build-pico2-prueba-falla\MiYoke_PD.ino.elf` debe imprimir `loop`; anotar la salida;
   - `tests\bin\comparar_ensayo.exe tmp\vuelo_corto`: `RESULTADO: OK`.
-- Commit por nombre: `SimConnectBridge/PicoCsv.h SimConnectBridge/main.cpp tests/picolog_checks.h FALLA.ps1 ARRANQUE.ps1 ARRANQUE.cmd "LEEME md/CALCULO_PICO_SC8.md" "LEEME md/ENSAYOS.md" "LEEME md/LEEME_PICO2.md" HANDOFF.md`.
+- Commit por nombre: `MiYoke_PD.ino .gitignore SimConnectBridge/PicoCsv.h SimConnectBridge/main.cpp tests/picolog_checks.h FALLA.ps1 ARRANQUE.ps1 ARRANQUE.cmd "LEEME md/CALCULO_PICO_SC8.md" "LEEME md/ENSAYOS.md" "LEEME md/LEEME_PICO2.md" HANDOFF.md`.
   Mensaje: "Puente y scripts: stack libre, FALLA.ps1 y ARRANQUE para diagnosticar HardFault".
 - Versión: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Diagnostico de HardFault con PC y excepcion, motores a 0 V en la falla y stack libre"`. Verificar `Version Vx.y creada` y el `ACTUALIZACION_Vx_y.txt`. Si los cambios del usuario en `tesis/` lo impiden, usar el checkout temporal limpio, como en las tareas anteriores, y anotarlo.
 - "Última entrega": las líneas OK/FALLO, la salida de `FALLA.ps1`, la versión y los desvíos.
@@ -112,7 +116,21 @@ OK Pico 2 (prueba falla) - Sketch uses 106412 bytes (2%) of program storage spac
 
 \## Revisión
 
-- (vacío: tarea nueva)
+- Revisor: Claude (2026-10-13), con Code Reviewer. **Parte 1 (`b6db398`): APROBADA.**
+  - **Manejador (revisado por Claude):**
+    - primero EN, después los 4 PWM a GPIO SIO en 0;
+    - PC/LR/CFSR y excepción en `scratch[1..3]` y en los bits 8-15 de `scratch[0]`;
+    - en RAM (`.time_critical`) y como símbolos fuertes (`nm`: `hardfaultCapture` 0x20000110, `isr_hardfault` 0x2000015c).
+  - **`BOOT`:** sin falla, la línea es idéntica; con falla, los campos van antes del `
+` y el peor caso queda por debajo de 159.
+  - **Stack:** el pintado deja 256 B bajo el SP; la medición es una vez por segundo y la línea `S` va después de `W`, una sola por ciclo.
+  - **Compilación de prueba:** `-PruebaFalla` con un único `extra_flags` y fuera de `-Todo`.
+  - **Pruebas:** discriminantes. Todo OK según Codex (+544 B).
+  - **Dato nuevo [Código]:** el stack del núcleo 0 mide **2 KB** (`PICO_STACK_SIZE=0x800`, `__StackBottom`=0x20081800, `__StackTop`=0x20082000), no 4 KB como suponía el diseño. La hipótesis H-b gana peso; el valor de `stack libre minimo` en los ensayos lo dirá.
+  - **Pendientes que van a la Parte 2, punto 5:**
+    - reiniciar `lastStackBytes` en el flanco de `dtr`;
+    - agregar `build-pico2-prueba-falla/` a `.gitignore`.
+  - **Detalle aceptado:** con el manejador antiguo (no ARM) saldría `pc=0x00000000 pc_invalido=1`; esta placa compila para ARM.
 
 \## Ensayos del usuario
 
