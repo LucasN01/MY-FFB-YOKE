@@ -193,6 +193,36 @@ Se divide en **3 partes** (una sesión de Codex por parte): toca firmware con es
     - Informar en la línea `A` las revisiones no emparejadas por `drop` (`no_emparejadas_drop=<n>`).
   - Con estas correcciones, `comparar_ensayo.exe tmp\vuelo_corto` debe dar `RESULTADO: OK`.
 
+- Revisor: Claude (2026-10-12), con Code Reviewer. **Parte 3 (`82b5c04`, V1.9): REQUIERE CAMBIOS** (solo en los scripts del ensayo; lo demás está aprobado).
+  - **Bien:**
+    - R1-R7 implementados con sus pruebas. `comparar_ensayo.exe tmp\vuelo_corto` da `RESULTADO: OK` (B6: 3 transiciones evaluadas, latencia máxima 62 ms; A 100 %).
+    - BANCO.ps1 solo agrega `--enable` con `-Armar` más `APAGADA` exacto o `-Confirmado` (`BANCO.ps1:12,31`); no hay otro camino que arme.
+    - Reemplazos de §10 literales; `LEEME md/ENSAYOS.md` coincide con el código; tesis sin tocar.
+    - Tag V1.9 y `ACTUALIZACION_V1_9.txt` correctos.
+  - **Hallazgos (verificados por Claude en el código):**
+    - **S1 (medio)** `ENSAYO.cmd:5`: hace `pause` solo si hay error, así que con doble clic y resultado OK la ventana se cierra antes de leer el informe. Cambiar por `pause` siempre.
+    - **S2 (medio)** `ENSAYO.ps1:46-53`: el mismo `Read-Host` sirve para marcar fases y para terminar; un Enter vacío dado por error cierra el ensayo y copia registros incompletos. Cambiar el bucle por:
+      - prompt `Escribi un numero de fase para marcarla, o FIN para terminar (despues de cerrar el simulador)`;
+      - el Enter vacío se ignora y se vuelve a preguntar;
+      - `FIN` (sin distinguir mayúsculas) sale;
+      - si al salir el puente sigue abierto, mostrar `Esperando a que se cierre el puente (cerra el simulador)... hasta 120 s` antes de la espera existente.
+    - **S3 (bajo)** `ENSAYO.ps1:58-60` y `BANCO.ps1:34-36`: si falta un registro, `Copy-Item` corta con una excepción. Copiar solo los que existen y avisar en español: `Falta <archivo>; se sigue sin el`. El comparador se ejecuta igual si existe `telemetry.csv`; si no existe, avisar y salir con código 1.
+    - **S4 (detalle)** `tests/picolog_checks.h:84-86`: la prueba de "pausa antes del primer armado" pasa con cualquier versión. Poner `paused=1` (y `armed=0`) en `tel[0]` para que exista de verdad una pausa previa al armado que no debe evaluarse.
+    - **S5 (detalle)** `tests/comparar_ensayo.h:177`: `no_emparejadas_drop` es una resta sin signo; usar `max(0, ...)` con aritmética con signo.
+    - **S6 (detalle)** `BANCO.ps1:20`: con `2>&1` bajo `ErrorActionPreference=Stop`, una línea de error del lanzador corta la detección. Rodear esa llamada con `$prev=$ErrorActionPreference; $ErrorActionPreference='Continue'` y restaurarlo después (patrón de `probar.ps1:44-49`).
+  - **Observación aparte (fuera de esta tarea; no corregir ahora):** en el banco, la primera línea `SC8` ya traía `lp=39252 gap=39297` µs, con `us=286` igual que en el vuelo corto. La Pico no se reinició entre el vuelo corto (lp=2412) y el banco, así que un ciclo de unos 39 ms ocurrió **entre los dos**, sin puente activo (cierre de P3D/puente o detección de puerto). El vuelo V1.8 del 11/10 tuvo un valor parecido (lp=38948). Es una hipótesis a investigar con `depuracion-sistematica` en una tarea propia, porque el comando a los motores queda congelado durante ese ciclo.
+
+\### Parte 3b para Codex (correcciones S1-S6 y versión)
+- Leer solo: esta sección "Revisión" (S1-S6) y las líneas indicadas en cada hallazgo.
+- Alcance: S1 a S6 exactamente como están escritos. No tocar firmware, puente ni documentación (los textos de `LEEME md/ENSAYOS.md` siguen siendo válidos; si alguno menciona el Enter para terminar, cambiarlo por `FIN`, y solo eso).
+- Pruebas:
+  - `powershell -ExecutionPolicy Bypass -File probar.ps1` (suite, comparador y lanzador);
+  - verificar sintaxis de `ENSAYO.ps1` y `BANCO.ps1` como en la Parte 3;
+  - `tests\bin\comparar_ensayo.exe tmp\vuelo_corto` debe dar `RESULTADO: OK`.
+- Commit por nombre: `ENSAYO.cmd ENSAYO.ps1 BANCO.ps1 tests/picolog_checks.h tests/comparar_ensayo.h HANDOFF.md` (más `"LEEME md/ENSAYOS.md"` solo si se tocó). Mensaje: "Ensayos: ventana abierta al terminar, fin con FIN, copia tolerante y pruebas reforzadas".
+- Versión: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Correcciones de scripts de ensayo: pausa final, fin con FIN y copia tolerante"`. Verificar `Version Vx.y creada` y el `ACTUALIZACION_Vx_y.txt`.
+- Completar "Última entrega": las líneas OK/FALLO, el `RESULTADO` del comparador y la versión creada.
+
 \## Ensayos del usuario
 
 - Vuelo corto (usuario, 2026-10-12 20:52; firmware `fd46a9d`, fuente de motores apagada). Análisis de Claude con Test Results Analyzer, sobre los registros de `SimConnectBridge/bin/Win32/RealismoSC8/`:
