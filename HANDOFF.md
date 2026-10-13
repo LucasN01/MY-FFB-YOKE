@@ -58,7 +58,7 @@ Rama: `mejora/diagnostico-hardfault`. Diseño: `LEEME md/DISENO_diagnostico_hard
 
 \## Última entrega
 
-- Parte 2b completada (Codex, 2026-10-13), rama `mejora/diagnostico-hardfault`. Commit de implementacion: el que contiene esta entrega; el hash y la version se registran tras versionar.
+- Parte 2b completada (Codex, 2026-10-13), rama `mejora/diagnostico-hardfault`. Commit de implementacion: `bc16be5` (codigo, documentacion y HANDOFF); esta anotacion final se guarda en un commit posterior de HANDOFF.
 - Archivos modificados: `ARRANQUE.ps1`, `LEEME md/LEEME_PICO2.md`, `LEEME md/ENSAYOS.md` y `HANDOFF.md`.
 - R2b-1 aplicado: [Codigo] `ARRANQUE.ps1:6` agrega `Select-Elf`; sin `-Elf`, BOOT con `etapa=15:PRUEBA` elige `build-pico2-prueba-falla\MiYoke_PD.ino.elf`; los otros casos eligen `build-pico2-potentiometers\MiYoke_PD.ino.elf`. Si existe, ejecuta FALLA, guarda `falla.txt` e informa el ELF elegido; si falta, informa `No existe` y el comando con ese ELF. Con `-Elf` explicito conserva el comportamiento anterior.
 - R2b-2 aplicado: [Codigo] `ARRANQUE.ps1:32-37` comprueba el puente antes de crear la carpeta del ensayo; la deteccion del COM ya ocurre antes. R2b-3 aplicado: se movio la linea de PruebaFalla despues del parrafo de los dos comandos en LEEME_PICO2 y se agregaron el titulo con motores apagados y la seleccion automatica del ELF en ENSAYOS. Sin otros cambios documentales; no afecta tesis.
@@ -75,7 +75,7 @@ OK Select-Elf: etapa=15:PRUEBA -> build-pico2-prueba-falla; BOOT normal -> build
 
 - Select-Elf probado desde PowerShell 5.1 extrayendo solo la funcion mediante AST a `tmp/verificar-select-elf.ps1`, sin ejecutar el cuerpo de ARRANQUE ni abrir puertos. El primer comando aislado uso Invoke-Expression y perdio PSScriptRoot (cadena vacia): fallo del contexto de prueba; se corrigio el harness mediante archivo temporal y ambos casos pasaron sin cambios adicionales al codigo.
 - `git diff --check`: sin errores. No se recompilo firmware ni puente porque no se modificaron; no se editaron ni compilaron .tex. Sin ensayos de hardware, carga de firmware ni integracion a master.
-- Version: pendiente de ejecutar nueva-version.ps1 desde checkout temporal limpio por los cambios del usuario en tesis/; se registrara el resultado antes de cerrar la entrega.
+- Version: **V2.3**, creada por `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "ARRANQUE elige el .elf segun la linea BOOT"`. Salida: `Version V2.3 creada`. Verificado `../MiYoke_PD_VERSIONES/V2_3/ACTUALIZACION_V2_3.txt`: `VERSION: V2.3`, `COMMIT: bc16be5`; etiqueta sobre `bc16be5`. Se uso el checkout temporal limpio `../MiYoke_PD-versionado-hardfault-codex`, en la misma rama, para conservar los cambios del usuario en tesis/. Fue retirado tras verificar la version.
 - Sigue: revision de Claude de Parte 2b; ensayos V1 y R1-R4 por el usuario con motores apagados.
 
 \## Revisión
