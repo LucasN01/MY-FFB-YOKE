@@ -96,12 +96,16 @@ Se divide en **3 partes**, porque hay estado nuevo en firmware y en puente, un r
      - `centrado signo` con 0 filas → `SIN DATOS`;
      - la prueba de "pausa inicial" con 3 filas (desarmada, pausada y desarmada, armada), esperando `transiciones=0 evaluadas=0`;
      - en `ENSAYO.ps1` y `CICLOS.ps1`, recortar espacios antes de comparar con `FIN`.
+     - de la revisión de la Parte 2:
+       - en `SimConnectBridge/main.cpp`, guardar el estado de la compuerta **antes** de `FinishCsv()`, para que la línea `Fin:` pueda decir `registro=PENDIENTE`;
+       - en `CICLOS.ps1`, que `ciclos.txt` no empiece con una línea vacía;
+       - en `tests/calibration_checks.h:65-70`, quitar los `strstr` que repiten lo que ya verifica `expectedRows`.
   4. `graphify update .`.
 - Pruebas:
   - `probar.ps1 -Pico -Potentiometers -Encoders -Bridge`: todo OK;
   - `powershell -ExecutionPolicy Bypass -File compilar-tesis.ps1`: anotar su línea;
   - `tests\bin\comparar_ensayo.exe tmp\vuelo_corto`: `RESULTADO: OK`.
-- Commit por nombre: `"LEEME md/MENU_CALIBRACION.md" "LEEME md/CALCULO_PICO_SC8.md" "LEEME md/ENSAYOS.md" tesis/capitulos/03_centrado.tex tests/comparar_ensayo.h tests/picolog_checks.h ENSAYO.ps1 CICLOS.ps1 HANDOFF.md`.
+- Commit por nombre: `"LEEME md/MENU_CALIBRACION.md" "LEEME md/CALCULO_PICO_SC8.md" "LEEME md/ENSAYOS.md" tesis/capitulos/03_centrado.tex tests/comparar_ensayo.h tests/picolog_checks.h tests/calibration_checks.h SimConnectBridge/main.cpp ENSAYO.ps1 CICLOS.ps1 HANDOFF.md`.
   Mensaje: "Documentacion del menu REGISTRO DATOS y ciclos lentos; ajustes menores del comparador".
 - Versión: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Menu REGISTRO DATOS para activar los CSV y diagnostico de ciclos lentos del lazo"`. Verificar `Version Vx.y creada` y `..\MiYoke_PD_VERSIONES\Vx_y\ACTUALIZACION_Vx_y.txt`. Si los cambios del usuario en `tesis/` impiden ejecutar el script, usar el mismo procedimiento de la tarea anterior (checkout temporal limpio) y anotarlo.
 - "Última entrega": lo hecho, las líneas OK/FALLO, la línea de la tesis, la versión y los desvíos.
@@ -151,6 +155,28 @@ Se divide en **3 partes**, porque hay estado nuevo en firmware y en puente, un r
     - la comprobación de `strlen` no puede fallar porque `padded` trunca;
     - la prueba de `decode` inválido no detecta que se escriba `true`;
     - descartar `v` si `slowLine` falla.
+
+- Revisor: Claude (2026-10-13), con Code Reviewer. **Parte 2 (`c74d6e7`): APROBADA.**
+  - **Firmware**, revisado por Claude:
+    - las tres salidas del lazo pasan por `finishLoop`;
+    - el guardado en flash queda en la etapa FLASH (control positivo);
+    - W > L > M > G, con una sola línea por ciclo y con enlace reciente (`now-last<300`);
+    - `W` es independiente del registro, y `M`/`G` dependen de `enabled && recordSent`;
+    - al reactivar se reinician `gainsSent`, `logSynced` y `peak`;
+    - `UsbLock` en `slowFlags` está fuera de otros bloqueos;
+    - con `YOKE_MODEL_LOG 0` compila.
+  - **Desvío autorizado por el usuario:** `slowBetween` (`gapUs>=umbral && prevElapsedUs<umbral`), probado. El diseño §4.2 se actualizó para coincidir (`6671b6a`).
+  - **Puente, comparador y scripts**, revisados por Code Reviewer:
+    - `Record()` conserva el formato de 34 campos;
+    - la compuerta está en las dos ramas (normal y replay), con `tick`/`reopen`/`finish` y `fflush`;
+    - el filtro acepta M/G/L/W, y el comparador da `SIN DATOS` antes de exigir `pico.csv`;
+    - `CICLOS.ps1` cumple §6.3.
+  - **Compilación:** todo OK según Codex (+1320 B frente a V2.0).
+  - **Observaciones menores** (van a la Parte 3, punto 3):
+    - `registro=PENDIENTE` nunca aparece porque el estado se lee después de `FinishCsv()`;
+    - `ciclos.txt` empieza con una línea vacía;
+    - hay `strstr` redundantes en las pruebas;
+    - nit: las filas retenidas que se descartan con `reopen()` no suman a ningún contador, con efecto despreciable.
 
 \## Ensayos del usuario
 
