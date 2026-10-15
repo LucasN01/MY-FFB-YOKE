@@ -2,7 +2,7 @@
 
 > Ajustes actuales (01/10/2026): [AJUSTE_FUERZAS_Y_MOVIMIENTO.md](AJUSTE_FUERZAS_Y_MOVIMIENTO.md). Fuente unica simulacion/encoders, sin potenciometros.
 
-> Configuracion actual: esta Pico recibe SimConnect por USB CDC y controla motores, sin joystick HID ni envio de ejes a Prepar3D. Otra placa maneja los ejes del simulador. La lectura de sensores, AxisMotion y filtros locales se conservan.
+> Configuracion actual: esta Pico recibe SimConnect por USB CDC y controla motores, sin joystick HID ni envio de ejes a Prepar3D. Otra placa maneja los ejes del simulador. La lectura de sensores y la velocidad filtrada local (YokeMotion.h) se conservan.
 > Se utiliza la respuesta YOKE17SC5 que identifica la placa ante el puente y el diagnostico serie; ninguno controla ejes del simulador. Verificar el puerto COM tras cargar el nuevo firmware.
 
 # Pico 2 y Prepar3D v3: solo SimConnect

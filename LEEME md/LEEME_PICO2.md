@@ -94,7 +94,7 @@ motores separada y masa comun. Si no se usan enables, configurar sus pines en -1
 
 - TinyUSB mantiene el puerto serie USB CDC sin registrar una interfaz joystick HID.
 - El sketch recibe SimConnect por CDC. Otra placa envia los ejes a Prepar3D.
-- La lectura de posicion, AxisMotion y los filtros siguen activos a 2 ms para diagnostico y futuras funciones locales.
+- La lectura de posicion y la velocidad filtrada (YokeMotion.h) siguen activas a 2 ms para diagnostico y futuras funciones locales.
 - Se conservan ADC a 10 bits, encoders x4, LCD y sus reintentos, mapas de pines y PWM a 490 Hz con rango 0..255.
 - Las fuerzas son exclusivamente las de SimConnect. No hay centrado ni amortiguacion local.
 - La identificacion serie sigue siendo `YOKE17SC2`; Windows puede reasignar el COM al reenumerar USB.

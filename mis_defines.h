@@ -174,9 +174,6 @@ static_assert(MOTOR_PWM_HARD_LIMIT >= 0 && MOTOR_PWM_HARD_LIMIT <= 220, "Techo P
 #define YOKE_USB_STRESS    0     // SOLO ENSAYO: 1 = escribir linea corta en cada ciclo de 2 ms
 static_assert(YOKE_WDT_MS >= 50*CONTROL_LOOP_MS, "WDT demasiado corto para el lazo");
 
-// Velocidad: filtro de primer orden, con el dt real medido en microsegundos.
-// 0.018 segundos equivale a alpha=0.90 cuando dt=0.002 segundos.
-#define VELOCITY_FILTER_TAU_S 0.018f
 // Ajustes comunes para velocidad de SimConnect, encoders y potenciometros.
 #define YOKE_MOTION_FILTER_TAU_S 0.040f
 #define YOKE_MOTION_MAX_SPEED 10.0f // recorridos centro-extremo por segundo
@@ -239,7 +236,6 @@ static_assert(PITCH_POS_MIN < 0 && PITCH_POS_MAX > 0, "Revisar limites Pitch");
 static_assert(ROLL_POS_MIN >= -32767L && ROLL_POS_MAX <= 32767L &&
               PITCH_POS_MIN >= -32767L && PITCH_POS_MAX <= 32767L,
               "Los limites deben caber en el rango de posicion HID de 16 bits");
-static_assert(VELOCITY_FILTER_TAU_S >= 0.0f, "Tau debe ser >= 0");
 static_assert(CONTROL_LOOP_MS > 0, "Periodo de control debe ser > 0");
 static_assert(PWM_MAX >= 0 && PWM_MAX <= 255, "PWM_MAX fuera de rango");
 static_assert(ROLL_ENCODER_DIRECTION == 1 || ROLL_ENCODER_DIRECTION == -1, "Signo encoder Roll");

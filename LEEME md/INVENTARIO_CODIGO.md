@@ -41,8 +41,7 @@ Estados:
 | `PicoEncoder.h` | USO (condicional) | Cuadratura x4 por interrupción para la Pico. Lo usa `AxisEncoders.h`. |
 | `AxisPotentiometers.h` | USO (condicional) | Lectura de los potenciómetros por ADC0/ADC1. Se compila solo con `YOKE_USE_SIMULATION 2`. |
 | `PotentiometerPosition.h` | USO | Convierte la lectura ADC en posición y valida la calibración en tiempo de compilación. |
-| `AxisMotion.h` | SIN USO | Medición de posición de la "Etapa 2" (versión vieja). Ningún archivo lo incluye; lo reemplazó `YokeMotion.h`. Se puede eliminar. |
-| `filters.h` / `filters.cpp` | SIN USO | Filtro pasa bajos (τ = 18 ms, `VELOCITY_FILTER_TAU_S`) que usaba `AxisMotion.h`. La velocidad del damper hoy la filtra `YokeMotion.h` con la misma fórmula de primer orden, pero con su propio código y τ = 40 ms (`YOKE_MOTION_FILTER_TAU_S`). Se puede eliminar junto con `AxisMotion.h` y `VELOCITY_FILTER_TAU_S`. |
+| `AxisMotion.h`, `filters.h`, `filters.cpp` | ELIMINADOS | Estimador de velocidad de la "Etapa 2" (τ = 18 ms, `VELOCITY_FILTER_TAU_S`), sin uso. Se eliminaron el 2026-10-15; la velocidad la filtra `YokeMotion.h` con τ = 40 ms. |
 
 ## 2. Puente SimConnect para Windows (`SimConnectBridge/`)
 
@@ -76,7 +75,7 @@ Estados:
 | `INICIAR SIMULADOR.cmd` | USO | Acceso de doble clic que arranca `Iniciar-Simulador.ps1` (Prepar3D v4). |
 | `INICIAR SIMULADOR V3.cmd` | USO | Igual que el anterior, pero para Prepar3D v3.4. Usarlo solo si se vuela en V3. |
 | `Iniciar-Simulador.ps1` | USO | Lanzador: detecta la Pico, configura MobiFlight, abre Prepar3D, espera el vuelo con `WaitForFlight.exe` y abre el puente. |
-| `PROBAR REALISMO.cmd` | SIN USO (redundante) | Llama al lanzador con `-Realismo`, que hoy ya es el valor por defecto; su título dice "SC6". Hace lo mismo que `INICIAR SIMULADOR.cmd`. Se puede eliminar. |
+| `PROBAR REALISMO.cmd` | ELIMINADO | Duplicaba `INICIAR SIMULADOR.cmd`. Se eliminó el 2026-10-15. |
 | `ENSAYO.cmd` / `ENSAYO.ps1` | USO | Guía un ensayo en vuelo por fases, guarda los datos en `ensayos/` y ejecuta el comparador. |
 | `CICLOS.cmd` / `CICLOS.ps1` | USO (ensayo puntual) | Ensayo de ciclos lentos (pausa, menú, flash y Pico sola) del diagnóstico de reinicios. Útil si se repite ese ensayo. |
 | `ARRANQUE.cmd` / `ARRANQUE.ps1` | USO (diagnóstico) | Repite un vuelo corto grabado contra la Pico para reproducir fallas de arranque, y decodifica el HardFault con `FALLA.ps1`. |
@@ -116,14 +115,11 @@ Estados:
 | Carpeta | Estado | Para qué |
 |---|---|---|
 | `VPforce-TelemFFB-refactor/` | REFERENCIA | Código fuente de TelemFFB (Python, unos 300 archivos). Fuente de los modelos citados en diseños y tesis, y la leen `auditar_modelo.py` y `generar_documento.py`. No se compila ni se ejecuta. Conservarla mientras se cite. |
-| `backups/antes-sc8/`, `backups/suelo-antes-sc7/` | SIN USO | Copias manuales de archivos de antes de SC7/SC8 (`MiYoke_PD_V2.4.ino`, `main.cpp`, `SimEffects.h`, etc.). Lo mismo está en git y en `MiYoke_PD_VERSIONES`. Se pueden eliminar. |
+| `backups/` | ELIMINADA | Copias manuales de antes de SC7/SC8. Se envió a la Papelera el 2026-10-15. |
 | `graphify-ino/` | FLUJO | Copia automática del `.ino` para el grafo. La regenera `graphify-sync.cmd`. |
 
-## Resumen: se pueden eliminar
+## Resumen
 
-- `AxisMotion.h`, `filters.h` y `filters.cpp`: código sin uso de la etapa 2.
-- `PROBAR REALISMO.cmd`: duplica `INICIAR SIMULADOR.cmd`.
-- `backups/`: copias que ya están en git y en las versiones.
-- Opcional: `SimConnectBridge/GustModel.h`, `BuffetModel.h` y `GroundModel.h`, si las pruebas pasan a incluir los modelos de la raíz. `fundamento_efectos/agregar_explicaciones.py`, porque ya se aplicó.
+Eliminados el 2026-10-15: `AxisMotion.h`, `filters.h`, `filters.cpp`, `VELOCITY_FILTER_TAU_S`, `PROBAR REALISMO.cmd` y `backups/`.
 
-Antes de borrar archivos de código, hay que actualizar la documentación que los nombra. `AxisMotion.h` y `filters` aparecen en `LEEME.md`, `LEEME_ETAPAS.md`, `LEEME_PICO2.md`, `LEEME_SIMCONNECT.md`, `LEEME_AMORTIGUACION.md` y `VALIDACION_SIMCONNECT_V3.md`. Además, eliminarlos genera una versión nueva.
+Candidatos opcionales que quedan: `SimConnectBridge/GustModel.h`, `BuffetModel.h` y `GroundModel.h` (si las pruebas incluyen los modelos de la raíz) y `fundamento_efectos/agregar_explicaciones.py` (ya aplicado).

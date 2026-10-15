@@ -36,6 +36,8 @@ intervienen en estas etapas.
    Delega el filtrado a `TimeConstantLowPassFilter`, declarado en `filters.h`
    e implementado en `filters.cpp`, con una instancia por eje. La clase
    `LowPassFilter` de los efectos FFB conserva su implementacion anterior.
+   (2026-10-15: `AxisMotion.h`, `filters.h/.cpp` y `VELOCITY_FILTER_TAU_S` se eliminaron
+   por falta de uso; la velocidad la calcula `YokeMotion.h` con tau=40 ms.)
 
 La conversion usa redondeo simetrico: con PWM_MAX=255, +/-5000 producen
 comandos +/-0.5 y PWM +/-128; cero produce exactamente cero y +/-10000

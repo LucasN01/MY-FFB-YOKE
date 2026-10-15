@@ -4,7 +4,7 @@ Version 30/09/2026, preparada para usar el puente con Prepar3D v3 sin FFB nativo
 
 Los motores reciben exclusivamente turbulencia y buffet de perdida, tren y spoilers calculados con telemetria SimConnect. Se eliminaron del firmware activo los efectos CONSTANT y SINE, el centrado automatico y la amortiguacion local. No hay vibraciones de rodaje ni de contacto con el suelo.
 
-La Pico 2 recibe la telemetria por USB CDC y controla los motores. Otra placa envia los ejes a Prepar3D; esta Pico no publica joystick HID ni envia posiciones al simulador. Se conservan la lectura local de potenciometros/encoders, AxisMotion, filtros, diagnostico serie y pantalla para uso actual y futuras implementaciones.
+La Pico 2 recibe la telemetria por USB CDC y controla los motores. Otra placa envia los ejes a Prepar3D; esta Pico no publica joystick HID ni envia posiciones al simulador. Se conservan la lectura local de potenciometros/encoders, la velocidad filtrada de YokeMotion.h, diagnostico serie y pantalla para uso actual y futuras implementaciones.
 
 - [Puesta en marcha y traslado a la PC con Prepar3D v3](LEEME_SIMCONNECT.md)
 - [Cableado y carga de Pico 2](LEEME_PICO2.md)
