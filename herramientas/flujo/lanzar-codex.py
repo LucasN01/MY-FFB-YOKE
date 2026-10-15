@@ -53,6 +53,7 @@ def main():
     ap.add_argument("mensaje")
     ap.add_argument("-o", "--salida", default=os.path.join(REPO, "tmp", "codex_ultimo.txt"))
     ap.add_argument("--add-dir", action="append", default=[])
+    ap.add_argument("--sin-abrir", action="store_true", help="No abrir el chat en la app de Codex")
     ap.add_argument("--titulo", default=None, help="Nombre del chat (por defecto, la Tarea del Plan para Codex en HANDOFF.md)")
     args = ap.parse_args()
 
@@ -124,7 +125,7 @@ def main():
         "approvalPolicy": "on-request",
         "approvalsReviewer": "auto_review",
         "config": {"sandbox_workspace_write": {"writable_roots": raices}},
-        # La app de Codex solo lista chats con threadSource "user" (asi los crea ella).
+        # Igual que los chats creados desde la app.
         "threadSource": "user",
     })["thread"]["id"]
     estado["hilo"] = hilo
@@ -134,6 +135,13 @@ def main():
     except RuntimeError:
         pass
     print(f"[lanzar-codex] chat {hilo}: {titulo}", flush=True)
+    # La app carga su lista al arrancar y no ve chats creados por otro proceso;
+    # abrir el enlace codex://threads/<id> hace que lo cargue sin reiniciarla.
+    if not args.sin_abrir and hasattr(os, "startfile"):
+        try:
+            os.startfile(f"codex://threads/{hilo}")
+        except OSError as e:
+            print(f"[lanzar-codex] no se pudo abrir el chat en la app: {e}", file=sys.stderr)
 
     pedir("turn/start", {"threadId": hilo, "input": [{"type": "text", "text": args.mensaje}]})
     estado["fin"].wait()
