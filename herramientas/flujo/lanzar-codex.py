@@ -124,6 +124,8 @@ def main():
         "approvalPolicy": "on-request",
         "approvalsReviewer": "auto_review",
         "config": {"sandbox_workspace_write": {"writable_roots": raices}},
+        # La app de Codex solo lista chats con threadSource "user" (asi los crea ella).
+        "threadSource": "user",
     })["thread"]["id"]
     estado["hilo"] = hilo
     titulo = (args.titulo or titulo_desde_handoff(args.mensaje) or args.mensaje)[:100]
