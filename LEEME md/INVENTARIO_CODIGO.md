@@ -42,7 +42,7 @@ Estados:
 | `AxisPotentiometers.h` | USO (condicional) | Lectura de los potenciómetros por ADC0/ADC1. Se compila solo con `YOKE_USE_SIMULATION 2`. |
 | `PotentiometerPosition.h` | USO | Convierte la lectura ADC en posición y valida la calibración en tiempo de compilación. |
 | `AxisMotion.h` | SIN USO | Medición de posición de la "Etapa 2" (versión vieja). Ningún archivo lo incluye; lo reemplazó `YokeMotion.h`. Se puede eliminar. |
-| `filters.h` / `filters.cpp` | SIN USO | Filtro pasa bajos de primer orden. Solo lo usaba `AxisMotion.h`. Arduino compila `filters.cpp` por estar en la carpeta, pero nada lo llama. Se puede eliminar junto con `AxisMotion.h`. |
+| `filters.h` / `filters.cpp` | SIN USO | Filtro pasa bajos (τ = 18 ms, `VELOCITY_FILTER_TAU_S`) que usaba `AxisMotion.h`. La velocidad del damper hoy la filtra `YokeMotion.h` con la misma fórmula de primer orden, pero con su propio código y τ = 40 ms (`YOKE_MOTION_FILTER_TAU_S`). Se puede eliminar junto con `AxisMotion.h` y `VELOCITY_FILTER_TAU_S`. |
 
 ## 2. Puente SimConnect para Windows (`SimConnectBridge/`)
 
