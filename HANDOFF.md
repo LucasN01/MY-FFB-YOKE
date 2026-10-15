@@ -117,7 +117,7 @@ Verificacion manual del usuario (8.7, pendiente):
   - `nueva-version.ps1`: versiones fuera del repo, `$flujo` excluye solo las 4 herramientas de flujo/.
   - Pruebas del revisor: `probar.ps1 -Pico` desde otra carpeta OK; `ARRANQUE.ps1` con entrada inexistente falla con mensaje claro.
   - El BLOQUEO de 8.5 (fecha de la copia de graphify-ino) era un criterio mal planteado del diseño: `copy` conserva la fecha. Contenido y SHA-256 iguales: resuelto.
-  - Errata del plan de Claude en esta sección (`` convertido en salto de página): corregida.
+  - Errata del plan de Claude (barra seguida de f convertida en salto de pagina en la ruta de graphify-sync): corregida.
 
 \## Ensayos del usuario
 
