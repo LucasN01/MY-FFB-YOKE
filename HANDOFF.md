@@ -28,95 +28,63 @@
 
 \## Plan para Codex
 
-Tarea: diagnóstico del HardFault — **Parte 2b**: correcciones de la revisión de la Parte 2 (Claude, 2026-10-13).
-Rama: `mejora/diagnostico-hardfault`. Diseño: `LEEME md/DISENO_diagnostico_hardfault.md` (solo como referencia: §4.2 y §8). Plan único, sin partes.
+Tarea: **posición desde SimConnect por defecto** (dejar de usar los potenciómetros de la Pico 2) y **compilar-tesis.ps1 con LaTeX instalado** (Claude, 2026-10-15).
+Rama: `cambio/posicion-simconnect` (sale de `mejora/diagnostico-hardfault`, ya creada). Plan único, sin partes: son cambios de pocas líneas.
 
 \### Precondiciones
-- `git status`: ignorar `graphify-ino/`, `tesis/main.tex`, `tesis/capitulos/11_maquinas_estado.tex` y `tesis/caracterizacion_motores_775.tex` (cambios del usuario).
-- Orientarse con `graphify query`; leer solo lo indicado. Si algo no coincide, anotar `BLOQUEO:` en "Última entrega" y terminar (AGENTS.md, FLUJO AUTOMATICO).
+- `git status`: ignorar `graphify-ino/`, `tesis/main.tex`, `tesis/capitulos/11_maquinas_estado.tex` y `tesis/caracterizacion_motores_775.tex` (cambios del usuario; no commitearlos).
+- Orientarse con `graphify query`; leer solo las líneas indicadas. Si un texto actual no aparece exactamente, anotar `BLOQUEO:` o la diferencia en "Última entrega" y seguir con el resto (AGENTS.md, FLUJO AUTOMATICO).
+
+\### Fundamento (verificado por Claude)
+- [Código] `mis_defines.h:53-56`: `YOKE_USE_SIMULATION` 0 = encoders, 1 = SimConnect, 2 = potes. Con 1, `MiYoke_PD.ino` no incluye `AxisPotentiometers.h` ni lee ADC (`:2-6`, `:88-95`, `:257`), toma posición de `simTelemetry.yoke[axis]` y velocidad de `simEffects.simulationVelocity(axis)` (`:339-347`), y pasa `useSimPosition=true` (`:371`). La fricción vuelve a la ley de velocidad (`SimEffects.h:10`). El puente ya envía YOKE X/Y POSITION. No hace falta otro cambio de firmware.
+- [Código] `compilar-tesis.ps1:21-41`: con MiKTeX instalado (latexmk en PATH) el script falla siempre. (a) Con `$ErrorActionPreference='Stop'`, el texto que latexmk escribe en stderr ("This is METAFONT...") se vuelve `NativeCommandError` en PowerShell 5.1 y corta el script. (b) El patrón `^(.*:\d+: |! )` toma como error las líneas `...: ignored error: Infinite glue shrinkage...` del log, aunque latexmk termine con código 0 y genere el PDF (Claude lo probó: código 0, PDF de 1,1 MB, 8 líneas "ignored error", 0 referencias indefinidas).
 
 \### Alcance
-1. `ARRANQUE.ps1`:
-   - **R2b-1, `.elf` según la línea BOOT** (`:65-77`):
-     - sin `-Elf`, elegir el `.elf` automáticamente: si la línea `BOOT` contiene `etapa=15:PRUEBA`, usar `build-pico2-prueba-falla\MiYoke_PD.ino.elf`; si no, `build-pico2-potentiometers\MiYoke_PD.ino.elf`;
-     - si el archivo existe, llamar a `FALLA.ps1` con ese `-Elf`, guardar `falla.txt` e imprimir la línea `Elf usado: <ruta> (elegido por la linea BOOT; si cargaste otro UF2, repetir FALLA.ps1 con su .elf)`;
-     - si no existe, imprimir el comando de `FALLA.ps1` con ese `.elf` y el aviso `No existe <ruta>`;
-     - con `-Elf` explícito, sigue como hoy.
-   - **R2b-2, carpeta del ensayo** (`:28-34`): crear la carpeta `ensayos\..._arranque` **después** de comprobar que existe el puente (`$bridge`) y de detectar el COM, para que no queden carpetas vacías si falla un chequeo.
-2. `LEEME md/LEEME_PICO2.md:43`: mover la línea `probar.ps1 -PruebaFalla compila build-pico2-prueba-falla (...)` para que quede **después** del párrafo `El primer comando respeta ... Ninguno carga ni activa la placa.` y no entre los comandos y ese párrafo. Sin otros cambios.
-3. `LEEME md/ENSAYOS.md:81`: el título pasa a ser `## Arranque y fallas (ARRANQUE.cmd, motores apagados)`. En la sección, agregar una línea: `Sin -Elf, ARRANQUE elige el .elf por la linea BOOT: etapa=15:PRUEBA usa build-pico2-prueba-falla; si no, build-pico2-potentiometers.`
-4. `graphify update .`.
+1. `mis_defines.h:55`: `#define YOKE_USE_SIMULATION 2` → `#define YOKE_USE_SIMULATION 1`. Nada más en ese archivo.
+2. `ARRANQUE.ps1:7` (`Select-Elf`): en el caso normal usar `'build-pico2'` en vez de `'build-pico2-potentiometers'` (el UF2 normal ahora es el de la configuración de `mis_defines.h`). El caso `etapa=15:PRUEBA` no cambia. Actualizar también `tmp/verificar-select-elf.ps1` si se reutiliza para la prueba.
+3. `compilar-tesis.ps1`, solo la rama latexmk (`:21-41`):
+   - alrededor de la llamada a `latexmk`, poner `$ErrorActionPreference = 'Continue'` y restaurar el valor anterior en el `finally` (mismo patrón que `ARRANQUE.ps1:18`); mantener `*> $null`;
+   - separar las líneas que contienen `ignored error`: no cuentan como error; contarlas aparte;
+   - salida OK: `OK compilacion latexmk ($refs referencias indefinidas, $ignorados errores ignorados por LaTeX). PDF en tmp\tesis-build`;
+   - FALLO solo si el código de salida no es 0 o hay errores reales (sin `ignored error`). El chequeo estático no cambia.
+4. Documentación (solo estas líneas; cambios mínimos):
+   - `LEEME md/LEEME_PICO2.md:30`: `- \`build-pico2/MiYoke_PD_V2.2.ino.uf2\`: potenciometros, configuracion predeterminada.` → `- \`build-pico2/MiYoke_PD_V2.2.ino.uf2\`: posicion desde SimConnect (YOKE_USE_SIMULATION=1), configuracion predeterminada.`
+   - `LEEME md/ENSAYOS.md:83`: `si no, build-pico2-potentiometers.` → `si no, build-pico2 (configuracion de mis_defines.h; para otro UF2 pasar -Elf).`
+   - `LEEME md/ENSAYOS.md:88` (R1): `build-pico2-potentiometers\MiYoke_PD.ino.uf2` → `build-pico2\MiYoke_PD.ino.uf2`.
+   - No cambiar `LEEME_POTENCIOMETROS.md`, `AJUSTE_FUERZAS_Y_MOVIMIENTO.md` ni `MENU_CALIBRACION.md`: ya dicen que el valor por defecto es 1.
+5. Tesis (aprobado por el usuario el 2026-10-15; reemplazo literal, sin leer el capítulo entero):
+   - `tesis/capitulos/03_centrado.tex`
+     - TEXTO ACTUAL: `\textbf{Hallazgo importante:} \code{mis_defines.h} define \code{YOKE_USE_SIMULATION=2}. Por defecto, la fuerza depende de la presión de SimConnect y de la posición de los \textbf{potenciómetros locales}. No depende de la posición de SimConnect, aunque el puente siga solicitándola, validándola y transmitiéndola. Las opciones son:`
+     - TEXTO NUEVO: `\textbf{Hallazgo importante:} \code{mis_defines.h} define \code{YOKE_USE_SIMULATION=1}. Por defecto, la fuerza depende de la presión de SimConnect y de la posición del mando virtual (\code{YOKE X POSITION} / \code{YOKE Y POSITION}) que transmite el puente. Los potenciómetros locales no se leen en este modo. Las opciones son:`
+   - `tesis/capitulos/03_centrado.tex`
+     - TEXTO ACTUAL: `1 & SimConnect & \code{YOKE X POSITION} / \code{YOKE Y POSITION}\\`
+     - TEXTO NUEVO: `1 & SimConnect & \code{YOKE X POSITION} / \code{YOKE Y POSITION}; opción predeterminada\\`
+   - `tesis/capitulos/03_centrado.tex`
+     - TEXTO ACTUAL: `2 & Potenciómetros & ADC0/ADC1; opción predeterminada\\`
+     - TEXTO NUEVO: `2 & Potenciómetros & ADC0/ADC1\\`
+   - `tesis/capitulos/09_damper.tex`
+     - TEXTO ACTUAL: `El valor predeterminado inspeccionado es \textbf{2}.`
+     - TEXTO NUEVO: `El valor predeterminado inspeccionado es \textbf{1}.`
+6. `graphify update .` (no se edita `MiYoke_PD.ino`, no hace falta `graphify-sync.cmd`).
 
 \### Pruebas
-- `powershell -ExecutionPolicy Bypass -File probar.ps1` (suite, comparador y lanzador) y verificación de sintaxis de `ARRANQUE.ps1` con el parser de PowerShell 5.1, como en la Parte 2.
-- Probar la selección del `.elf` con una línea BOOT de ejemplo (sin hardware): extraer la elección a una función dentro de `ARRANQUE.ps1` (`function Select-Elf([string]$boot)`) y llamarla desde un comando de PowerShell con los dos casos. Anotar el resultado.
+- `powershell -ExecutionPolicy Bypass -File probar.ps1 -Pico -Potentiometers` (suite + firmware modo 1 configurado + variante potes, para confirmar que el modo 2 sigue compilando). Anotar programa/RAM del modo 1 si `probar.ps1` lo informa.
+- Prueba de `Select-Elf` como en la Parte 2b: BOOT `etapa=15:PRUEBA` → `build-pico2-prueba-falla`; BOOT normal → `build-pico2`.
+- `powershell -ExecutionPolicy Bypass -File compilar-tesis.ps1`: esperado `OK compilacion latexmk (...)`. Puede tardar la primera vez (MiKTeX). Si da FALLO, copiar solo sus líneas.
+- No leer logs de LaTeX completos ni ejecutar pdflatex/latexmk directamente.
 
 \### Commit y versión
-- Commit por nombre: `ARRANQUE.ps1 "LEEME md/LEEME_PICO2.md" "LEEME md/ENSAYOS.md" HANDOFF.md`. Mensaje: "ARRANQUE: elegir .elf por la linea BOOT y crear carpeta tras los chequeos".
-- Versión: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "ARRANQUE elige el .elf segun la linea BOOT"`. Verificar `Version Vx.y creada` y el `ACTUALIZACION_Vx_y.txt`. Si los cambios del usuario en `tesis/` lo impiden, usar el checkout temporal limpio, como en la Parte 2, y anotarlo.
-- "Última entrega": reemplazar el contenido por lo de la Parte 2b (la Parte 2 queda en el historial de git), con las líneas OK/FALLO, la prueba de `Select-Elf` y la versión. Terminar con un resumen corto como último mensaje.
+- Commit por nombre: `mis_defines.h ARRANQUE.ps1 compilar-tesis.ps1 "LEEME md/LEEME_PICO2.md" "LEEME md/ENSAYOS.md" tesis/capitulos/03_centrado.tex tesis/capitulos/09_damper.tex HANDOFF.md`. Mensaje: "Posicion desde SimConnect por defecto; compilar-tesis funciona con LaTeX instalado".
+- Versión: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Posicion desde SimConnect por defecto y compilar-tesis con LaTeX instalado"`. Verificar `Version Vx.y creada` y el `ACTUALIZACION_Vx_y.txt`. Si los cambios del usuario en `tesis/` lo impiden, usar el checkout temporal limpio, como en la Parte 2, y anotarlo.
+- "Última entrega": archivos, líneas OK/FALLO de las pruebas, prueba de `Select-Elf`, línea de `compilar-tesis.ps1` y versión. Terminar con un resumen corto como último mensaje.
 
 \## Última entrega
 
-- Parte 2b completada (Codex, 2026-10-13), rama `mejora/diagnostico-hardfault`. Commit de implementacion: `bc16be5` (codigo, documentacion y HANDOFF); esta anotacion final se guarda en un commit posterior de HANDOFF.
-- Archivos modificados: `ARRANQUE.ps1`, `LEEME md/LEEME_PICO2.md`, `LEEME md/ENSAYOS.md` y `HANDOFF.md`.
-- R2b-1 aplicado: [Codigo] `ARRANQUE.ps1:6` agrega `Select-Elf`; sin `-Elf`, BOOT con `etapa=15:PRUEBA` elige `build-pico2-prueba-falla\MiYoke_PD.ino.elf`; los otros casos eligen `build-pico2-potentiometers\MiYoke_PD.ino.elf`. Si existe, ejecuta FALLA, guarda `falla.txt` e informa el ELF elegido; si falta, informa `No existe` y el comando con ese ELF. Con `-Elf` explicito conserva el comportamiento anterior.
-- R2b-2 aplicado: [Codigo] `ARRANQUE.ps1:32-37` comprueba el puente antes de crear la carpeta del ensayo; la deteccion del COM ya ocurre antes. R2b-3 aplicado: se movio la linea de PruebaFalla despues del parrafo de los dos comandos en LEEME_PICO2 y se agregaron el titulo con motores apagados y la seleccion automatica del ELF en ENSAYOS. Sin otros cambios documentales; no afecta tesis.
-- `graphify update .`: completado, AST sin API. Cambios del usuario en tesis/ y graphify-ino/ conservados, fuera del commit.
-- Pruebas: `powershell -ExecutionPolicy Bypass -File probar.ps1`, codigo 0:
-
-```text
-OK suite simconnect_checks - PASS: 143619 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
-OK comparar_ensayo
-OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-OK sintaxis ARRANQUE.ps1 (PowerShell 5.1)
-OK Select-Elf: etapa=15:PRUEBA -> build-pico2-prueba-falla; BOOT normal -> build-pico2-potentiometers
-```
-
-- Select-Elf probado desde PowerShell 5.1 extrayendo solo la funcion mediante AST a `tmp/verificar-select-elf.ps1`, sin ejecutar el cuerpo de ARRANQUE ni abrir puertos. El primer comando aislado uso Invoke-Expression y perdio PSScriptRoot (cadena vacia): fallo del contexto de prueba; se corrigio el harness mediante archivo temporal y ambos casos pasaron sin cambios adicionales al codigo.
-- `git diff --check`: sin errores. No se recompilo firmware ni puente porque no se modificaron; no se editaron ni compilaron .tex. Sin ensayos de hardware, carga de firmware ni integracion a master.
-- Version: **V2.3**, creada por `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "ARRANQUE elige el .elf segun la linea BOOT"`. Salida: `Version V2.3 creada`. Verificado `../MiYoke_PD_VERSIONES/V2_3/ACTUALIZACION_V2_3.txt`: `VERSION: V2.3`, `COMMIT: bc16be5`; etiqueta sobre `bc16be5`. Se uso el checkout temporal limpio `../MiYoke_PD-versionado-hardfault-codex`, en la misma rama, para conservar los cambios del usuario en tesis/. Fue retirado tras verificar la version.
-- Sigue: revision de Claude de Parte 2b; ensayos V1 y R1-R4 por el usuario con motores apagados.
+- (vacío: tarea nueva. La entrega anterior, Parte 2b del HardFault, está en el historial de git.)
 
 \## Revisión
 
-- Revisor: Claude (2026-10-13), con Code Reviewer. **Parte 1 (`b6db398`): APROBADA.**
-  - **Manejador (revisado por Claude):**
-    - primero EN, después los 4 PWM a GPIO SIO en 0;
-    - PC/LR/CFSR y excepción en `scratch[1..3]` y en los bits 8-15 de `scratch[0]`;
-    - en RAM (`.time_critical`) y como símbolos fuertes (`nm`: `hardfaultCapture` 0x20000110, `isr_hardfault` 0x2000015c).
-  - **`BOOT`:** sin falla, la línea es idéntica; con falla, los campos van antes del `
-` y el peor caso queda por debajo de 159.
-  - **Stack:** el pintado deja 256 B bajo el SP; la medición es una vez por segundo y la línea `S` va después de `W`, una sola por ciclo.
-  - **Compilación de prueba:** `-PruebaFalla` con un único `extra_flags` y fuera de `-Todo`.
-  - **Pruebas:** discriminantes. Todo OK según Codex (+544 B).
-  - **Dato nuevo [Código]:** el stack del núcleo 0 mide **2 KB** (`PICO_STACK_SIZE=0x800`, `__StackBottom`=0x20081800, `__StackTop`=0x20082000), no 4 KB como suponía el diseño. La hipótesis H-b gana peso; el valor de `stack libre minimo` en los ensayos lo dirá.
-  - **Pendientes que van a la Parte 2, punto 5:**
-    - reiniciar `lastStackBytes` en el flanco de `dtr`;
-    - agregar `build-pico2-prueba-falla/` a `.gitignore`.
-  - **Detalle aceptado:** con el manejador antiguo (no ARM) saldría `pc=0x00000000 pc_invalido=1`; esta placa compila para ARM.
-
-- Revisor: Claude (2026-10-13), con Code Reviewer. **Parte 2 (`97d26e8`, V2.2): APROBADA**, con correcciones menores que van a la **Parte 2b** (ver Plan para Codex).
-  - **Cumple:**
-    - `stackLine` estricto y probado;
-    - el puente registra el stack libre y su mínimo en `Fin:`;
-    - se reinicia `lastStackBytes` con el flanco de `dtr`;
-    - `FALLA.ps1` cumple §4.1, y su prueba con el `.elf` de prueba lleva el PC 0x100067dc a `loop` (`MiYoke_PD.ino:240`);
-    - `ARRANQUE.ps1`/`.cmd` cumplen §4.2 (sin `--enable`, copia los logs aunque el puente falle, códigos 0/1/2);
-    - documentación de §8 literal; tag V2.2 sobre `97d26e8`.
-  - **R2b-1 (medio):** sin `-Elf`, `ARRANQUE.ps1:75-76` imprime siempre el `.elf` de la prueba de falla. En R1-R4 se carga el UF2 normal, así que la traducción daría una función equivocada.
-  - **R2b-2 (detalle):** la carpeta del ensayo se crea antes de los chequeos.
-  - **R2b-3 (documentación):** la línea de `LEEME_PICO2.md` corta el párrafo siguiente, y a `ENSAYOS.md` le falta "motores apagados".
-- Flujo automático (2026-10-13): prueba de lanzamiento de `codex exec` OK con `--approve-for-me -c windows.sandbox="unelevated"`. El modo "elevated" falla desde Claude. Regla actualizada en `CLAUDE.md`. La Parte 2b es la primera parte lanzada por Claude.
-
-- Revisor: Claude (2026-10-13). **Parte 2b (`bc16be5`, V2.3): APROBADA.** Fue la primera parte lanzada por Claude con `codex exec`: terminó sin bloqueos.
-  - Revisión directa, porque el diff es de unas 30 líneas en `ARRANQUE.ps1` y 2 documentos:
-    - `Select-Elf` elige `build-pico2-prueba-falla` con `etapa=15:PRUEBA` y `build-pico2-potentiometers` en los demás casos; está probada con los dos casos;
-    - informa el `.elf` usado, o "No existe" con el comando listo;
-    - la carpeta se crea después del chequeo del puente;
-    - `LEEME_PICO2.md` y `ENSAYOS.md` quedan como se pidió.
-  - Tag V2.3 sobre `bc16be5`.
-  - **Usuario:** protocolo V1 y R1-R3 (diseño §5), con los motores apagados.
+- (vacío: tarea nueva.)
 
 \## Ensayos del usuario
 
