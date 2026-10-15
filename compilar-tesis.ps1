@@ -4,11 +4,13 @@
 # - Si hay latexmk instalado: compila de verdad en tmp\tesis-build.
 # - Si no: chequeo estatico (\input existentes, llaves, \begin/\end,
 #   \label duplicados, \ref sin \label).
-# Uso: powershell -ExecutionPolicy Bypass -File compilar-tesis.ps1 [-Archivo tesis\main.tex] [-MaxErrores 15]
+# -CopiarPdf: si compila bien, copia (sobreescribe) el PDF junto al .tex principal.
+# Uso: powershell -ExecutionPolicy Bypass -File compilar-tesis.ps1 [-Archivo tesis\main.tex] [-MaxErrores 15] [-CopiarPdf]
 
 param(
     [string]$Archivo = "tesis\main.tex",
-    [int]$MaxErrores = 15
+    [int]$MaxErrores = 15,
+    [switch]$CopiarPdf
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,7 +36,13 @@ if ($latexmk) {
     $errores = $lineas | Where-Object { $_ -notmatch 'ignored error' } | Select-String -Pattern '^(.*:\d+: |! )' | Select-Object -First $MaxErrores
     $refs = ($lineas | Select-String -Pattern 'Reference .* undefined').Count
     if ($codigo -eq 0 -and -not $errores) {
-        Write-Output "OK compilacion latexmk ($refs referencias indefinidas, $ignorados errores ignorados por LaTeX). PDF en tmp\tesis-build"
+        $destino = "tmp\tesis-build"
+        if ($CopiarPdf) {
+            $pdf = Join-Path $out (([IO.Path]::GetFileNameWithoutExtension($main)) + ".pdf")
+            try { Copy-Item $pdf $dirMain -Force -ErrorAction Stop; $destino = $dirMain.Substring($raiz.Length + 1) }
+            catch { Write-Output "FALLO al copiar el PDF junto a $Archivo (esta abierto en un visor?). PDF en tmp\tesis-build"; exit 1 }
+        }
+        Write-Output "OK compilacion latexmk ($refs referencias indefinidas, $ignorados errores ignorados por LaTeX). PDF en $destino"
         exit 0
     }
     Write-Output "FALLO compilacion latexmk (codigo $codigo):"
