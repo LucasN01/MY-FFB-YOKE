@@ -14,7 +14,7 @@ Rules:
 ## AHORRO DE TOKENS: graphify, PDF y LaTeX (regla del usuario)
 - Codigo: antes de buscar o abrir archivos, orientarse con `graphify query`/`explain`/`path`. Leer directamente solo las lineas puntuales de un archivo ya identificado.
 - PDF: no leer el PDF directamente. Convertirlo con `markitdown archivo.pdf -o tmp/<nombre>.md` (instalado; tmp/ esta en .gitignore) y leer solo la seccion necesaria con grep. Si una tabla o formula sale desordenada, verificar solo esa pagina.
-- LaTeX (.tex): la tesis de efectos esta dividida en tesis/capitulos/NN_*.tex; abrir solo el capitulo afectado y, dentro de el, solo las lineas ubicadas con grep por \label o titulo. Aplicar los cambios como reemplazo exacto del texto que da el diseno. Verificar con compilar-tesis.ps1 (salida de una linea), nunca con pdflatex directo.
+- Tesis (tesis/*.tex, tesis/capitulos/NN_*.tex): la redacta y edita Claude, no Codex (regla del usuario, 2026-10-15). Codex no la abre ni la modifica; si ve que falta actualizar algo, lo anota en HANDOFF para Claude.
 - Pruebas y compilacion: usar `powershell -ExecutionPolicy Bypass -File probar.ps1` (suite C++ + lanzador; agregar -Pico, -Encoders, -Potentiometers, -Bridge o -Todo segun el plan). Imprime una linea OK/FALLO por paso con solo las lineas de error. No invocar MSBuild, arduino-cli ni Build-*.ps1 directamente, no volcar logs completos y no repetir una compilacion que ya dio OK salvo que el codigo haya cambiado. En HANDOFF copiar solo esas lineas de resultado.
 - Versionado: ejecutar nueva-version.ps1 siempre desde PowerShell (si falla la copia, el script lo detecta, borra la etiqueta y se repite).
 
@@ -43,21 +43,21 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 - Solo cuando sea necesario: actualizar unicamente los documentos cuyo contenido queda incorrecto o incompleto por el cambio, y solo las partes afectadas. No reescribir, reformatear ni "mejorar" documentos por las dudas.
 - Documentos a revisar segun el tema: tesis de efectos = tesis/capitulos/NN_*.tex (un archivo por seccion; tesis/main.tex solo tiene preambulo e \input, es el que se sube a Overleaf), otros .tex de tesis/, LEEME md/*.md, LEEME.md y LEEME-*.md. No tocar ACTUALIZACION_Vx_y.txt ni los documentos de diseno de otras tareas.
 - Diseno (Claude, modo Flujo): el documento de diseno incluye la seccion "Documentacion afectada" con archivo, seccion/ecuacion y que debe decir; o indica explicitamente "No afecta documentacion".
-- LaTeX como reemplazo exacto: para cada cambio en un .tex, Claude escribe en "Documentacion afectada" el archivo (tesis/capitulos/NN_*.tex), el TEXTO ACTUAL literal (fragmento corto y unico, copiado del archivo) y el TEXTO NUEVO completo, listo para pegar. Codex lo aplica tal cual con una busqueda del texto actual: no lee el capitulo entero, no redacta ni reformula. Si el texto actual no aparece exactamente, Codex no improvisa: lo anota en HANDOFF y sigue con el resto.
-- Implementacion (Codex): actualiza esos documentos y los incluye por nombre en el mismo commit que el codigo, antes de ejecutar nueva-version.ps1, para que la copia de la version quede coherente. Si edita un .tex, ejecutar `powershell -ExecutionPolicy Bypass -File compilar-tesis.ps1` y anotar en HANDOFF su unica linea de resultado (OK/FALLO). No ejecutar pdflatex/latexmk directamente ni leer logs de LaTeX.
+- La tesis (.tex) la redacta, edita y compila Claude en la fase de diseno, antes de lanzar a Codex. En "Documentacion afectada" del diseno figura como "ya actualizada por Claude"; Codex no la toca.
+- Implementacion (Codex): actualiza los demas documentos afectados (LEEME y otros .md/.txt) y los incluye por nombre en el mismo commit que el codigo, antes de ejecutar nueva-version.ps1, para que la copia de la version quede coherente.
 - Revision (Claude): verifica que la documentacion coincida con el codigo nuevo (formulas, constantes, unidades, nombres) y que no haya cambios innecesarios. Documentacion faltante o desactualizada = "requiere cambios".
 
 ## ROL DE CODEX EN EL FLUJO (regla del usuario)
 - Codex implementa especificaciones disenadas por Claude. No re-analiza ni redisena.
 - Si la especificacion es ambigua, incompleta o contradice el codigo existente, se detiene y lo informa en HANDOFF en lugar de suponer.
-- Al terminar, el HANDOFF indica: archivos modificados, documentacion actualizada, si compila (y si el .tex compila, cuando corresponda) y la version creada.
+- Al terminar, el HANDOFF indica: archivos modificados, documentacion actualizada, si compila y la version creada.
 - Instrucciones: las escribe Claude en HANDOFF.md, seccion "Plan para Codex"; el mensaje (del usuario o de Claude) solo indica leerlo (y que parte hacer, si esta dividido).
 - FLUJO AUTOMATICO (regla del usuario, 2026-10-13): normalmente Claude lanza a Codex con `lanzar-codex.py` (queda como chat en la app de Codex), sin usuario presente.
   - No preguntar al usuario ni esperar respuesta: si algo es ambiguo, falta o contradice el codigo, o requiere una decision del usuario, anotarlo en HANDOFF ("Ultima entrega", linea que empiece con "BLOQUEO:"), commitear lo ya hecho que este verificado y terminar.
   - El ultimo mensaje de la sesion es un resumen corto: parte completada o BLOQUEO, commits, lineas OK/FALLO y version creada si corresponde. Claude lo lee al terminar.
   - No cargar firmware ni hacer ensayos con hardware: eso lo hace el usuario.
 - Trabajo por sesiones: si el plan esta dividido en partes, cada sesion hace solo la parte pedida y termina con commit por nombre y HANDOFF ("Ultima entrega": parte completada, commits, pruebas, que sigue). Al empezar, revisar git status/log y HANDOFF; si hay cambios sin commit de una sesion anterior, verificarlos contra el diseno y completarlos, sin rehacerlos. nueva-version.ps1 solo en la parte final.
-- Ahorro de contexto: leer solo las secciones del diseno indicadas en el mensaje. En archivos grandes (por ejemplo los capitulos de tesis/capitulos/) ubicar las partes con busqueda por \label o titulo y leer solo esas lineas, nunca el archivo completo. Si el contexto se esta agotando, cerrar la parte en curso con commit y HANDOFF antes de seguir.
+- Ahorro de contexto: leer solo las secciones del diseno indicadas en el mensaje. En archivos grandes ubicar las partes con busqueda y leer solo esas lineas, nunca el archivo completo. Si el contexto se esta agotando, cerrar la parte en curso con commit y HANDOFF antes de seguir.
 
 ## AGENTES (Agency Agents) – aplicacion obligatoria
 - Toda implementacion → Minimal Change Engineer: cambiar solo lo especificado. Sin refactorizaciones, renombres, reformateos ni "mejoras" adicionales. Lo que parezca mejorable se anota en HANDOFF como sugerencia, sin aplicarlo.
