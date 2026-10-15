@@ -6,12 +6,14 @@ el mismo cwd que el proyecto, asi aparece en la barra lateral como un chat norma
 Equivale a: codex exec --approve-for-me -c windows.sandbox="unelevated" --add-dir ...
 
 Uso:
-  python lanzar-codex.py "<mensaje>" [-o tmp/codex_ultimo.txt] [--add-dir DIR ...]
+  python lanzar-codex.py "<mensaje>" [-o tmp/codex_ultimo.txt] [--add-dir DIR ...] [--titulo T]
+El nombre del chat sale de la linea "Tarea:" del Plan para Codex (HANDOFF.md).
 Codigo de salida: 0 si el turno termino "completed", 1 en otro caso.
 """
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -20,12 +22,35 @@ import threading
 REPO = os.path.dirname(os.path.abspath(__file__))
 
 
+def titulo_desde_handoff(mensaje):
+    """Nombre del chat: linea "Tarea:" de la seccion "Plan para Codex" de HANDOFF.md,
+    con "Parte N - " si el mensaje pide una parte. None si no se encuentra."""
+    try:
+        with open(os.path.join(REPO, "HANDOFF.md"), encoding="utf-8") as f:
+            texto = f.read()
+    except OSError:
+        return None
+    seccion = re.split(r"^\\?#+\s*Plan para Codex\s*$", texto, maxsplit=1, flags=re.M)
+    if len(seccion) < 2:
+        return None
+    m = re.search(r"^Tarea:\s*(.+)$", seccion[1], flags=re.M)
+    if not m:
+        return None
+    tarea = re.sub(r"\s*\([^)]*\)", "", m.group(1))  # saca aclaraciones y "(Claude, fecha)"
+    tarea = tarea.replace("**", "").replace("`", "").strip().rstrip(".")
+    tarea = tarea[:1].upper() + tarea[1:]
+    parte = re.search(r"\bparte\s+(\w+)", mensaje, flags=re.I)
+    if parte:
+        tarea = f"Parte {parte.group(1)} - {tarea}"
+    return tarea or None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("mensaje")
     ap.add_argument("-o", "--salida", default=os.path.join(REPO, "tmp", "codex_ultimo.txt"))
     ap.add_argument("--add-dir", action="append", default=[])
-    ap.add_argument("--titulo", default=None, help="Nombre del chat (por defecto, el mensaje)")
+    ap.add_argument("--titulo", default=None, help="Nombre del chat (por defecto, la Tarea del Plan para Codex en HANDOFF.md)")
     args = ap.parse_args()
 
     codex = shutil.which("codex") or "codex"
@@ -98,7 +123,7 @@ def main():
         "config": {"sandbox_workspace_write": {"writable_roots": raices}},
     })["thread"]["id"]
     estado["hilo"] = hilo
-    titulo = (args.titulo or args.mensaje)[:80]
+    titulo = (args.titulo or titulo_desde_handoff(args.mensaje) or args.mensaje)[:100]
     try:
         pedir("thread/name/set", {"threadId": hilo, "name": titulo})
     except RuntimeError:
