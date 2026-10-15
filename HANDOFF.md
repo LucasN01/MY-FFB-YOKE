@@ -92,7 +92,7 @@ Rama: `cambio/posicion-simconnect` (sale de `mejora/diagnostico-hardfault`, ya c
 - OK compilacion latexmk (0 referencias indefinidas, 8 errores ignorados por LaTeX). PDF en tmp\tesis-build
 - graphify update . ejecutado: sin cambios de topologia; salidas conservadas. git diff --check sin errores.
 - Cambios del usuario en tesis/main.tex, tesis/capitulos/11_maquinas_estado.tex, tesis/caracterizacion_motores_775.tex y graphify-ino/ conservados y excluidos del commit. tmp/verificar-select-elf.ps1 actualizado (ignorado).
-- Versionado pendiente de ejecutar desde checkout temporal limpio junto al repositorio para conservar los cambios del usuario. Se registrara debajo la version asignada por nueva-version.ps1.
+- Commit de implementacion: 6d87616. Version V2.4 creada con nueva-version.ps1 desde checkout temporal limpio junto al repositorio, para conservar los cambios del usuario. Verificado ../MiYoke_PD_VERSIONES/V2_4/ACTUALIZACION_V2_4.txt y etiqueta V2.4 en 6d87616. El commit posterior solo registra este cierre en HANDOFF.
 - Sigue: revision de Claude; sin carga de firmware ni ensayos de hardware.
 
 \## Revisión
