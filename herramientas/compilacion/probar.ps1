@@ -2,7 +2,7 @@
 # Compila y ejecuta las verificaciones con salida minima (ahorro de tokens para agentes).
 # Imprime una linea por paso: "OK ..." o "FALLO ..." con hasta -MaxLineas lineas de error.
 # Por defecto: suite tests\simconnect_checks (Release Win32) y tests\launcher_port_checks.ps1.
-# Uso: powershell -ExecutionPolicy Bypass -File probar.ps1 [-Pico] [-Encoders] [-Potentiometers] [-Bridge] [-PruebaFalla] [-Todo]
+# Uso: powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 [-Pico] [-Encoders] [-Potentiometers] [-Bridge] [-PruebaFalla] [-Todo]
 #   -Pico            compila firmware Pico 2 con la configuracion del codigo (Build-Pico2.ps1)
 #   -Encoders        compila tambien la variante encoders
 #   -Potentiometers  compila tambien la variante potenciometros
@@ -22,7 +22,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-Set-Location $PSScriptRoot
+$Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'MiYoke_PD.ino'))) { throw "No se encontro MiYoke_PD.ino en $Raiz (raiz del repositorio)." }
+Set-Location $Raiz
 if ($Todo) { $Pico = $true; $Encoders = $true; $Potentiometers = $true; $Bridge = $true }
 $fallos = 0
 
@@ -78,23 +80,23 @@ $fallos += Resumir 'launcher_port_checks' $r.Codigo $r.Salida 'PASS|OK' '(?i)err
 $patronTam = '(?i)(sketch uses|el sketch usa|global variables|las variables globales)'
 $patronErr = '(?i)(error|warning|advertencia)'
 if ($Pico) {
-    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'Build-Pico2.ps1' }
+    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Pico2.ps1' }
     $fallos += Resumir 'Pico 2 (configurado)' $r.Codigo $r.Salida $patronTam $patronErr
 }
 if ($Encoders) {
-    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'Build-Pico2.ps1' -Encoders }
+    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Pico2.ps1' -Encoders }
     $fallos += Resumir 'Pico 2 (encoders)' $r.Codigo $r.Salida $patronTam $patronErr
 }
 if ($Potentiometers) {
-    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'Build-Pico2.ps1' -Potentiometers }
+    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Pico2.ps1' -Potentiometers }
     $fallos += Resumir 'Pico 2 (potenciometros)' $r.Codigo $r.Salida $patronTam $patronErr
 }
 if ($Bridge) {
-    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'Build-Bridge.ps1' }
+    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Bridge.ps1' }
     $fallos += Resumir 'puente SimConnect' $r.Codigo $r.Salida '^$' '(error|warning) [A-Z]+\d+'
 }
 if ($PruebaFalla) {
-    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'Build-Pico2.ps1' -PruebaFalla }
+    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Pico2.ps1' -PruebaFalla }
     $fallos += Resumir 'Pico 2 (prueba falla)' $r.Codigo $r.Salida $patronTam $patronErr
 }
 

@@ -3,9 +3,11 @@ param(
     [ValidatePattern('^COM\d+$')][string]$Puerto,
     [string]$Elf
 )
+$Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'MiYoke_PD.ino'))) { throw "No se encontro MiYoke_PD.ino en $Raiz (raiz del repositorio)." }
 function Select-Elf([string]$boot) {
     $build = if ($boot -match '\betapa=15:PRUEBA\b') { 'build-pico2-prueba-falla' } else { 'build-pico2' }
-    Join-Path $PSScriptRoot ($build + '\MiYoke_PD.ino.elf')
+    Join-Path $Raiz ($build + '\MiYoke_PD.ino.elf')
 }
 $ErrorActionPreference = 'Stop'
 try {
@@ -17,7 +19,7 @@ try {
     if (-not $Puerto) {
         $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
         try {
-            $deteccion = @(& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'Iniciar-Simulador.ps1') -DetectarPlaca 2>&1)
+            $deteccion = @(& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Raiz 'Iniciar-Simulador.ps1') -DetectarPlaca 2>&1)
         } finally { $ErrorActionPreference = $prev }
         $coincidencia = [regex]::Match(($deteccion -join "`n"), 'Yoke detectado: (COM\d+)')
         if (-not $coincidencia.Success) { throw 'No se detecto la Pico. Indica el puerto con -Puerto COMn.' }
@@ -29,10 +31,10 @@ try {
         Where-Object { ($_ | ConvertFrom-Csv -Header ($header -split ',')).sent -eq '1' } |
         Select-Object -First 300)
     if (-not $rows.Count) { throw 'La entrada no tiene filas con sent=1.' }
-    $registros = Join-Path $PSScriptRoot 'SimConnectBridge\bin\Win32\RealismoSC8'
+    $registros = Join-Path $Raiz 'SimConnectBridge\bin\Win32\RealismoSC8'
     $bridge = Join-Path $registros 'YokeSimConnectBridge.exe'
     if (-not (Test-Path -LiteralPath $bridge -PathType Leaf)) { throw "No existe el puente: $bridge" }
-    $destino = Join-Path $PSScriptRoot ('ensayos\' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '_arranque')
+    $destino = Join-Path $Raiz ('ensayos\' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '_arranque')
     New-Item -ItemType Directory -Path $destino | Out-Null
     $copia = Join-Path $destino 'entrada.csv'
     [System.IO.File]::WriteAllLines($copia, [string[]](@($header) + $rows), (New-Object System.Text.UTF8Encoding($false)))

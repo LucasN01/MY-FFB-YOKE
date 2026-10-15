@@ -33,17 +33,17 @@ Binarios generados:
 Los binarios reflejan la configuracion del momento de compilacion. Si se cambian
 pines, ganancias o calibracion, hay que volver a compilar.
 
-Tambien se puede compilar desde PowerShell, situado en esta carpeta:
+Tambien se puede compilar desde PowerShell, situado en la raiz del repositorio:
 
 ```powershell
-.\Build-Pico2.ps1
-.\Build-Pico2.ps1 -Encoders
+.\herramientas\compilacion\Build-Pico2.ps1
+.\herramientas\compilacion\Build-Pico2.ps1 -Encoders
 ```
 
 El primer comando respeta `USE_POTENTIOMETERS` del archivo de configuracion;
 el segundo fuerza encoders. Ninguno carga ni activa la placa.
 
-probar.ps1 -PruebaFalla compila build-pico2-prueba-falla (HardFault provocado a los 20 s, solo para validar el diagnostico; no usar para volar).
+herramientas/compilacion/probar.ps1 -PruebaFalla compila build-pico2-prueba-falla (HardFault provocado a los 20 s, solo para validar el diagnostico; no usar para volar).
 
 FQBN utilizado: `rp2040:rp2040:rpipico2:usbstack=tinyusb,arch=arm`.
 

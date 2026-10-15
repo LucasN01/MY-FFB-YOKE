@@ -20,7 +20,7 @@ Actualizacion 30/09/2026. No requiere habilitar FFB nativo en Prepar3D.
 
 ## Cargar firmware
 
-Ejecutar `./Build-Pico2.ps1` para la fuente elegida por YOKE_USE_SIMULATION (1=simulacion, 0=encoders, 2=potenciometros), o `./Build-Pico2.ps1 -Encoders` para forzar encoders; `./Build-Pico2.ps1 -Potentiometers` fuerza ADC0/ADC1.
+Ejecutar `./herramientas/compilacion/Build-Pico2.ps1` para la fuente elegida por YOKE_USE_SIMULATION (1=simulacion, 0=encoders, 2=potenciometros), o `./herramientas/compilacion/Build-Pico2.ps1 -Encoders` para forzar encoders; `./herramientas/compilacion/Build-Pico2.ps1 -Potentiometers` fuerza ADC0/ADC1.
 Con BOOTSEL, copiar a la unidad RP2350 el archivo correspondiente:
 
 - `build-pico2/MiYoke_PD_V2.3.ino.uf2`

@@ -6,7 +6,7 @@ el mismo cwd que el proyecto, asi aparece en la barra lateral como un chat norma
 Equivale a: codex exec --approve-for-me -c windows.sandbox="unelevated" --add-dir ...
 
 Uso:
-  python lanzar-codex.py "<mensaje>" [-o tmp/codex_ultimo.txt] [--add-dir DIR ...] [--titulo T]
+  python herramientas/flujo/lanzar-codex.py "<mensaje>" [-o tmp/codex_ultimo.txt] [--add-dir DIR ...] [--titulo T]
 El nombre del chat sale de la linea "Tarea:" del Plan para Codex (HANDOFF.md).
 Codigo de salida: 0 si el turno termino "completed", 1 en otro caso.
 """
@@ -19,7 +19,10 @@ import subprocess
 import sys
 import threading
 
-REPO = os.path.dirname(os.path.abspath(__file__))
+# El script vive en herramientas/flujo/: la raiz del repo esta dos niveles arriba.
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if not os.path.isfile(os.path.join(REPO, "MiYoke_PD.ino")):
+    sys.exit(f"[lanzar-codex] no se encontro MiYoke_PD.ino en {REPO} (raiz del repositorio)")
 
 
 def titulo_desde_handoff(mensaje):

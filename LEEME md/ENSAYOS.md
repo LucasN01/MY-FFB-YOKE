@@ -1,15 +1,17 @@
 # Ensayos del Yoke SC8
 
+Los scripts de ensayo (ENSAYO, CICLOS, ARRANQUE, BANCO, FALLA) están en herramientas/ensayos/; los resultados quedan en ensayos/ de la raíz.
+
 Primera sesión: fuente de potencia de motores apagada. Con motores, solo después de instalar el pull-down de EN pendiente de V1.8.
 
 Antes de cada ensayo, comprobar en el menú que REGISTRO DATOS esté en Activado; si no, los CSV quedan vacíos y el informe da SIN DATOS. No cambiarlo durante un ensayo.
 
 ## Vuelo
 
-Abrir `ENSAYO.cmd` o ejecutar:
+Abrir `herramientas\ensayos\ENSAYO.cmd` o ejecutar desde la raíz del repositorio:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File ENSAYO.ps1 -Nombre vuelo1 -Rutina corta
+powershell -ExecutionPolicy Bypass -File herramientas/ensayos/ENSAYO.ps1 -Nombre vuelo1 -Rutina corta
 ```
 
 `-Rutina completa` es el valor predeterminado; `corta` incluye F1, F3, F4, F5, F7, F8 y F11. Preparar C182RG o avión habitual en cabecera, motor en marcha, frenos puestos, clima sin turbulencia y potes centrados, con `INICIAR SIMULADOR V3.cmd`.
@@ -38,7 +40,7 @@ El script crea `ensayos/AAAAMMDD-HHMMSS_<Nombre>/`, `rutina.txt` y `marcas.csv`.
 Cerrar Prepar3D y el puente, conectar la Pico y ejecutar:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File BANCO.ps1 -Entrada tmp\vuelo_corto\telemetry.csv
+powershell -ExecutionPolicy Bypass -File herramientas/ensayos/BANCO.ps1 -Entrada tmp\vuelo_corto\telemetry.csv
 ```
 
 Detecta el COM con el lanzador; se puede indicar `-Puerto COMn`. Crea una carpeta con sufijo `_banco`, conserva la entrada como `entrada.csv`, ejecuta el replay y archiva `telemetry.csv`, `pico.csv`, `ganancias.csv`, `pico.log` y `bridge.log` junto al informe.

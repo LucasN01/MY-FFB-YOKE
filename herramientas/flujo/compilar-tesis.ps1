@@ -5,7 +5,7 @@
 # - Si no: chequeo estatico (\input existentes, llaves, \begin/\end,
 #   \label duplicados, \ref sin \label).
 # -CopiarPdf: si compila bien, copia (sobreescribe) el PDF junto al .tex principal.
-# Uso: powershell -ExecutionPolicy Bypass -File compilar-tesis.ps1 [-Archivo tesis\main.tex] [-MaxErrores 15] [-CopiarPdf]
+# Uso: powershell -ExecutionPolicy Bypass -File herramientas/flujo/compilar-tesis.ps1 [-Archivo tesis\main.tex] [-MaxErrores 15] [-CopiarPdf]
 
 param(
     [string]$Archivo = "tesis\main.tex",
@@ -14,7 +14,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$raiz = Split-Path -Parent $MyInvocation.MyCommand.Path
+$raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+if (-not (Test-Path -LiteralPath (Join-Path $raiz 'MiYoke_PD.ino'))) { Write-Output "ERROR: no se encontro la raiz del repositorio ($raiz)"; exit 2 }
 $main = Join-Path $raiz $Archivo
 if (-not (Test-Path $main)) { Write-Output "ERROR: no existe $Archivo"; exit 2 }
 $dirMain = Split-Path -Parent $main

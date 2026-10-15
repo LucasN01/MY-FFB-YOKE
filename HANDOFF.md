@@ -14,7 +14,7 @@
 
 5\. Antes de afirmar algo del código, indicar la fuente: \[Grafo], \[INO] o \[Código], con archivo y línea. Las aristas INFERRED se tratan como hipótesis.
 
-6\. Tras editar `MiYoke\_PD.ino`, ejecutar `graphify-sync.cmd`.
+6\. Tras editar `MiYoke\_PD.ino`, ejecutar `herramientas/flujo/graphify-sync.cmd`.
 
 7\. No modificar constantes de seguridad (límites de PWM, `MOTOR\_PWM\_HARD\_LIMIT`, `SIMCONNECT\_EXTRA\_LIMIT`) sin aprobación explícita del usuario.
 
@@ -49,28 +49,69 @@ Al terminar, completar "Última entrega": commit, líneas OK/FALLO (base y final
 
 \## Última entrega
 
-- Plan unico implementado en cambio/posicion-simconnect. Codigo: mis_defines.h, ARRANQUE.ps1, compilar-tesis.ps1. Documentacion: LEEME md/LEEME_PICO2.md, LEEME md/ENSAYOS.md, tesis/capitulos/03_centrado.tex y tesis/capitulos/09_damper.tex (cuatro reemplazos literales).
-- OK suite simconnect_checks - PASS: 143619 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
-- OK comparar_ensayo
-- OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-- OK Pico 2 (configurado) - Sketch uses 105388 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
-- OK Pico 2 (potenciometros) - Sketch uses 106380 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
-- OK Select-Elf: etapa=15:PRUEBA -> build-pico2-prueba-falla; BOOT normal -> build-pico2
-- OK Select-Elf: funcion probada identica a ARRANQUE.ps1
-- FALLO compilacion latexmk (codigo -1): primera ejecucion restringida. Repetida con acceso de MiKTeX fuera del sandbox:
-- OK compilacion latexmk (0 referencias indefinidas, 8 errores ignorados por LaTeX). PDF en tmp\tesis-build
-- graphify update . ejecutado: sin cambios de topologia; salidas conservadas. git diff --check sin errores.
-- Cambios del usuario en tesis/main.tex, tesis/capitulos/11_maquinas_estado.tex, tesis/caracterizacion_motores_775.tex y graphify-ino/ conservados y excluidos del commit. tmp/verificar-select-elf.ps1 actualizado (ignorado).
-- Commit de implementacion: 6d87616. Version V2.4 creada con nueva-version.ps1 desde checkout temporal limpio junto al repositorio, para conservar los cambios del usuario. Verificado ../MiYoke_PD_VERSIONES/V2_4/ACTUALIZACION_V2_4.txt y etiqueta V2.4 en 6d87616. El commit posterior solo registra este cierre en HANDOFF.
-- Sigue: revision de Claude; sin carga de firmware ni ensayos de hardware.
+- Reorganizacion implementada segun secciones 3 a 9 del diseno, rama `cambio/reorganizar-carpetas`: 16 scripts movidos con `git mv` a `herramientas/compilacion`, `herramientas/ensayos` y `herramientas/flujo`; rutas de raiz explicitas; PDF duplicado de la raiz eliminado con `git rm`; `.gitignore` anclado a `/ensayos/`.
+- Documentacion actualizada: `AGENTS.md`, `CLAUDE.md`, regla 6 de `HANDOFF.md`, `.claude/skills/verificacion-antes-de-terminar/SKILL.md`, `LEEME md/ENSAYOS.md`, `LEEME md/LEEME_PICO2.md`, `LEEME md/LEEME_SIMCONNECT.md`, `LEEME md/INVENTARIO_CODIGO.md`. Tesis, firmware, lanzador y diseno sin editar.
+- Commit unico: el que contiene esta entrega, con titulo `Reorganiza scripts de soporte en herramientas/ (compilacion, ensayos, flujo) y elimina PDF duplicado de la raiz` (consultar `git log -1 --oneline` al revisar).
+- Version: pendiente, la crea Claude despues de la revision (no se ejecuto `nueva-version.ps1`, segun P3).
+- BLOQUEO: el criterio literal de 8.5 exige que cambie LastWriteTime de `graphify-ino/MiYoke_PD_ino.cpp`, pero `copy /y` conserva la fecha del origen. La copia y el INO tienen 23770 bytes, el mismo SHA-256 B4CD68D4C47D347547A816A386441F157B93E452E28CC314B9B1A37250475E9C y fecha UTC 2026-10-13 21:39:03. Una copia de control en tmp confirma la conservacion de fecha. `graphify-sync.cmd` se implemento literalmente, sin redisenarlo. Claude debe resolver ese criterio antes de aprobar; no se cambio la fecha artificialmente.
+
+Linea base (P4):
+
+```text
+FALLO compilacion latexmk (codigo -1):
+OK suite simconnect_checks - PASS: 143619 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+OK comparar_ensayo
+OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
+OK Pico 2 (configurado) - Sketch uses 105388 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
+OK Pico 2 (encoders) - Sketch uses 106540 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23256 bytes (4%) of dynamic memory, leaving 501032 bytes for local variables. Maximum is 524288 bytes.
+OK Pico 2 (potenciometros) - Sketch uses 106380 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
+OK puente SimConnect
+OK compilacion latexmk (0 referencias indefinidas, 8 errores ignorados por LaTeX). PDF en tmp\tesis-build
+```
+
+La primera compilacion LaTeX fallo dentro del sandbox. Repetida con acceso a MiKTeX dio el OK registrado arriba; no se editaron archivos de tesis.
+
+Final (8.1):
+
+```text
+OK suite simconnect_checks - PASS: 143619 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+OK comparar_ensayo
+OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
+OK Pico 2 (configurado) - Sketch uses 105388 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
+OK Pico 2 (encoders) - Sketch uses 106540 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23256 bytes (4%) of dynamic memory, leaving 501032 bytes for local variables. Maximum is 524288 bytes.
+OK Pico 2 (potenciometros) - Sketch uses 106380 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
+OK puente SimConnect
+OK compilacion latexmk (0 referencias indefinidas, 8 errores ignorados por LaTeX). PDF en tmp\tesis-build
+```
+
+Comprobaciones 8.2 a 8.6 y 8.8:
+
+```text
+OK suite simconnect_checks - PASS: 143619 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+OK comparar_ensayo
+OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
+OK sintaxis PowerShell: 11 scripts, 0 errores; BOM solo en BANCO, Build-Bridge, CICLOS y ENSAYO.
+OK PSScriptRoot: 10 calculos de raiz y 2 referencias hermanas a FALLA.ps1.
+OK lanzar-codex: REPO apunta a MiYoke_PD; titulo Parte 1 - Reorganizar scripts de soporte en la carpeta herramientas.
+OK ARRANQUE sin hardware: Error: No existe la entrada: noexiste.csv; codigo 1.
+OK estructura: 35 archivos versionados en la raiz; UF2 en build-pico2, build-pico2-encoders y build-pico2-potentiometers; sin build-pico2 en herramientas/compilacion.
+OK gitignore: herramientas/ensayos/ENSAYO.ps1 no ignorado; ensayos/x ignorado por /ensayos/.
+OK graphify update desde TEMP: 1244 nodos, 1626 aristas; rutas nuevas indexadas.
+FALLO criterio 8.5 graphify-sync: fecha sin actualizar (copy conserva la del origen; ver BLOQUEO).
+```
+
+- La primera copia graphify en sandbox fue denegada; se repitio con acceso de escritura. La igualdad de hashes confirma la copia correcta. No se altero manualmente graphify-ino ni se incluyo en el commit.
+- Los cambios previos del usuario en tesis/main.tex, tesis/capitulos/11_maquinas_estado.tex, tesis/caracterizacion_motores_775.tex y graphify-ino/ se conservan fuera del commit. Sin carga de firmware ni ensayos de hardware.
+- Siguiente: Claude revisa el commit, resuelve el criterio 8.5 y crea V2.5 segun P3.
+
+Verificacion manual del usuario (8.7, pendiente):
+1. Doble clic en el acceso directo del escritorio `INICIAR SIMULADOR V3`: debe iniciar igual que antes.
+2. Doble clic en `herramientas\ensayos\ENSAYO.cmd`: debe crear `MiYoke_PD\ensayos\<fecha>_vuelo1\rutina.txt` en la raiz. Si es solo una prueba, cerrar la ventana y borrar esa carpeta.
+3. Primer `ARRANQUE.cmd`/`BANCO.ps1` real: comprobar que los registros aparecen en `ensayos\` de la raiz.
 
 \## Revisión
 
-- Revisor: Claude (2026-10-15). **`6d87616` (V2.4): APROBADA.** Revisión directa, porque el diff es de 28 líneas:
-  - `mis_defines.h:55` pasa a `YOKE_USE_SIMULATION 1`; no hay otros cambios de firmware;
-  - `Select-Elf` normal → `build-pico2`; `compilar-tesis.ps1` restaura `ErrorActionPreference` en el `finally` y excluye `ignored error` de los errores;
-  - LEEME y tesis (03, 09) son reemplazos literales del plan; las pruebas, ambos firmwares y la tesis dan OK; tag V2.4.
-  - **Usuario:** cargar `build-pico2\MiYoke_PD.ino.uf2` y probar en vuelo que la fuerza sigue al mando virtual.
+- Pendiente de Claude: reorganizacion de scripts. Resolver BLOQUEO del criterio 8.5 antes de aprobar y crear la version.
 
 \## Ensayos del usuario
 

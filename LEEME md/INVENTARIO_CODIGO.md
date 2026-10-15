@@ -68,7 +68,7 @@ Estados:
 | `comparar_ensayo.h` / `.cpp` / `.vcxproj` | USO | Programa `comparar_ensayo.exe`: al terminar un ensayo, compara la telemetría con el registro de la Pico. Lo usan `ENSAYO.ps1` y `BANCO.ps1`; lo compila `probar.ps1`. |
 | `launcher_port_checks.ps1` | PRUEBA | Prueba la detección del puerto COM del lanzador con puertos simulados, sin tocar puertos reales. |
 
-## 4. Scripts de uso del yugo (raíz)
+## 4. Scripts de uso del yugo (lanzador en la raíz; ensayos en `herramientas/ensayos/`)
 
 | Archivo | Estado | Para qué |
 |---|---|---|
@@ -82,7 +82,7 @@ Estados:
 | `FALLA.ps1` | USO (diagnóstico) | Traduce las direcciones de un HardFault (PC/LR) a archivo y línea con `addr2line` y el `.elf`. |
 | `BANCO.ps1` | USO (diagnóstico) | Banco de prueba sin simulador: reproduce telemetría grabada hacia la Pico, con resguardo de fuente de motores apagada. |
 
-## 5. Compilación y verificación
+## 5. Compilación y verificación (`herramientas/compilacion/`)
 
 | Archivo | Estado | Para qué |
 |---|---|---|
@@ -91,7 +91,7 @@ Estados:
 | `Build-Bridge.ps1` | COMPILAR | Compila `YokeSimConnectBridge.exe` con MSBuild. |
 | `Build-WaitForFlight.ps1` | COMPILAR | Compila `WaitForFlight.exe`. `probar.ps1` no lo incluye; se ejecuta a mano si cambia `WaitForFlight.cpp`. |
 
-## 6. Herramientas del flujo Claude–Codex (no generan versión)
+## 6. Herramientas del flujo Claude–Codex (`herramientas/flujo/`, no generan versión)
 
 | Archivo | Estado | Para qué |
 |---|---|---|
@@ -123,3 +123,5 @@ Estados:
 Eliminados el 2026-10-15: `AxisMotion.h`, `filters.h`, `filters.cpp`, `VELOCITY_FILTER_TAU_S`, `PROBAR REALISMO.cmd` y `backups/`.
 
 Candidatos opcionales que quedan: `SimConnectBridge/GustModel.h`, `BuffetModel.h` y `GroundModel.h` (si las pruebas incluyen los modelos de la raíz) y `fundamento_efectos/agregar_explicaciones.py` (ya aplicado).
+
+Reorganización del 2026-10-15 (`DISENO_reorganizacion_carpetas.md`): los scripts de soporte pasaron a `herramientas/` (`compilacion/`, `ensayos/`, `flujo/`) y se eliminó de la raíz la copia duplicada de `Efectos_de_simulador_V2_3.pdf` (queda en `tesis/fundamento_efectos/`).

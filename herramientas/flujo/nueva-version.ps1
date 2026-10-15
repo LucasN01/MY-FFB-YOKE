@@ -1,6 +1,8 @@
 param([Parameter(Mandatory=$true)][string]$Mensaje, [switch]$Forzar)
 $ErrorActionPreference = 'Stop'
-Set-Location $PSScriptRoot
+$Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'MiYoke_PD.ino'))) { throw "No se encontro MiYoke_PD.ino en $Raiz (raiz del repositorio)." }
+Set-Location $Raiz
 
 # 1. Exigir árbol limpio (se ignora la copia de graphify)
 $sucio = git status --porcelain | Where-Object { $_ -notmatch 'graphify-ino/' }
@@ -16,7 +18,7 @@ if ($vers.Count -gt 0) {
 } else { $maj = 1; $min = 0; $prev = $null }
 if ($prev -and -not $Forzar) {
   # No cuentan: herramientas del flujo entre agentes y todo lo de tesis/ (redaccion del PDF)
-  $flujo = '^(lanzar-codex\.py|compilar-tesis\.ps1|nueva-version\.ps1|graphify-sync\.cmd|tesis/.*)$'
+  $flujo = '^(herramientas/flujo/(lanzar-codex\.py|compilar-tesis\.ps1|nueva-version\.ps1|graphify-sync\.cmd)|tesis/.*)$'
   $cod = git -c core.quotepath=off diff --name-only $prev HEAD | Where-Object { $_ -match '\.(h|hpp|c|cpp|ino|ps1|cmd|py|vcxproj)$' -and $_ -notmatch $flujo }
   if (-not $cod) { Write-Host "Sin cambios de codigo desde $prev. No se crea version."; exit 0 }
 }
@@ -24,7 +26,7 @@ $tag = "V$maj.$min"; $carpeta = "V${maj}_${min}"
 
 # 3. Etiqueta y copia (solo archivos versionados, sin carpetas ignoradas)
 git tag -a $tag -m $Mensaje
-$dest = Join-Path (Split-Path $PSScriptRoot -Parent) "MiYoke_PD_VERSIONES\$carpeta"
+$dest = Join-Path (Split-Path $Raiz -Parent) "MiYoke_PD_VERSIONES\$carpeta"
 New-Item -ItemType Directory -Force $dest | Out-Null
 $tmp = Join-Path $env:TEMP "$carpeta.tar"
 git archive --format=tar -o $tmp HEAD

@@ -3,7 +3,9 @@
     [ValidateSet('completa','corta')][string]$Rutina = 'completa'
 )
 $ErrorActionPreference = 'Stop'
-$destino = Join-Path $PSScriptRoot ('ensayos\' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '_' + $Nombre)
+$Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'MiYoke_PD.ino'))) { throw "No se encontro MiYoke_PD.ino en $Raiz (raiz del repositorio)." }
+$destino = Join-Path $Raiz ('ensayos\' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '_' + $Nombre)
 New-Item -ItemType Directory -Path $destino | Out-Null
 $fases = @(
     @('1','Pausa','15 s','Pausar (P).','armed=0, cmd=0, pwm=0 (B6).'),
@@ -58,7 +60,7 @@ if (Get-Process -Name YokeSimConnectBridge -ErrorAction SilentlyContinue) { Writ
 $limite = [EnsayoReloj]::GetTickCount64() + 120000
 while ((Get-Process -Name YokeSimConnectBridge -ErrorAction SilentlyContinue) -and [EnsayoReloj]::GetTickCount64() -lt $limite) { Start-Sleep -Milliseconds 250 }
 if (Get-Process -Name YokeSimConnectBridge -ErrorAction SilentlyContinue) { Write-Warning 'El puente sigue abierto tras 120 s; se copian igualmente los registros.' }
-$registros = Join-Path $PSScriptRoot 'SimConnectBridge\bin\Win32\RealismoSC8'
+$registros = Join-Path $Raiz 'SimConnectBridge\bin\Win32\RealismoSC8'
 foreach ($archivo in @('telemetry.csv','pico.csv','ganancias.csv','pico.log','bridge.log')) {
     if (Test-Path -LiteralPath (Join-Path $registros $archivo)) {
         Copy-Item -LiteralPath (Join-Path $registros $archivo) -Destination $destino
@@ -68,7 +70,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $destino 'telemetry.csv'))) {
     Write-Host 'Falta telemetry.csv; no se puede comparar el ensayo.'
     exit 1
 }
-& (Join-Path $PSScriptRoot 'tests\bin\comparar_ensayo.exe') $destino | Out-Null
+& (Join-Path $Raiz 'tests\bin\comparar_ensayo.exe') $destino | Out-Null
 $codigo = $LASTEXITCODE
 Get-Content -LiteralPath (Join-Path $destino 'informe.txt') | ForEach-Object { Write-Host $_ }
 exit $codigo

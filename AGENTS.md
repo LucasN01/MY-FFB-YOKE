@@ -11,15 +11,24 @@ Rules:
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 
+## ESTRUCTURA DE CARPETAS
+- Raiz: solo el proyecto. Firmware (MiYoke_PD.ino y sus .h; Arduino exige que esten juntos en la carpeta MiYoke_PD y el puente y tests/ los incluyen como ../X.h), lanzador (INICIAR SIMULADOR*.cmd e Iniciar-Simulador.ps1; los usa el acceso directo del escritorio) y reglas de agentes (CLAUDE.md, AGENTS.md, HANDOFF.md).
+- SimConnectBridge/ (puente), tests/ (pruebas C++ y del lanzador), tesis/ (LaTeX), LEEME md/ (documentacion).
+- herramientas/compilacion/: probar.ps1, Build-Pico2.ps1, Build-Bridge.ps1, Build-WaitForFlight.ps1.
+- herramientas/ensayos/: ENSAYO, CICLOS y ARRANQUE (.cmd y .ps1), BANCO.ps1, FALLA.ps1. Guardan resultados en ensayos/ de la raiz.
+- herramientas/flujo/: lanzar-codex.py, nueva-version.ps1, compilar-tesis.ps1, graphify-sync.cmd (no generan version).
+- Los scripts de herramientas/ calculan la raiz como dos niveles arriba de su carpeta y funcionan desde cualquier directorio. Los comandos de estas reglas se escriben desde la raiz y con / (sirven en PowerShell y en Git Bash).
+- Generadas e ignoradas, en la raiz: build-pico2*/, ensayos/, logs/, tmp/, graphify-out/, graphify-ino/. Fuera de git: Prepar3D-v3/ (la configuracion de Prepar3D V3 apunta ahi: no mover) y VPforce-TelemFFB-refactor/ (referencia).
+
 ## AHORRO DE TOKENS: graphify, PDF y LaTeX (regla del usuario)
 - Codigo: antes de buscar o abrir archivos, orientarse con `graphify query`/`explain`/`path`. Leer directamente solo las lineas puntuales de un archivo ya identificado.
 - PDF: no leer el PDF directamente. Convertirlo con `markitdown archivo.pdf -o tmp/<nombre>.md` (instalado; tmp/ esta en .gitignore) y leer solo la seccion necesaria con grep. Si una tabla o formula sale desordenada, verificar solo esa pagina.
 - Tesis (tesis/*.tex, tesis/capitulos/NN_*.tex): la redacta y edita Claude, no Codex (regla del usuario, 2026-10-15). Codex no la abre ni la modifica; si ve que falta actualizar algo, lo anota en HANDOFF para Claude.
-- Pruebas y compilacion: usar `powershell -ExecutionPolicy Bypass -File probar.ps1` (suite C++ + lanzador; agregar -Pico, -Encoders, -Potentiometers, -Bridge o -Todo segun el plan). Imprime una linea OK/FALLO por paso con solo las lineas de error. No invocar MSBuild, arduino-cli ni Build-*.ps1 directamente, no volcar logs completos y no repetir una compilacion que ya dio OK salvo que el codigo haya cambiado. En HANDOFF copiar solo esas lineas de resultado.
-- Versionado: ejecutar nueva-version.ps1 siempre desde PowerShell (si falla la copia, el script lo detecta, borra la etiqueta y se repite).
+- Pruebas y compilacion: usar `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1` (suite C++ + lanzador; agregar -Pico, -Encoders, -Potentiometers, -Bridge o -Todo segun el plan). Imprime una linea OK/FALLO por paso con solo las lineas de error. No invocar MSBuild, arduino-cli ni Build-*.ps1 directamente, no volcar logs completos y no repetir una compilacion que ya dio OK salvo que el codigo haya cambiado. En HANDOFF copiar solo esas lineas de resultado.
+- Versionado: ejecutar herramientas/flujo/nueva-version.ps1 siempre desde PowerShell (si falla la copia, el script lo detecta, borra la etiqueta y se repite).
 
 ## Limitaciones del grafo en este proyecto
-- MiYoke_PD.ino se indexa vía copia en graphify-ino/ (ejecutar graphify-sync.cmd tras editarlo).
+- MiYoke_PD.ino se indexa vía copia en graphify-ino/ (ejecutar herramientas/flujo/graphify-sync.cmd tras editarlo).
 - Las llamadas desde setup()/loop() a objetos globales NO aparecen en el grafo.
   Para trazar el flujo completo, leer MiYoke_PD.ino directamente.
 - SimConnectBridge/*Model.h son wrappers de un include; la lógica está en la raíz.
@@ -27,7 +36,7 @@ Rules:
 ## VERSIONADO OBLIGATORIO Y AUTOMATICO (regla del usuario)
 Cada vez que un agente (Claude o Codex) modifique codigo (.h .hpp .c .cpp .ino .ps1 .cmd .py .vcxproj), DEBE crear una version nueva sin que el usuario lo pida. Pasos, en este orden:
 1. Hacer commit por nombre de los archivos modificados (nunca git add . ni git add -A).
-2. Ejecutar: powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "<una linea breve, sin tildes, que diga que se modifico>"
+2. Ejecutar: powershell -ExecutionPolicy Bypass -File herramientas/flujo/nueva-version.ps1 -Mensaje "<una linea breve, sin tildes, que diga que se modifico>"
 3. Verificar que imprima "Version Vx.y creada" y que exista ..\MiYoke_PD_VERSIONES\Vx_y\ACTUALIZACION_Vx_y.txt.
 4. Informar al usuario el numero de version creada en la respuesta final.
 Reglas:
@@ -35,7 +44,7 @@ Reglas:
 - Numeracion: 1.0, 1.1 ... 1.9, 2.0, 2.1 ... (la asigna el script; no inventar numeros ni crear carpetas a mano).
 - Si el script se detiene por cambios sin commit, resolver con commit por nombre y repetir; no saltarse el script.
 - Cambios solo de documentacion (.md, .tex, .txt) no generan version.
-- Tampoco generan version (regla del usuario, 2026-10-15) las herramientas del flujo entre agentes (lanzar-codex.py, compilar-tesis.ps1, nueva-version.ps1, graphify-sync.cmd) ni nada dentro de tesis/ (scripts de redaccion o analisis para el PDF). Si solo cambiaron esos, se commitean por nombre y no se ejecuta nueva-version.ps1 (el script igual los ignora y no crea version). Lista elegida por el usuario. Si aparece un script nuevo que podria ser del flujo, preguntar al usuario si se excluye antes de sumarlo a la lista $flujo de nueva-version.ps1 (Codex lo anota en HANDOFF para que Claude pregunte). Los .ps1/.cmd/.py del proyecto (lanzador, Build-*, ensayos, probar.ps1, tests/) si generan version.
+- Tampoco generan version (regla del usuario, 2026-10-15) las herramientas del flujo entre agentes (carpeta herramientas/flujo/: lanzar-codex.py, compilar-tesis.ps1, nueva-version.ps1, graphify-sync.cmd) ni nada dentro de tesis/ (scripts de redaccion o analisis para el PDF). Si solo cambiaron esos, se commitean por nombre y no se ejecuta nueva-version.ps1 (el script igual los ignora y no crea version). Lista elegida por el usuario. Si aparece un script nuevo que podria ser del flujo, preguntar al usuario si se excluye antes de sumarlo a la lista $flujo de nueva-version.ps1 (Codex lo anota en HANDOFF para que Claude pregunte). Los .ps1/.cmd/.py del proyecto (lanzador, Build-*, ensayos, probar.ps1, tests/) si generan version.
 - Para volver atras: git checkout Vx.y, o restaurar desde MiYoke_PD_VERSIONES\Vx_y.
 - El agente revisor no crea versiones (no edita codigo).
 

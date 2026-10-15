@@ -5,6 +5,8 @@
     [switch]$Confirmado
 )
 $ErrorActionPreference = 'Stop'
+$Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'MiYoke_PD.ino'))) { throw "No se encontro MiYoke_PD.ino en $Raiz (raiz del repositorio)." }
 if (Get-Process -Name Prepar3D,YokeSimConnectBridge -ErrorAction SilentlyContinue) {
     throw 'Cerra Prepar3D y YokeSimConnectBridge antes del banco: el puerto COM es exclusivo.'
 }
@@ -19,17 +21,17 @@ $origen = (Resolve-Path -LiteralPath $Entrada).Path
 if (-not $Puerto) {
     $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
     try {
-        $deteccion = @(& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'Iniciar-Simulador.ps1') -DetectarPlaca 2>&1)
+        $deteccion = @(& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Raiz 'Iniciar-Simulador.ps1') -DetectarPlaca 2>&1)
     } finally { $ErrorActionPreference = $prev }
     $coincidencia = [regex]::Match(($deteccion -join "`n"), 'Yoke detectado: (COM\d+)')
     if (-not $coincidencia.Success) { throw 'No se detecto la Pico. Indica el puerto con -Puerto COMn.' }
     $Puerto = $coincidencia.Groups[1].Value
 }
-$destino = Join-Path $PSScriptRoot ('ensayos\' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '_banco')
+$destino = Join-Path $Raiz ('ensayos\' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '_banco')
 New-Item -ItemType Directory -Path $destino | Out-Null
 $copia = Join-Path $destino 'entrada.csv'
 Copy-Item -LiteralPath $origen -Destination $copia
-$registros = Join-Path $PSScriptRoot 'SimConnectBridge\bin\Win32\RealismoSC8'
+$registros = Join-Path $Raiz 'SimConnectBridge\bin\Win32\RealismoSC8'
 $argumentos = @('--port', $Puerto, '--replay', $copia)
 if ($Armar) { $argumentos += '--enable' }
 & (Join-Path $registros 'YokeSimConnectBridge.exe') @argumentos | Out-Null
@@ -43,7 +45,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $destino 'telemetry.csv'))) {
     Write-Host 'Falta telemetry.csv; no se puede comparar el ensayo.'
     exit 1
 }
-& (Join-Path $PSScriptRoot 'tests\bin\comparar_ensayo.exe') $destino | Out-Null
+& (Join-Path $Raiz 'tests\bin\comparar_ensayo.exe') $destino | Out-Null
 $codigo = $LASTEXITCODE
 Get-Content -LiteralPath (Join-Path $destino 'informe.txt') | ForEach-Object { Write-Host $_ }
 exit $codigo

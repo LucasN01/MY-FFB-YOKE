@@ -1,5 +1,7 @@
 ﻿$ErrorActionPreference = 'Stop'
-$destino = Join-Path $PSScriptRoot ('ensayos\' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '_ciclos')
+$Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'MiYoke_PD.ino'))) { throw "No se encontro MiYoke_PD.ino en $Raiz (raiz del repositorio)." }
+$destino = Join-Path $Raiz ('ensayos\' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '_ciclos')
 New-Item -ItemType Directory -Path $destino | Out-Null
 $tabla = @'
 | Paso | Acción | Duración | Para qué |
@@ -34,7 +36,7 @@ do {
         $paso++
     }
 } while ($true)
-$registros = Join-Path $PSScriptRoot 'SimConnectBridge\bin\Win32\RealismoSC8'
+$registros = Join-Path $Raiz 'SimConnectBridge\bin\Win32\RealismoSC8'
 foreach ($archivo in @('bridge.log','bridge.anterior.log','pico.log','pico.anterior.log')) {
     $origen = Join-Path $registros $archivo
     if (Test-Path -LiteralPath $origen) { Copy-Item -LiteralPath $origen -Destination $destino }
