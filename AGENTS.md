@@ -52,7 +52,7 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 - Si la especificacion es ambigua, incompleta o contradice el codigo existente, se detiene y lo informa en HANDOFF en lugar de suponer.
 - Al terminar, el HANDOFF indica: archivos modificados, documentacion actualizada, si compila (y si el .tex compila, cuando corresponda) y la version creada.
 - Instrucciones: las escribe Claude en HANDOFF.md, seccion "Plan para Codex"; el mensaje (del usuario o de Claude) solo indica leerlo (y que parte hacer, si esta dividido).
-- FLUJO AUTOMATICO (regla del usuario, 2026-10-13): normalmente Claude lanza a Codex con `codex exec`, sin pantalla ni usuario presente.
+- FLUJO AUTOMATICO (regla del usuario, 2026-10-13): normalmente Claude lanza a Codex con `lanzar-codex.py` (queda como chat en la app de Codex), sin usuario presente.
   - No preguntar al usuario ni esperar respuesta: si algo es ambiguo, falta o contradice el codigo, o requiere una decision del usuario, anotarlo en HANDOFF ("Ultima entrega", linea que empiece con "BLOQUEO:"), commitear lo ya hecho que este verificado y terminar.
   - El ultimo mensaje de la sesion es un resumen corto: parte completada o BLOQUEO, commits, lineas OK/FALLO y version creada si corresponde. Claude lo lee al terminar.
   - No cargar firmware ni hacer ensayos con hardware: eso lo hace el usuario.
