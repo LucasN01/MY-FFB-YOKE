@@ -97,7 +97,11 @@ Rama: `cambio/posicion-simconnect` (sale de `mejora/diagnostico-hardfault`, ya c
 
 \## Revisión
 
-- (vacío: tarea nueva.)
+- Revisor: Claude (2026-10-15). **`6d87616` (V2.4): APROBADA.** Revisión directa, porque el diff es de 28 líneas:
+  - `mis_defines.h:55` pasa a `YOKE_USE_SIMULATION 1`; no hay otros cambios de firmware;
+  - `Select-Elf` normal → `build-pico2`; `compilar-tesis.ps1` restaura `ErrorActionPreference` en el `finally` y excluye `ignored error` de los errores;
+  - LEEME y tesis (03, 09) son reemplazos literales del plan; las pruebas, ambos firmwares y la tesis dan OK; tag V2.4.
+  - **Usuario:** cargar `build-pico2\MiYoke_PD.ino.uf2` y probar en vuelo que la fuerza sigue al mando virtual.
 
 \## Ensayos del usuario
 
