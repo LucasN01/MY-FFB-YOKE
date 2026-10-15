@@ -80,7 +80,20 @@ Rama: `cambio/posicion-simconnect` (sale de `mejora/diagnostico-hardfault`, ya c
 
 \## Última entrega
 
-- (vacío: tarea nueva. La entrega anterior, Parte 2b del HardFault, está en el historial de git.)
+- Plan unico implementado en cambio/posicion-simconnect. Codigo: mis_defines.h, ARRANQUE.ps1, compilar-tesis.ps1. Documentacion: LEEME md/LEEME_PICO2.md, LEEME md/ENSAYOS.md, tesis/capitulos/03_centrado.tex y tesis/capitulos/09_damper.tex (cuatro reemplazos literales).
+- OK suite simconnect_checks - PASS: 143619 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+- OK comparar_ensayo
+- OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
+- OK Pico 2 (configurado) - Sketch uses 105388 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
+- OK Pico 2 (potenciometros) - Sketch uses 106380 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
+- OK Select-Elf: etapa=15:PRUEBA -> build-pico2-prueba-falla; BOOT normal -> build-pico2
+- OK Select-Elf: funcion probada identica a ARRANQUE.ps1
+- FALLO compilacion latexmk (codigo -1): primera ejecucion restringida. Repetida con acceso de MiKTeX fuera del sandbox:
+- OK compilacion latexmk (0 referencias indefinidas, 8 errores ignorados por LaTeX). PDF en tmp\tesis-build
+- graphify update . ejecutado: sin cambios de topologia; salidas conservadas. git diff --check sin errores.
+- Cambios del usuario en tesis/main.tex, tesis/capitulos/11_maquinas_estado.tex, tesis/caracterizacion_motores_775.tex y graphify-ino/ conservados y excluidos del commit. tmp/verificar-select-elf.ps1 actualizado (ignorado).
+- Versionado pendiente de ejecutar desde checkout temporal limpio junto al repositorio para conservar los cambios del usuario. Se registrara debajo la version asignada por nueva-version.ps1.
+- Sigue: revision de Claude; sin carga de firmware ni ensayos de hardware.
 
 \## Revisión
 

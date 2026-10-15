@@ -22,17 +22,19 @@ if ($latexmk) {
     $out = Join-Path $raiz "tmp\tesis-build"
     New-Item -ItemType Directory -Force $out | Out-Null
     Push-Location $dirMain
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
     try {
         & latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error "-outdir=$out" (Split-Path -Leaf $main) *> $null
         $codigo = $LASTEXITCODE
-    } finally { Pop-Location }
+    } finally { $ErrorActionPreference = $prev; Pop-Location }
     $log = Join-Path $out (([IO.Path]::GetFileNameWithoutExtension($main)) + ".log")
     $lineas = @()
     if (Test-Path $log) { $lineas = Get-Content $log -Encoding UTF8 }
-    $errores = $lineas | Select-String -Pattern '^(.*:\d+: |! )' | Select-Object -First $MaxErrores
+    $ignorados = @($lineas | Select-String -Pattern 'ignored error').Count
+    $errores = $lineas | Where-Object { $_ -notmatch 'ignored error' } | Select-String -Pattern '^(.*:\d+: |! )' | Select-Object -First $MaxErrores
     $refs = ($lineas | Select-String -Pattern 'Reference .* undefined').Count
     if ($codigo -eq 0 -and -not $errores) {
-        Write-Output "OK compilacion latexmk ($refs referencias indefinidas). PDF en tmp\tesis-build"
+        Write-Output "OK compilacion latexmk ($refs referencias indefinidas, $ignorados errores ignorados por LaTeX). PDF en tmp\tesis-build"
         exit 0
     }
     Write-Output "FALLO compilacion latexmk (codigo $codigo):"

@@ -67,7 +67,7 @@ Valor & Fuente & Característica principal\\
 \bottomrule
 \end{tabular}
 \end{center}
-El valor predeterminado inspeccionado es \textbf{2}. No es un selector del menú en tiempo de ejecución. El script \code{Build-Pico2.ps1} permite seleccionar encoders o potenciómetros mediante sus opciones correspondientes; el modo 1 depende de la definición de compilación. No hay mezcla automática de un sensor para el resorte y otro para el damper, ni selección independiente de fuente por eje. Tampoco se comprobó qué binario está cargado físicamente.
+El valor predeterminado inspeccionado es \textbf{1}. No es un selector del menú en tiempo de ejecución. El script \code{Build-Pico2.ps1} permite seleccionar encoders o potenciómetros mediante sus opciones correspondientes; el modo 1 depende de la definición de compilación. No hay mezcla automática de un sensor para el resorte y otro para el damper, ni selección independiente de fuente por eje. Tampoco se comprobó qué binario está cargado físicamente.
 
 \subsubsection{Modo 1: SimConnect, paquete y reloj de las muestras}
 La solicitud al simulador se realiza por cuadro de simulación. El puente limita el envío activo a intervalos de al menos 20 ms: como máximo unos 50 envíos por segundo en esa ruta, y menos si no hay cuadros/datos suficientes. No equivale a una garantía de muestreo perfectamente periódico.

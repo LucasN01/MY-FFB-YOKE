@@ -29,15 +29,15 @@ Por lo tanto, ``generar un valor de $\pm1$'' significa trabajar en una escala no
 \end{minipage}}
 \end{center}
 
-\textbf{Hallazgo importante:} \code{mis_defines.h} define \code{YOKE_USE_SIMULATION=2}. Por defecto, la fuerza depende de la presión de SimConnect y de la posición de los \textbf{potenciómetros locales}. No depende de la posición de SimConnect, aunque el puente siga solicitándola, validándola y transmitiéndola. Las opciones son:
+\textbf{Hallazgo importante:} \code{mis_defines.h} define \code{YOKE_USE_SIMULATION=1}. Por defecto, la fuerza depende de la presión de SimConnect y de la posición del mando virtual (\code{YOKE X POSITION} / \code{YOKE Y POSITION}) que transmite el puente. Los potenciómetros locales no se leen en este modo. Las opciones son:
 \begin{center}
 \begin{tabular}{cll}
 \toprule
 Valor & Posición utilizada & Procedencia\\
 \midrule
 0 & Encoders & Cuentas relativas al centro al arrancar\\
-1 & SimConnect & \code{YOKE X POSITION} / \code{YOKE Y POSITION}\\
-2 & Potenciómetros & ADC0/ADC1; opción predeterminada\\
+1 & SimConnect & \code{YOKE X POSITION} / \code{YOKE Y POSITION}; opción predeterminada\\
+2 & Potenciómetros & ADC0/ADC1\\
 \bottomrule
 \end{tabular}
 \end{center}

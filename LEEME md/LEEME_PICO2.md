@@ -27,7 +27,7 @@ No se necesita MicroPython ni un sistema operativo en la Pico.
 
 Binarios generados:
 
-- `build-pico2/MiYoke_PD_V2.2.ino.uf2`: potenciometros, configuracion predeterminada.
+- `build-pico2/MiYoke_PD_V2.2.ino.uf2`: posicion desde SimConnect (YOKE_USE_SIMULATION=1), configuracion predeterminada.
 - `build-pico2-encoders/MiYoke_PD_V2.2.ino.uf2`: encoders, con la bandera de sensores en 0.
 
 Los binarios reflejan la configuracion del momento de compilacion. Si se cambian

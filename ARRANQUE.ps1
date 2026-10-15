@@ -4,7 +4,7 @@ param(
     [string]$Elf
 )
 function Select-Elf([string]$boot) {
-    $build = if ($boot -match '\betapa=15:PRUEBA\b') { 'build-pico2-prueba-falla' } else { 'build-pico2-potentiometers' }
+    $build = if ($boot -match '\betapa=15:PRUEBA\b') { 'build-pico2-prueba-falla' } else { 'build-pico2' }
     Join-Path $PSScriptRoot ($build + '\MiYoke_PD.ino.elf')
 }
 $ErrorActionPreference = 'Stop'

@@ -52,7 +52,7 @@ static_assert(LCD_POWER_ON_WAIT_MS >= 50 && LCD_RETRY_MS >= 100 && LCD_RESYNC_MS
 // Fuente UNICA de posicion y velocidad para todos los efectos.
 // 0 = encoders AB; 1 = SimConnect; 2 = potenciometros ADC0/ADC1 de Pico.
 #ifndef YOKE_USE_SIMULATION
-#define YOKE_USE_SIMULATION 2
+#define YOKE_USE_SIMULATION 1
 #endif
 static_assert(YOKE_USE_SIMULATION >= 0 && YOKE_USE_SIMULATION <= 2,
               "YOKE_USE_SIMULATION debe ser 0, 1 o 2");
