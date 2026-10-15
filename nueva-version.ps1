@@ -15,7 +15,9 @@ if ($vers.Count -gt 0) {
   $prev = $ult.Tag
 } else { $maj = 1; $min = 0; $prev = $null }
 if ($prev -and -not $Forzar) {
-  $cod = git -c core.quotepath=off diff --name-only $prev HEAD | Where-Object { $_ -match '\.(h|hpp|c|cpp|ino|ps1|cmd|py|vcxproj)$' }
+  # No cuentan: herramientas del flujo entre agentes y todo lo de tesis/ (redaccion del PDF)
+  $flujo = '^(lanzar-codex\.py|compilar-tesis\.ps1|nueva-version\.ps1|graphify-sync\.cmd|tesis/.*)$'
+  $cod = git -c core.quotepath=off diff --name-only $prev HEAD | Where-Object { $_ -match '\.(h|hpp|c|cpp|ino|ps1|cmd|py|vcxproj)$' -and $_ -notmatch $flujo }
   if (-not $cod) { Write-Host "Sin cambios de codigo desde $prev. No se crea version."; exit 0 }
 }
 $tag = "V$maj.$min"; $carpeta = "V${maj}_${min}"

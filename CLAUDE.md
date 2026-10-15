@@ -33,6 +33,7 @@ Reglas:
 - Numeracion: 1.0, 1.1 ... 1.9, 2.0, 2.1 ... (la asigna el script; no inventar numeros ni crear carpetas a mano).
 - Si el script se detiene por cambios sin commit, resolver con commit por nombre y repetir; no saltarse el script.
 - Cambios solo de documentacion (.md, .tex, .txt) no generan version.
+- Tampoco generan version (regla del usuario, 2026-10-15) las herramientas del flujo entre agentes (lanzar-codex.py, compilar-tesis.ps1, nueva-version.ps1, graphify-sync.cmd) ni nada dentro de tesis/ (scripts de redaccion o analisis para el PDF). Si solo cambiaron esos, se commitean por nombre y no se ejecuta nueva-version.ps1 (el script igual los ignora y no crea version). Si se agrega otra herramienta del flujo, sumarla a la lista $flujo de nueva-version.ps1. Los .ps1/.cmd/.py del proyecto (lanzador, Build-*, ensayos, probar.ps1, tests/) si generan version.
 - Para volver atras: git checkout Vx.y, o restaurar desde MiYoke_PD_VERSIONES\Vx_y.
 - El agente revisor no crea versiones (no edita codigo).
 
