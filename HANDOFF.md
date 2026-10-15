@@ -42,7 +42,7 @@ Puntos a respetar:
 - No editar nada de `tesis/`.
 - **No ejecutar `nueva-version.ps1`** (paso 9 omitido): la versión V2.5 la crea Claude después de la revisión.
 - Pruebas: línea base antes (P4) y diseño 8.1 a 8.6 después. Copiar en HANDOFF solo las líneas OK/FALLO.
-- Commit único del paso 8 (por nombre) y luego `herramientaslujo\graphify-sync.cmd`.
+- Commit único del paso 8 (por nombre) y luego `herramientas/flujo/graphify-sync.cmd`.
 - Si algo del diseño no coincide con el archivo real, no improvisar: anotar `BLOQUEO:` en "Última entrega" y terminar.
 
 Al terminar, completar "Última entrega": commit, líneas OK/FALLO (base y final), "versión: pendiente, la crea Claude" y la lista 8.7 para el usuario.
@@ -111,7 +111,13 @@ Verificacion manual del usuario (8.7, pendiente):
 
 \## Revisión
 
-- Pendiente de Claude: reorganizacion de scripts. Resolver BLOQUEO del criterio 8.5 antes de aprobar y crear la version.
+- Revisor: Claude con el subagente Code Reviewer (2026-10-15). **`fd2e420`: APROBADA.**
+  - 16 renombres y borrado del PDF duplicado; sin archivos de tesis/ ni graphify-ino/.
+  - Todas las rutas usan la raíz del repo (verificado archivo por archivo); BOM y CRLF conservados; `.gitignore` con `/ensayos/`.
+  - `nueva-version.ps1`: versiones fuera del repo, `$flujo` excluye solo las 4 herramientas de flujo/.
+  - Pruebas del revisor: `probar.ps1 -Pico` desde otra carpeta OK; `ARRANQUE.ps1` con entrada inexistente falla con mensaje claro.
+  - El BLOQUEO de 8.5 (fecha de la copia de graphify-ino) era un criterio mal planteado del diseño: `copy` conserva la fecha. Contenido y SHA-256 iguales: resuelto.
+  - Errata del plan de Claude en esta sección (`` convertido en salto de página): corregida.
 
 \## Ensayos del usuario
 
