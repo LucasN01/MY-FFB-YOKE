@@ -43,7 +43,7 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 - Solo cuando sea necesario: actualizar unicamente los documentos cuyo contenido queda incorrecto o incompleto por el cambio, y solo las partes afectadas. No reescribir, reformatear ni "mejorar" documentos por las dudas.
 - Documentos a revisar segun el tema: tesis de efectos = tesis/capitulos/NN_*.tex (un archivo por seccion; tesis/main.tex solo tiene preambulo e \input, es el que se sube a Overleaf), otros .tex de tesis/, LEEME md/*.md, LEEME.md y LEEME-*.md. No tocar ACTUALIZACION_Vx_y.txt ni los documentos de diseno de otras tareas.
 - Diseno (Claude, modo Flujo): el documento de diseno incluye la seccion "Documentacion afectada" con archivo, seccion/ecuacion y que debe decir; o indica explicitamente "No afecta documentacion".
-- La tesis (.tex) la redacta, edita y compila Claude en la fase de diseno, antes de lanzar a Codex. En "Documentacion afectada" del diseno figura como "ya actualizada por Claude"; Codex no la toca.
+- La tesis (.tex) la redacta, edita y compila Claude al final, cuando su revision da "aprobado". En "Documentacion afectada" del diseno figura como "la actualiza Claude al aprobar"; Codex no la toca.
 - Implementacion (Codex): actualiza los demas documentos afectados (LEEME y otros .md/.txt) y los incluye por nombre en el mismo commit que el codigo, antes de ejecutar nueva-version.ps1, para que la copia de la version quede coherente.
 - Revision (Claude): verifica que la documentacion coincida con el codigo nuevo (formulas, constantes, unidades, nombres) y que no haya cambios innecesarios. Documentacion faltante o desactualizada = "requiere cambios".
 
