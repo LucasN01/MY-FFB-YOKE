@@ -28,55 +28,24 @@
 
 \## Plan para Codex
 
-Tarea: **posición desde SimConnect por defecto** (dejar de usar los potenciómetros de la Pico 2) y **compilar-tesis.ps1 con LaTeX instalado** (Claude, 2026-10-15).
-Rama: `cambio/posicion-simconnect` (sale de `mejora/diagnostico-hardfault`, ya creada). Plan único, sin partes: son cambios de pocas líneas.
+Tarea: **Reorganizar scripts de soporte en la carpeta herramientas** (Claude, 2026-10-15).
+Rama: `cambio/reorganizar-carpetas` (ya creada desde `master` = V2.4, con el diseño commiteado). Plan único, sin partes (un solo commit atómico; ver diseño 7.3).
 
-\### Precondiciones
-- `git status`: ignorar `graphify-ino/`, `tesis/main.tex`, `tesis/capitulos/11_maquinas_estado.tex` y `tesis/caracterizacion_motores_775.tex` (cambios del usuario; no commitearlos).
-- Orientarse con `graphify query`; leer solo las líneas indicadas. Si un texto actual no aparece exactamente, anotar `BLOQUEO:` o la diferencia en "Última entrega" y seguir con el resto (AGENTS.md, FLUJO AUTOMATICO).
+Diseño aprobado por el usuario: `LEEME md/DISENO_reorganizacion_carpetas.md`. Es una especificación cerrada: aplicarla tal cual, sin redactar ni decidir.
 
-\### Fundamento (verificado por Claude)
-- [Código] `mis_defines.h:53-56`: `YOKE_USE_SIMULATION` 0 = encoders, 1 = SimConnect, 2 = potes. Con 1, `MiYoke_PD.ino` no incluye `AxisPotentiometers.h` ni lee ADC (`:2-6`, `:88-95`, `:257`), toma posición de `simTelemetry.yoke[axis]` y velocidad de `simEffects.simulationVelocity(axis)` (`:339-347`), y pasa `useSimPosition=true` (`:371`). La fricción vuelve a la ley de velocidad (`SimEffects.h:10`). El puente ya envía YOKE X/Y POSITION. No hace falta otro cambio de firmware.
-- [Código] `compilar-tesis.ps1:21-41`: con MiKTeX instalado (latexmk en PATH) el script falla siempre. (a) Con `$ErrorActionPreference='Stop'`, el texto que latexmk escribe en stderr ("This is METAFONT...") se vuelve `NativeCommandError` en PowerShell 5.1 y corta el script. (b) El patrón `^(.*:\d+: |! )` toma como error las líneas `...: ignored error: Infinite glue shrinkage...` del log, aunque latexmk termine con código 0 y genere el PDF (Claude lo probó: código 0, PDF de 1,1 MB, 8 líneas "ignored error", 0 referencias indefinidas).
+Leer solo: secciones 3 a 9 del diseño (estructura, tabla origen → destino, cambios exactos por script, `.gitignore`, pasos, pruebas, documentación afectada). Para ubicar líneas, usar grep y leer solo esas líneas.
 
-\### Alcance
-1. `mis_defines.h:55`: `#define YOKE_USE_SIMULATION 2` → `#define YOKE_USE_SIMULATION 1`. Nada más en ese archivo.
-2. `ARRANQUE.ps1:7` (`Select-Elf`): en el caso normal usar `'build-pico2'` en vez de `'build-pico2-potentiometers'` (el UF2 normal ahora es el de la configuración de `mis_defines.h`). El caso `etapa=15:PRUEBA` no cambia. Actualizar también `tmp/verificar-select-elf.ps1` si se reutiliza para la prueba.
-3. `compilar-tesis.ps1`, solo la rama latexmk (`:21-41`):
-   - alrededor de la llamada a `latexmk`, poner `$ErrorActionPreference = 'Continue'` y restaurar el valor anterior en el `finally` (mismo patrón que `ARRANQUE.ps1:18`); mantener `*> $null`;
-   - separar las líneas que contienen `ignored error`: no cuentan como error; contarlas aparte;
-   - salida OK: `OK compilacion latexmk ($refs referencias indefinidas, $ignorados errores ignorados por LaTeX). PDF en tmp\tesis-build`;
-   - FALLO solo si el código de salida no es 0 o hay errores reales (sin `ignored error`). El chequeo estático no cambia.
-4. Documentación (solo estas líneas; cambios mínimos):
-   - `LEEME md/LEEME_PICO2.md:30`: `- \`build-pico2/MiYoke_PD_V2.2.ino.uf2\`: potenciometros, configuracion predeterminada.` → `- \`build-pico2/MiYoke_PD_V2.2.ino.uf2\`: posicion desde SimConnect (YOKE_USE_SIMULATION=1), configuracion predeterminada.`
-   - `LEEME md/ENSAYOS.md:83`: `si no, build-pico2-potentiometers.` → `si no, build-pico2 (configuracion de mis_defines.h; para otro UF2 pasar -Elf).`
-   - `LEEME md/ENSAYOS.md:88` (R1): `build-pico2-potentiometers\MiYoke_PD.ino.uf2` → `build-pico2\MiYoke_PD.ino.uf2`.
-   - No cambiar `LEEME_POTENCIOMETROS.md`, `AJUSTE_FUERZAS_Y_MOVIMIENTO.md` ni `MENU_CALIBRACION.md`: ya dicen que el valor por defecto es 1.
-5. Tesis (aprobado por el usuario el 2026-10-15; reemplazo literal, sin leer el capítulo entero):
-   - `tesis/capitulos/03_centrado.tex`
-     - TEXTO ACTUAL: `\textbf{Hallazgo importante:} \code{mis_defines.h} define \code{YOKE_USE_SIMULATION=2}. Por defecto, la fuerza depende de la presión de SimConnect y de la posición de los \textbf{potenciómetros locales}. No depende de la posición de SimConnect, aunque el puente siga solicitándola, validándola y transmitiéndola. Las opciones son:`
-     - TEXTO NUEVO: `\textbf{Hallazgo importante:} \code{mis_defines.h} define \code{YOKE_USE_SIMULATION=1}. Por defecto, la fuerza depende de la presión de SimConnect y de la posición del mando virtual (\code{YOKE X POSITION} / \code{YOKE Y POSITION}) que transmite el puente. Los potenciómetros locales no se leen en este modo. Las opciones son:`
-   - `tesis/capitulos/03_centrado.tex`
-     - TEXTO ACTUAL: `1 & SimConnect & \code{YOKE X POSITION} / \code{YOKE Y POSITION}\\`
-     - TEXTO NUEVO: `1 & SimConnect & \code{YOKE X POSITION} / \code{YOKE Y POSITION}; opción predeterminada\\`
-   - `tesis/capitulos/03_centrado.tex`
-     - TEXTO ACTUAL: `2 & Potenciómetros & ADC0/ADC1; opción predeterminada\\`
-     - TEXTO NUEVO: `2 & Potenciómetros & ADC0/ADC1\\`
-   - `tesis/capitulos/09_damper.tex`
-     - TEXTO ACTUAL: `El valor predeterminado inspeccionado es \textbf{2}.`
-     - TEXTO NUEVO: `El valor predeterminado inspeccionado es \textbf{1}.`
-6. `graphify update .` (no se edita `MiYoke_PD.ino`, no hace falta `graphify-sync.cmd`).
+Puntos a respetar:
+- Precondición P1 del diseño: no tocar ni commitear `tesis/main.tex`, `tesis/capitulos/11_maquinas_estado.tex`, `tesis/caracterizacion_motores_775.tex` ni `graphify-ino/`.
+- Movimientos con `git mv` y borrado del PDF duplicado con `git rm` (aprobado por el usuario).
+- Conservar el BOM UTF-8 de los scripts que lo tienen (diseño 5 y 8.4).
+- No editar nada de `tesis/`.
+- **No ejecutar `nueva-version.ps1`** (paso 9 omitido): la versión V2.5 la crea Claude después de la revisión.
+- Pruebas: línea base antes (P4) y diseño 8.1 a 8.6 después. Copiar en HANDOFF solo las líneas OK/FALLO.
+- Commit único del paso 8 (por nombre) y luego `herramientaslujo\graphify-sync.cmd`.
+- Si algo del diseño no coincide con el archivo real, no improvisar: anotar `BLOQUEO:` en "Última entrega" y terminar.
 
-\### Pruebas
-- `powershell -ExecutionPolicy Bypass -File probar.ps1 -Pico -Potentiometers` (suite + firmware modo 1 configurado + variante potes, para confirmar que el modo 2 sigue compilando). Anotar programa/RAM del modo 1 si `probar.ps1` lo informa.
-- Prueba de `Select-Elf` como en la Parte 2b: BOOT `etapa=15:PRUEBA` → `build-pico2-prueba-falla`; BOOT normal → `build-pico2`.
-- `powershell -ExecutionPolicy Bypass -File compilar-tesis.ps1`: esperado `OK compilacion latexmk (...)`. Puede tardar la primera vez (MiKTeX). Si da FALLO, copiar solo sus líneas.
-- No leer logs de LaTeX completos ni ejecutar pdflatex/latexmk directamente.
-
-\### Commit y versión
-- Commit por nombre: `mis_defines.h ARRANQUE.ps1 compilar-tesis.ps1 "LEEME md/LEEME_PICO2.md" "LEEME md/ENSAYOS.md" tesis/capitulos/03_centrado.tex tesis/capitulos/09_damper.tex HANDOFF.md`. Mensaje: "Posicion desde SimConnect por defecto; compilar-tesis funciona con LaTeX instalado".
-- Versión: `powershell -ExecutionPolicy Bypass -File nueva-version.ps1 -Mensaje "Posicion desde SimConnect por defecto y compilar-tesis con LaTeX instalado"`. Verificar `Version Vx.y creada` y el `ACTUALIZACION_Vx_y.txt`. Si los cambios del usuario en `tesis/` lo impiden, usar el checkout temporal limpio, como en la Parte 2, y anotarlo.
-- "Última entrega": archivos, líneas OK/FALLO de las pruebas, prueba de `Select-Elf`, línea de `compilar-tesis.ps1` y versión. Terminar con un resumen corto como último mensaje.
+Al terminar, completar "Última entrega": commit, líneas OK/FALLO (base y final), "versión: pendiente, la crea Claude" y la lista 8.7 para el usuario.
 
 \## Última entrega
 
