@@ -66,7 +66,7 @@ Leer del diseño: secciones 3, 4.3, 4.4, 4.5, 4.6 (LoopSupervisor, CalibrationCo
 
 \## Última entrega
 
-- Parte 2 implementada (Codex, 2026-10-22), sin bloqueos de implementacion. Parte 1 OK segun el usuario; revision de Parte 2 pendiente de Claude.
+- Parte 2 completada (Codex, 2026-10-22), sin bloqueos de implementacion. Parte 1 OK segun el usuario; revision de Parte 2 pendiente de Claude.
 - Codigo: nuevos `YokeI2C.h` y `AxisAs5600.h`; modificados `LcdTelemetry.h`, `MiYoke_PD.ino`, `LoopSupervisor.h`, `CalibrationControls.h`, `tests/health_checks.h`, `herramientas/compilacion/probar.ps1` y `.gitignore`.
 - Implementado segun diseno: buses compartido/propio, CONF volatil verificada y comprobada cada segundo alternando ejes, lectura de STATUS/RAW y AGC, estado serie, etapa SENSOR_I2C=16, excusa del hueco de flash, fuerza cero si cualquier eje no esta sano y reinicio del estimador de velocidad. Constantes de seguridad sin cambios. `-Todo` incluye AS5600.
 - Documentacion: nuevo `LEEME md/LEEME_AS5600.md`; actualizados `AJUSTE_FUERZAS_Y_MOVIMIENTO.md`, `LEEME_POTENCIOMETROS.md`, `LEEME_SIMCONNECT.md`, `MENU_CALIBRACION.md`, `MOBIFLIGHT_PICO_Y_UNO.md`, `LEEME_PICO2.md`, `LEEME_ENCODERS.md`, `CENTRADO_Y_RODAJE.md` e `INVENTARIO_CODIGO.md` (todos en `LEEME md/`), mas switches de `AGENTS.md`, `CLAUDE.md` y `.claude/skills/verificacion-antes-de-terminar/SKILL.md`.
@@ -84,8 +84,8 @@ Leer del diseño: secciones 3, 4.3, 4.4, 4.5, 4.6 (LoopSupervisor, CalibrationCo
 - Renombre: fuera de tesis/ y documentos DISENO_*, solo quedan las dos lineas de compatibilidad de `mis_defines.h` y las menciones literales del Plan para Codex en este HANDOFF (pasos/commit/mensaje historicos); ningun otro archivo conserva la bandera anterior.
 - `git diff --check`: sin errores. `.gitignore` requirio agregar `build-pico2-as5600/` porque enumeraba builds concretos; `git check-ignore` confirmado. Sin cambios fuera del alcance.
 - Grafo: `herramientas/flujo/graphify-sync.cmd` y `graphify update .` ejecutados; copia .ino verificada por SHA256. La copia inicial dio acceso denegado en sandbox; la sincronizacion con permisos ampliados lo resolvio.
-- Commit de implementacion: `Agrega fuente de posicion 3: encoders magneticos AS5600 por I2C` (hash consultable en git log).
-- Version: pendiente de ejecutar el script inmediatamente despues del commit. Se usara un worktree limpio del mismo commit, junto al repositorio, para preservar sin tocar los cambios de tesis del usuario que impiden versionar desde el arbol original.
+- Commit de implementacion: `1b29d0e` (`Agrega fuente de posicion 3: encoders magneticos AS5600 por I2C`). El cierre de este HANDOFF se commitea aparte, solo documentacion.
+- Version: V2.6 creada por `nueva-version.ps1`, salida "Version V2.6 creada"; verificados etiqueta sobre `1b29d0e` y `../MiYoke_PD_VERSIONES/V2_6/ACTUALIZACION_V2_6.txt` (rama mejora/encoder-as5600). Se ejecuto en un worktree temporal limpio del mismo commit y rama, junto al repositorio, para conservar los cambios previos de tesis sin tocarlos. Worktree temporal retirado tras verificar la version.
 - Ensayo pendiente del usuario cuando tenga sensores: s=OK y g cerca de 64 en ambos ejes; a= suave, sentido/magnitud correctos en todo el recorrido; desconexion SDA corta fuerza, reconexion recupera con centro absoluto o BLQ hasta reiniciar con centro al encender y hueco >40 ms. Comparar loopWorstUs/ciclos lentos con modo 2 sin aumento. Detalle en `LEEME md/LEEME_AS5600.md`. No se cargo firmware ni se hizo ensayo con hardware.
 
 \## Revisión
