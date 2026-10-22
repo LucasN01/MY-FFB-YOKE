@@ -3,7 +3,7 @@
 
 \subsection{Qué representa y diferencia con damper}
 % [V-realismo]
-Con \code{YOKE_FRICTION_MODEL=1} y sensor local (potenciómetros o encoders), la fricción de Hayward--Armstrong conserva una deformación de presliding calculada con posición. El damper sigue usando velocidad. El flag 0 o \code{YOKE_USE_SIMULATION=1} conserva la ley racional de velocidad.
+Con \code{YOKE_FRICTION_MODEL=1} y sensor local (potenciómetros, encoders incrementales o encoders magnéticos AS5600), la fricción de Hayward--Armstrong conserva una deformación de presliding calculada con posición. El damper sigue usando velocidad. El flag 0 o \code{YOKE_POSITION_SOURCE=1} conserva la ley racional de velocidad.
 
 % [V-realismo]
 \textit{Actualización (realismo): ley racional por velocidad $\rightarrow$ modelo Hayward--Armstrong por posición con sensor local; adherencia y presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}

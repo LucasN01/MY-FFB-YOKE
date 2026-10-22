@@ -14,7 +14,7 @@ Las fórmulas siguientes corresponden a \code{SimEffects.h::motionAdjustedForce}
 \subsection{Recorrido completo desde la entrada hasta el motor}
 \begin{center}
 \fbox{\begin{minipage}{0.91\linewidth}
-\textbf{Fuente elegida al compilar:} posición de SimConnect, ADC de potenciómetro o cuentas de encoder.
+\textbf{Fuente elegida al compilar:} posición de SimConnect, ADC de potenciómetro, cuentas de encoder incremental o ángulo de encoder magnético AS5600.
 
 \textbf{Movimiento:} posición normalizada $x\in[-1,1]$ $\rightarrow$ diferencia de posiciones dividida por tiempo real $\rightarrow$ límite de velocidad $\rightarrow$ filtro de 40 ms, tratamiento de inversión y reposo $\rightarrow$ velocidad estimada $\widehat v$.
 
@@ -32,7 +32,7 @@ El puente del PC \textbf{no transmite una fuerza de damper ni una velocidad de y
 \subsection{Variables de SimConnect y condiciones de habilitación}
 \label{sec:damper_simvars}
 \subsubsection{Entradas que participan directamente en el cálculo}
-En \code{YOKE_USE_SIMULATION=1}, se usan las siguientes variables solicitadas por \code{SimConnectBridge/main.cpp} como \code{SIMCONNECT_DATATYPE_FLOAT64}:
+En \code{YOKE_POSITION_SOURCE=1}, se usan las siguientes variables solicitadas por \code{SimConnectBridge/main.cpp} como \code{SIMCONNECT_DATATYPE_FLOAT64}:
 \begin{center}
 \begin{tabular}{lll}
 \toprule
@@ -55,7 +55,7 @@ La rama común requiere \code{SIMCONNECT_ADDITIONS_ENABLED}, trama válida y arm
 \subsection{Adquisición de posición: los tres modos}
 \label{sec:adquisicion_movimiento}
 \subsubsection{Selector común y configuración predeterminada}
-\code{YOKE_USE_SIMULATION}, en \code{mis_defines.h}, selecciona una única fuente para ambos ejes y para los efectos que utilizan movimiento:
+\code{YOKE_POSITION_SOURCE}, en \code{mis_defines.h}, selecciona una única fuente para ambos ejes y para los efectos que utilizan movimiento:
 \begin{center}
 \begin{tabular}{cll}
 \toprule
@@ -64,10 +64,13 @@ Valor & Fuente & Característica principal\\
 0 & Encoders & Posición relativa al arranque\\
 1 & SimConnect & Posición del mando virtual recibida por USB\\
 2 & Potenciómetros & Posición absoluta según calibración ADC\\
+3 & Encoders AS5600 & Ángulo magnético de 12 bits por I2C\\
 \bottomrule
 \end{tabular}
 \end{center}
-El valor predeterminado inspeccionado es \textbf{1}. No es un selector del menú en tiempo de ejecución. El script \code{Build-Pico2.ps1} permite seleccionar encoders o potenciómetros mediante sus opciones correspondientes; el modo 1 depende de la definición de compilación. No hay mezcla automática de un sensor para el resorte y otro para el damper, ni selección independiente de fuente por eje. Tampoco se comprobó qué binario está cargado físicamente.
+El valor predeterminado inspeccionado es \textbf{1}. No es un selector del menú en tiempo de ejecución. El script \code{Build-Pico2.ps1} permite seleccionar encoders, potenciómetros o AS5600 mediante sus opciones correspondientes; el modo 1 depende de la definición de compilación. No hay mezcla automática de un sensor para el resorte y otro para el damper, ni selección independiente de fuente por eje. Tampoco se comprobó qué binario está cargado físicamente.
+
+En el modo 3, cada eje usa un sensor magnético AS5600 montado después de la caja reductora. Como su dirección I2C (0x36) es fija, roll usa un bus I2C1 propio y pitch comparte el I2C0 con el LCD. En cada ciclo de 2~ms se leen el estado del imán y el ángulo crudo de 12 bits, de 4096 cuentas por vuelta del eje del sensor. El firmware acumula las vueltas sumando la diferencia entre lecturas envuelta al intervalo $[-2048,2047]$, aplica una histéresis móvil de una cuenta y normaliza con las cuentas del centro a cada extremo, igual que con los potenciómetros. Si el eje del sensor gira menos de media vuelta a cada lado, el centro puede configurarse como absoluto; en caso contrario se toma al encender. Ante una falla de lectura o la falta del imán, el comando de ambos motores pasa a cero. Si existe riesgo de haber perdido una vuelta (un hueco entre lecturas mayor de 40~ms o un sobrerrecorrido), el comando queda en cero hasta reiniciar. Este modo se verificó solo con pruebas unitarias; falta el ensayo con los sensores.
 
 \subsubsection{Modo 1: SimConnect, paquete y reloj de las muestras}
 La solicitud al simulador se realiza por cuadro de simulación. El puente limita el envío activo a intervalos de al menos 20 ms: como máximo unos 50 envíos por segundo en esa ruta, y menos si no hay cuadros/datos suficientes. No equivale a una garantía de muestreo perfectamente periódico.

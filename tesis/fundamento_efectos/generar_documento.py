@@ -47,7 +47,7 @@ Son ocho familias de efectos, contando rigidez residual dentro del centrado. El 
 
 \section{Arquitectura, magnitudes y límites comunes}
 \subsection{Recorrido de los datos}
-Prepar3D calcula el estado del avión. \code{SimConnectBridge/main.cpp} solicita veinte variables, calcula presión normalizada, ráfagas y envolventes; envía tramas SC6 de 26 bytes. \code{SimTelemetry.h} valida rango, CRC y secuencia. \code{SimEffects.h} sintetiza y suma los efectos; \code{MotorDriver.h} convierte el comando a PWM. MobiFlight proporciona los ejes al simulador; el firmware consulta esas posiciones con \code{YOKE_USE_SIMULATION=1}. Los encoders son una alternativa futura, no la fuente actual.
+Prepar3D calcula el estado del avión. \code{SimConnectBridge/main.cpp} solicita veinte variables, calcula presión normalizada, ráfagas y envolventes; envía tramas SC6 de 26 bytes. \code{SimTelemetry.h} valida rango, CRC y secuencia. \code{SimEffects.h} sintetiza y suma los efectos; \code{MotorDriver.h} convierte el comando a PWM. MobiFlight proporciona los ejes al simulador; el firmware consulta esas posiciones con \code{YOKE_POSITION_SOURCE=1}. Los encoders (incrementales o magnéticos AS5600) son una alternativa futura, no la fuente actual.
 
 El puente limita los envíos normales a intervalos de al menos 20 ms; el firmware calcula nominalmente cada 2 ms. El CSV del puente se escribe por muestra recibida y no equivale a un registro de paquetes enviados. Un watchdog de 300 ms y la desconexión anulan los efectos. La calibración permite pausa o ausencia de enlace; sus salidas de motor son cero. Ausencia de enlace no prueba que el proceso Prepar3D esté cerrado.
 

@@ -90,7 +90,12 @@ Leer del diseño: secciones 3, 4.3, 4.4, 4.5, 4.6 (LoopSupervisor, CalibrationCo
 
 \## Revisión
 
-- Parte 1: OK informado por el usuario (2026-10-22). Parte 2: pendiente de Claude.
+- Revisor: Claude con el subagente Code Reviewer (2026-10-22). **`7a14278` + `1b29d0e` (V2.6): APROBADA.**
+  - AxisAs5600.h, MiYoke_PD.ino, YokeI2C.h/LcdTelemetry.h y pruebas coinciden con el diseño; en modo 3 la fuerza queda en cero en ambos ejes sin lectura sana; modos 0-2 solo cambian por el renombre.
+  - Suite del revisor: OK simconnect_checks PASS 143769 checks; OK comparar_ensayo; OK launcher_port_checks.
+  - Tag V2.6 y `ACTUALIZACION_V2_6.txt` coherentes. `.gitignore` necesitaba `build-pico2-as5600/` (no hay comodín): correcto.
+  - Tesis actualizada por Claude (03, 09, 10 y fundamento_efectos): nombre de la bandera y descripción del modo 3.
+  - Pendiente: ensayo con los sensores (LEEME_AS5600.md), en particular `loopWorstUs` frente al modo 2. Sin eso, el modo 3 no se declara validado.
 
 \## Ensayos del usuario
 
