@@ -201,9 +201,9 @@ Renombrar todas las apariciones de la bandera. Además, solo con `YOKE_POSITION_
 Nuevo `tests/as5600_checks.h` con `as5600Checks()`, incluido en `simconnect_checks.cpp` y llamado desde `main`. Usar las macros (no números fijos) para umbrales. Casos:
 1. `decode(0x27,0xFF,0xFF)` → raw 4095, status 0x20; nibble alto enmascarado.
 2. `wrapDelta`: 0→0, 2047→2047, 2048→-2048, -2049→2047, 4095→-1, -4095→1.
-3. Centro al encender: primera 4090 → 0; luego 5 → cuentas +11; luego 4000 → -90 (cruce de 0 en ambos sentidos).
-4. Varias vueltas: pasos de +1000 → cuentas acumuladas > 4096 correctas; posición recortada a 1.
-5. Centro absoluto: center 3000, ±1000 → 3500 da 0,5; 2600 da -0,4; center 100, raw 4000 → -0,196.
+3. Centro al encender (H = `YOKE_AS5600_HYSTERESIS_COUNTS`): primera 4090 → 0; luego 5 → `counts() == 11 - H`; luego 4000 → `counts() == -90 + H` (cruce de 0 en ambos sentidos; la banda móvil descuenta H en cada cambio de sentido de avance, igual que `PotentiometerPosition`).
+4. Varias vueltas: pasos de +1000 → `counts() == accum - H` con accum > 4096; posición recortada a 1.
+5. Centro absoluto, cada caso con un `Axis` nuevo (la primera lectura inicializa `held = accum` sin descontar H): center 3000, ±1000 → primera 3500 da 0,5; primera 2600 da -0,4; center 100, primera 4000 → -0,196. Luego, en el primer eje, 2600 → `(-400 + H) / 1000`.
 6. `direction = -1` invierte el signo.
 7. Histéresis: ±1 cuenta alrededor del valor no cambia `counts()` con H=1; avance de 2 mueve 1.
 8. Fallas: `FAULT_CYCLES-1` malas → sano; `FAULT_CYCLES` → no sano y posición retenida; `RECOVER_CYCLES-1` buenas → no sano; una más → sano.

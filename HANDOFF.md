@@ -84,7 +84,7 @@ Leer del diseño: secciones 3, 4.3, 4.4, 4.5, 4.6 (LoopSupervisor, CalibrationCo
 
 \## Revisión
 
-- (vacío: la completa Claude al revisar.)
+- BLOQUEO de Parte 1 (histeresis) resuelto por Claude (2026-10-22): el bloqueo era correcto; los casos 3, 4 y 5 de la seccion 5 del diseno ahora descuentan H. Retomar la Parte 1 desde el paso 2 (la linea base ya esta hecha).
 
 \## Ensayos del usuario
 
