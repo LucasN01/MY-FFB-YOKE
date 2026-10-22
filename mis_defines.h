@@ -50,14 +50,18 @@ static_assert(LCD_POWER_ON_WAIT_MS >= 50 && LCD_RETRY_MS >= 100 && LCD_RESYNC_MS
               "Tiempos LCD demasiado cortos");
 
 // Fuente UNICA de posicion y velocidad para todos los efectos.
-// 0 = encoders AB; 1 = SimConnect; 2 = potenciometros ADC0/ADC1 de Pico.
-#ifndef YOKE_USE_SIMULATION
-#define YOKE_USE_SIMULATION 1
+// 0 = encoders incrementales AB; 1 = SimConnect; 2 = potenciometros ADC0/ADC1;
+// 3 = encoders magneticos absolutos AS5600 por I2C (solo Pico).
+#ifdef YOKE_USE_SIMULATION
+#error "YOKE_USE_SIMULATION se renombro a YOKE_POSITION_SOURCE (0..2 iguales; 3 = AS5600)"
 #endif
-static_assert(YOKE_USE_SIMULATION >= 0 && YOKE_USE_SIMULATION <= 2,
-              "YOKE_USE_SIMULATION debe ser 0, 1 o 2");
-#if YOKE_USE_SIMULATION == 2 && defined(ARDUINO) && !defined(ARDUINO_ARCH_RP2040)
-#error "El modo potenciometros requiere Raspberry Pi Pico/Pico 2 (Arduino-Pico)"
+#ifndef YOKE_POSITION_SOURCE
+#define YOKE_POSITION_SOURCE 1
+#endif
+static_assert(YOKE_POSITION_SOURCE >= 0 && YOKE_POSITION_SOURCE <= 3,
+              "YOKE_POSITION_SOURCE debe ser 0, 1, 2 o 3");
+#if (YOKE_POSITION_SOURCE == 2 || YOKE_POSITION_SOURCE == 3) && defined(ARDUINO) && !defined(ARDUINO_ARCH_RP2040)
+#error "Los modos 2 (potenciometros) y 3 (AS5600) requieren Raspberry Pi Pico/Pico 2 (Arduino-Pico)"
 #endif
 
 // Potenciometros: numeros GPIO, NO numeros fisicos 31/32. Entrada 0..3.3 V.
@@ -77,6 +81,39 @@ static_assert(YOKE_USE_SIMULATION >= 0 && YOKE_USE_SIMULATION <= 2,
 static_assert(YOKE_POT_SAMPLES >= 1 && YOKE_POT_SAMPLES <= 16 &&
               YOKE_POT_HYSTERESIS_ADC >= 0 && YOKE_POT_HYSTERESIS_ADC <= 32,
               "Revisar muestreo/histeresis ADC");
+// ============================================================
+// ENCODERS MAGNETICOS AS5600 (YOKE_POSITION_SOURCE 3). Ver LEEME_AS5600.md.
+// ============================================================
+// Direccion I2C fija 0x36: un sensor por bus. Roll: I2C1 propio.
+// Pitch: I2C0 compartido con el LCD (LCD_SDA_PIN/LCD_SCL_PIN).
+#define AS5600_I2C_ADDRESS 0x36
+#define ROLL_AS5600_SDA_PIN 14 // I2C1 SDA, pin fisico 19
+#define ROLL_AS5600_SCL_PIN 15 // I2C1 SCL, pin fisico 20
+#define YOKE_I2C1_HZ 400000UL  // bus propio del AS5600 de roll
+#define YOKE_I2C0_HZ 100000UL  // LCD + AS5600 de pitch; PCF8574: 100 kHz maximo por hoja de datos
+// Centro: -1 = la posicion al encender es el centro (como encoders incrementales).
+// 0..4095 = valor a= medido con el yugo centrado (centro absoluto, sin centrar al
+// encender); solo si el eje del sensor gira menos de media vuelta a cada lado.
+#define ROLL_AS5600_CENTER_RAW  -1
+#define PITCH_AS5600_CENTER_RAW -1
+// Cuentas desde el centro a cada extremo (4096 = 1 vuelta del eje del sensor).
+// Roll +-90 grados: 1024. Pitch +-150 mm con polea efectiva de 75 mm en el eje del
+// sensor: 150/(pi*75)*4096 = 2608. ESTIMACIONES: reemplazar por cuentas medidas.
+#define ROLL_AS5600_COUNTS_NEG  1024
+#define ROLL_AS5600_COUNTS_POS  1024
+#define PITCH_AS5600_COUNTS_NEG 2608
+#define PITCH_AS5600_COUNTS_POS 2608
+#define ROLL_AS5600_DIRECTION   1   // +1 o -1 (tambien se invierte con el pin DIR)
+#define PITCH_AS5600_DIRECTION  1
+#define YOKE_AS5600_HYSTERESIS_COUNTS 1 // banda movil contra el ruido de +-1 cuenta
+#define YOKE_AS5600_FAULT_CYCLES 3      // lecturas malas seguidas para cortar fuerza (6 ms)
+#define YOKE_AS5600_RECOVER_CYCLES 50   // lecturas buenas seguidas para volver (100 ms)
+#define YOKE_AS5600_MAX_GAP_MS 40       // con centro al encender: hueco mas largo = bloqueo hasta reiniciar
+#define YOKE_AS5600_START_WINDOW_MS 500 // con centro al encender: primera lectura despues de esto = bloqueo
+#define YOKE_AS5600_OVERTRAVEL 1.25f    // |cuentas| > 1,25 * extremo = vuelta perdida (bloqueo)
+#define YOKE_AS5600_REQUIRE_MD 1        // 1 = exigir bit MD (iman detectado); 0 si un modulo no lo informa
+#define YOKE_AS5600_CONF 0x0500         // SF=8x (1,1 ms), FTH=6 LSB, WD=0, PM=NOM. Volatil, nunca BURN
+
 // ============================================================
 // PINES - ENCODERS (cuadratura, uno por eje)
 // ============================================================
@@ -230,6 +267,48 @@ static_assert(YOKE_MOTION_FILTER_TAU_S >= 0 && YOKE_MOTION_MAX_SPEED > 0 &&
 #endif
 static_assert(YOKE_SLOW_LOOP_US > CONTROL_LOOP_MS*1000, "Umbral de ciclo lento invalido");
 #define MOTION_TELEMETRY_MS 100
+
+static_assert(ROLL_AS5600_CENTER_RAW >= -1 && ROLL_AS5600_CENTER_RAW <= 4095, "Centro AS5600 ROLL invalido");
+static_assert(ROLL_AS5600_COUNTS_NEG >= 1 && ROLL_AS5600_COUNTS_NEG <= 32767 &&
+              (ROLL_AS5600_CENTER_RAW < 0 || ROLL_AS5600_COUNTS_NEG <= 1800), "Recorrido AS5600 ROLL NEG invalido");
+static_assert(ROLL_AS5600_COUNTS_POS >= 1 && ROLL_AS5600_COUNTS_POS <= 32767 &&
+              (ROLL_AS5600_CENTER_RAW < 0 || ROLL_AS5600_COUNTS_POS <= 1800), "Recorrido AS5600 ROLL POS invalido");
+static_assert(ROLL_AS5600_DIRECTION == 1 || ROLL_AS5600_DIRECTION == -1, "Signo AS5600 ROLL invalido");
+static_assert(PITCH_AS5600_CENTER_RAW >= -1 && PITCH_AS5600_CENTER_RAW <= 4095, "Centro AS5600 PITCH invalido");
+static_assert(PITCH_AS5600_COUNTS_NEG >= 1 && PITCH_AS5600_COUNTS_NEG <= 32767 &&
+              (PITCH_AS5600_CENTER_RAW < 0 || PITCH_AS5600_COUNTS_NEG <= 1800), "Recorrido AS5600 PITCH NEG invalido");
+static_assert(PITCH_AS5600_COUNTS_POS >= 1 && PITCH_AS5600_COUNTS_POS <= 32767 &&
+              (PITCH_AS5600_CENTER_RAW < 0 || PITCH_AS5600_COUNTS_POS <= 1800), "Recorrido AS5600 PITCH POS invalido");
+static_assert(PITCH_AS5600_DIRECTION == 1 || PITCH_AS5600_DIRECTION == -1, "Signo AS5600 PITCH invalido");
+static_assert(YOKE_AS5600_HYSTERESIS_COUNTS >= 0 && YOKE_AS5600_HYSTERESIS_COUNTS <= 8, "YOKE_AS5600_HYSTERESIS_COUNTS fuera de rango");
+static_assert(YOKE_AS5600_FAULT_CYCLES >= 1 && YOKE_AS5600_FAULT_CYCLES <= 50, "YOKE_AS5600_FAULT_CYCLES fuera de rango");
+static_assert(YOKE_AS5600_RECOVER_CYCLES >= 1 && YOKE_AS5600_RECOVER_CYCLES <= 500, "YOKE_AS5600_RECOVER_CYCLES fuera de rango");
+static_assert(YOKE_AS5600_MAX_GAP_MS >= 10 && YOKE_AS5600_MAX_GAP_MS <= 100, "YOKE_AS5600_MAX_GAP_MS fuera de rango");
+static_assert(YOKE_AS5600_START_WINDOW_MS >= 100 && YOKE_AS5600_START_WINDOW_MS <= 2000, "YOKE_AS5600_START_WINDOW_MS fuera de rango");
+static_assert(YOKE_AS5600_OVERTRAVEL >= 1.05f && YOKE_AS5600_OVERTRAVEL <= 2, "YOKE_AS5600_OVERTRAVEL fuera de rango");
+static_assert(YOKE_AS5600_REQUIRE_MD >= 0 && YOKE_AS5600_REQUIRE_MD <= 1, "YOKE_AS5600_REQUIRE_MD fuera de rango");
+static_assert(YOKE_I2C0_HZ >= 100000 && YOKE_I2C0_HZ <= 400000, "YOKE_I2C0_HZ fuera de rango");
+static_assert(YOKE_I2C1_HZ >= 100000 && YOKE_I2C1_HZ <= 1000000, "YOKE_I2C1_HZ fuera de rango");
+static_assert(ROLL_AS5600_SDA_PIN % 4 == 2 && ROLL_AS5600_SDA_PIN <= 26, "Pin I2C1 SDA invalido");
+static_assert(ROLL_AS5600_SCL_PIN % 4 == 3 && ROLL_AS5600_SCL_PIN <= 27, "Pin I2C1 SCL invalido");
+#if YOKE_POSITION_SOURCE == 3
+static_assert(ROLL_AS5600_SDA_PIN != ROLL_PWM_LEFT &&
+              ROLL_AS5600_SDA_PIN != ROLL_PWM_RIGHT &&
+              ROLL_AS5600_SDA_PIN != PITCH_PWM_LEFT &&
+              ROLL_AS5600_SDA_PIN != PITCH_PWM_RIGHT &&
+              ROLL_AS5600_SDA_PIN != ROLL_EN_PIN &&
+              ROLL_AS5600_SDA_PIN != PITCH_EN_PIN &&
+              ROLL_AS5600_SDA_PIN != LCD_SDA_PIN &&
+              ROLL_AS5600_SDA_PIN != LCD_SCL_PIN, "Pin AS5600 SDA en conflicto");
+static_assert(ROLL_AS5600_SCL_PIN != ROLL_PWM_LEFT &&
+              ROLL_AS5600_SCL_PIN != ROLL_PWM_RIGHT &&
+              ROLL_AS5600_SCL_PIN != PITCH_PWM_LEFT &&
+              ROLL_AS5600_SCL_PIN != PITCH_PWM_RIGHT &&
+              ROLL_AS5600_SCL_PIN != ROLL_EN_PIN &&
+              ROLL_AS5600_SCL_PIN != PITCH_EN_PIN &&
+              ROLL_AS5600_SCL_PIN != LCD_SDA_PIN &&
+              ROLL_AS5600_SCL_PIN != LCD_SCL_PIN, "Pin AS5600 SCL en conflicto");
+#endif
 
 static_assert(ROLL_POS_MIN < 0 && ROLL_POS_MAX > 0, "Revisar limites Roll");
 static_assert(PITCH_POS_MIN < 0 && PITCH_POS_MAX > 0, "Revisar limites Pitch");

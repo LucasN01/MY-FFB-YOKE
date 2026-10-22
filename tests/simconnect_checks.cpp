@@ -55,11 +55,13 @@ static void feed4(YokeSC::Receiver& rx, const uint8_t* f, uint32_t time) {
 #include "realism_checks.h"
 #include "link_checks.h"
 #include "health_checks.h"
+#include "as5600_checks.h"
 int legacyEffectsChecks();
 int simPositionFrictionChecks();
 int main(int argc,char** argv) {
     linkChecks();
     healthChecks();
+    as5600Checks();
     rawChecks(); if(argc>1) replayRaw(argv[1]);
     picoLogChecks();
     groundChecks();
@@ -220,7 +222,7 @@ int main(int argc,char** argv) {
     CHECK(force(0)>0 && force(1)<0); CHECK(near(force(1),-2*force(0)));
     CHECK(simFx.commandWithPositionSource(simRx,1,1,-1,YokeSC::Centering,false)>0); // future local mode
     CHECK(near(simFx.commandWithPositionSource(simRx,1,1,-1,YokeSC::Centering),
-        simFx.commandWithPositionSource(simRx,1,1,-1,YokeSC::Centering,YOKE_USE_SIMULATION==1)));
+        simFx.commandWithPositionSource(simRx,1,1,-1,YokeSC::Centering,YOKE_POSITION_SOURCE==1)));
     for(int axis=0;axis<2;++axis) {
         frame4(sc4,54,10000,axis==0?10001:0,axis==1?-10001:0);
         feed4(simRx,sc4,1060); CHECK(simRx.last==1040);

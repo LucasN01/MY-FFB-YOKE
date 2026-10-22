@@ -66,11 +66,10 @@ Leer del diseño: secciones 3, 4.3, 4.4, 4.5, 4.6 (LoopSupervisor, CalibrationCo
 
 \## Última entrega
 
-- BLOQUEO: Parte 1 detenida antes de editar codigo. El diseno exige resultados incompatibles entre la histeresis de 4.2 y las pruebas de la seccion 5; requiere aclaracion de Claude, sin redisenar por Codex.
-- Evidencia [Diseno]: `LEEME md/DISENO_encoder_as5600.md:88` fija H=1; la linea 144 define `held=accum-H` al avanzar y `held=accum+H` al retroceder, y `counts()` devuelve las cuentas con histeresis (linea 129). En el caso 3 (linea 204), primera lectura 4090 deja held=0; raw=5 produce accum=11 y counts=10; raw=4000 produce accum=-90 y counts=-89. La prueba pide +11 y -90. La comprobacion aritmetica en PowerShell reprodujo 10 y -89.
-- Evidencia [Codigo]: `PotentiometerPosition.h:27` y `PotentiometerPosition.h:28` implementan exactamente esa banda movil. El caso 5 (diseno, linea 206) tambien pide posiciones sin descontar la histeresis: desde centro 3000, raw=3500 daria 0,499 con H=1, no 0,5.
-- Pendiente para Claude: aclarar las expectativas de los casos 3 y 5 respecto de la banda movil antes de retomar Parte 1. No se modifico el diseno ni se implementaron supuestos.
-- Archivos modificados: solo `HANDOFF.md`. Documentacion del producto: sin cambios. Se conservaron los cambios previos del usuario en tesis/ y los archivos sin seguimiento.
+- Parte 1 completada (Codex, 2026-10-22), sin bloqueos. Revision aplicada: casos 3, 4 y 5 descuentan H segun el diseno corregido por Claude.
+- Archivos modificados: `mis_defines.h`, `MiYoke_PD.ino`, `CalibrationControls.h`, `SimEffects.h`, `tests/simconnect_checks.cpp`, `tests/sim_position_friction_checks.cpp`, `herramientas/compilacion/Build-Pico2.ps1`, `herramientas/compilacion/probar.ps1`; nuevos `As5600Position.h` y `tests/as5600_checks.h`.
+- Implementado: renombre, configuracion y validaciones AS5600, logica pura con los 16 casos de prueba y switch `-As5600`. Solo renombre en .ino y CalibrationControls; `-Todo` todavia no incluye AS5600. Constantes de seguridad sin cambios.
+- Documentacion actualizada: este HANDOFF. Documentacion del producto y tesis pendientes de Parte 2 segun el plan; no se abrio ni modifico tesis/. Se conservaron los cambios previos del usuario y archivos sin seguimiento.
 - Pruebas base: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo`, salida 0:
   - OK suite simconnect_checks - PASS: 143619 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
   - OK comparar_ensayo
@@ -79,8 +78,19 @@ Leer del diseño: secciones 3, 4.3, 4.4, 4.5, 4.6 (LoopSupervisor, CalibrationCo
   - OK Pico 2 (encoders) - Sketch uses 106540 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23256 bytes (4%) of dynamic memory, leaving 501032 bytes for local variables. Maximum is 524288 bytes.
   - OK Pico 2 (potenciometros) - Sketch uses 106380 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
   - OK puente SimConnect
-- Commit de esta entrega: solo `HANDOFF.md`, mensaje `HANDOFF: bloqueo de Parte 1 por expectativas de histeresis AS5600` (hash consultable en git log).
-- Pruebas finales: no corresponde repetir; no hubo cambios de codigo. Version: no creada (solo HANDOFF; ademas Parte 1 no ejecuta nueva-version.ps1).
+- Pruebas finales: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo`, salida 0:
+  - OK suite simconnect_checks - PASS: 143765 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+  - OK comparar_ensayo
+  - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
+  - OK Pico 2 (configurado) - Sketch uses 105388 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (encoders) - Sketch uses 106540 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23256 bytes (4%) of dynamic memory, leaving 501032 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (potenciometros) - Sketch uses 106380 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
+  - OK puente SimConnect
+- Comprobacion de renombre: en codigo/scripts fuera de tesis/ solo quedan `#ifdef` y `#error` de `mis_defines.h:55-56`. La busqueda general todavia encuentra la documentacion y el plan de HANDOFF; su actualizacion corresponde a Parte 2.
+- `git diff --check`: sin errores. `herramientas/flujo/graphify-sync.cmd` y `graphify update .` ejecutados; copia .ino verificada por SHA256. La copia inicial dio acceso denegado en sandbox; ejecutar la sincronizacion con permisos ampliados resolvio el problema.
+- Commit de esta entrega (codigo y HANDOFF): `Renombra YOKE_USE_SIMULATION a YOKE_POSITION_SOURCE y agrega logica pura AS5600 con pruebas` (hash consultable en git log).
+- Version: no creada; el paso 8 de Parte 1 la reserva para Parte 2. No se compilo `-As5600`, como exige esta parte.
+- Sigue: Parte 2 del plan (driver I2C, integracion, documentacion y version). Observacion para Parte 2: `.gitignore` enumera builds concretos y no tiene el patron `build-pico2*/` supuesto por el diseno; falta cubrir `build-pico2-as5600/` antes de generar ese build. No se amplio el alcance de Parte 1.
 
 \## Revisión
 

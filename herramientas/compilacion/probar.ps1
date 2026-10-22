@@ -2,19 +2,21 @@
 # Compila y ejecuta las verificaciones con salida minima (ahorro de tokens para agentes).
 # Imprime una linea por paso: "OK ..." o "FALLO ..." con hasta -MaxLineas lineas de error.
 # Por defecto: suite tests\simconnect_checks (Release Win32) y tests\launcher_port_checks.ps1.
-# Uso: powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 [-Pico] [-Encoders] [-Potentiometers] [-Bridge] [-PruebaFalla] [-Todo]
+# Uso: powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 [-Pico] [-Encoders] [-Potentiometers] [-As5600] [-Bridge] [-PruebaFalla] [-Todo]
 #   -Pico            compila firmware Pico 2 con la configuracion del codigo (Build-Pico2.ps1)
 #   -Encoders        compila tambien la variante encoders
 #   -Potentiometers  compila tambien la variante potenciometros
+#   -As5600          compila tambien la variante AS5600 (aun no entra en -Todo)
 #   -Bridge          compila el puente SimConnect (Build-Bridge.ps1)
 #   -PruebaFalla     compila potenciometros con HardFault a los 20 s (no entra en -Todo)
-#   -Todo            todo lo anterior
+#   -Todo            suite, lanzador, Pico configurado, encoders, potenciometros y puente
 # No carga firmware ni ejecuta el simulador.
 
 param(
     [switch]$Pico,
     [switch]$Encoders,
     [switch]$Potentiometers,
+    [switch]$As5600,
     [switch]$Bridge,
     [switch]$PruebaFalla,
     [switch]$Todo,
@@ -90,6 +92,10 @@ if ($Encoders) {
 if ($Potentiometers) {
     $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Pico2.ps1' -Potentiometers }
     $fallos += Resumir 'Pico 2 (potenciometros)' $r.Codigo $r.Salida $patronTam $patronErr
+}
+if ($As5600) {
+    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Pico2.ps1' -As5600 }
+    $fallos += Resumir 'Pico 2 (AS5600)' $r.Codigo $r.Salida $patronTam $patronErr
 }
 if ($Bridge) {
     $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Bridge.ps1' }

@@ -1,7 +1,7 @@
 // SimConnect position remains on the velocity friction law even with model flag enabled.
 #define YokeGains YokeSimPositionGains
 #define YokeSC YokeSimPositionSC
-#define YOKE_USE_SIMULATION 1
+#define YOKE_POSITION_SOURCE 1
 #define YOKE_FRICTION_MODEL 1
 #include "../SimEffects.h"
 #include <cstdio>

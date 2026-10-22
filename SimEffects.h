@@ -7,7 +7,7 @@
 #include "PicoForceModels.h"
 #include "NarrowbandNoise.h"
 #include "FrictionModel.h"
-#define YOKE_FRICTION_POSITION_MODEL (YOKE_FRICTION_MODEL==1 && YOKE_USE_SIMULATION!=1)
+#define YOKE_FRICTION_POSITION_MODEL (YOKE_FRICTION_MODEL==1 && YOKE_POSITION_SOURCE!=1)
 
 namespace YokeSC {
 enum EffectMask { Turbulence=1, Stall=2, Gear=4, Spoiler=8, Ground=16, Centering=32, Damper=64, Friction=128 };
@@ -127,7 +127,7 @@ public:
     // Firmware entry point: never fall back to unconnected sensors if sim position is missing.
     float commandWithPositionSource(const Receiver& rx, uint8_t axis, float gain,
                   float localPosition, uint8_t mask=configuredEffects,
-                  bool useSimPosition=(YOKE_USE_SIMULATION == 1), float localVelocity=0) const {
+                  bool useSimPosition=(YOKE_POSITION_SOURCE == 1), float localVelocity=0) const {
         if(axis>1) return 0;
         if(useSimPosition && !rx.yokeAvailable) mask &= ~Centering;
         // No position filtering: a received zero cancels centering immediately.

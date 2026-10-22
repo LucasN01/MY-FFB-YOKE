@@ -1,7 +1,7 @@
 #include "mis_defines.h"
-#if YOKE_USE_SIMULATION == 0
+#if YOKE_POSITION_SOURCE == 0
 #include "AxisEncoders.h"
-#elif YOKE_USE_SIMULATION == 2
+#elif YOKE_POSITION_SOURCE == 2
 #include "AxisPotentiometers.h"
 #endif
 #include "YokeMotion.h"
@@ -85,12 +85,12 @@ YokeCalibration::Controls calibration(gainSettings,potSettings);
 YokeSC::Receiver simTelemetry;
 YokeSC::Effects simEffects(gainSettings);
 #endif
-#if YOKE_USE_SIMULATION == 0
+#if YOKE_POSITION_SOURCE == 0
 AxisEncoders positionInput;
-#elif YOKE_USE_SIMULATION == 2
+#elif YOKE_POSITION_SOURCE == 2
 AxisPotentiometers positionInput(potSettings);
 #endif
-#if YOKE_USE_SIMULATION != 1
+#if YOKE_POSITION_SOURCE != 1
 YokeMotion localMotion[2];
 #endif
 float yokePosition[2]={0,0}, yokeVelocity[2]={0,0};
@@ -153,7 +153,7 @@ void debugPrintMotion(unsigned long now, const float* motorCommands) {
     const uint8_t axis = printPitch ? 1 : 0;
     const int16_t pwm = printPitch ? pitchMotor.getLastAppliedPWM() : rollMotor.getLastAppliedPWM();
     char line[64];
-#if YOKE_USE_SIMULATION == 2
+#if YOKE_POSITION_SOURCE == 2
     const int length = snprintf_P(
         line, sizeof(line), PSTR("%c a=%u x=%ld v=%ld f=%d p=%d%s"),
         printPitch ? 'P' : 'R', (unsigned)positionInput.raw(axis),
@@ -225,7 +225,7 @@ void setup() {
     Serial.begin(115200); // USB CDC: no esperar la conexion del monitor
 #endif
     lcd.begin(); // programar inicio; LCD se inicializa por etapas desde update()
-#if YOKE_USE_SIMULATION != 1
+#if YOKE_POSITION_SOURCE != 1
     positionInput.begin(); // encoders: centrar al iniciar; potes: centro calibrado
 #endif
     lastControlLoopUs = micros();
@@ -254,7 +254,7 @@ void loop() {
 #endif
     const unsigned long now = millis();
 
-#if YOKE_USE_SIMULATION == 2
+#if YOKE_POSITION_SOURCE == 2
     markStage(YokeHealth::PotRead);
     positionInput.update(); // muestra actual ANTES de procesar OK de calibracion
 #if YOKE_CALIBRATION_ENABLED
@@ -298,7 +298,7 @@ void loop() {
 #if defined(ARDUINO_ARCH_RP2040)
         rp2040.wdt_begin(YOKE_WDT_MS);
 #endif
-#if YOKE_USE_SIMULATION != 1
+#if YOKE_POSITION_SOURCE != 1
         localMotion[0].reset(); localMotion[1].reset();
 #endif
         simEffects.reset();
@@ -326,7 +326,7 @@ void loop() {
 #if defined(ARDUINO_ARCH_RP2040)
         rp2040.wdt_begin(YOKE_WDT_MS);
 #endif
-#if YOKE_USE_SIMULATION != 1
+#if YOKE_POSITION_SOURCE != 1
         localMotion[0].reset(); localMotion[1].reset();
 #endif
         finishLoop(nowUs);
@@ -336,7 +336,7 @@ void loop() {
 
     // Una sola fuente para posicion y velocidad de TODOS los efectos.
     markStage(YokeHealth::Motion);
-#if YOKE_USE_SIMULATION == 1
+#if YOKE_POSITION_SOURCE == 1
     for(uint8_t axis=0;axis<2;++axis) {
 #if SIMCONNECT_ADDITIONS_ENABLED
         yokePosition[axis]=simTelemetry.yoke[axis];
@@ -346,7 +346,7 @@ void loop() {
 #endif
     }
 #else
-#if YOKE_USE_SIMULATION == 0
+#if YOKE_POSITION_SOURCE == 0
     const long counts[2]={positionInput.readRollRaw(),positionInput.readPitchRaw()};
     const float negative[2]={-float(ROLL_POS_MIN),-float(PITCH_POS_MIN)};
     const float positive[2]={float(ROLL_POS_MAX),float(PITCH_POS_MAX)};
@@ -368,7 +368,7 @@ void loop() {
     for (uint8_t axis = 0; axis < 2; ++axis) {
         motorCommands[axis] = simEffects.commandWithPositionSource(simTelemetry, axis,
             gainSettings.get(YokeGains::Total),
-            yokePosition[axis], YokeSC::configuredEffects, YOKE_USE_SIMULATION == 1, yokeVelocity[axis]);
+            yokePosition[axis], YokeSC::configuredEffects, YOKE_POSITION_SOURCE == 1, yokeVelocity[axis]);
     }
 #endif
 #if YOKE_CALIBRATION_ENABLED
