@@ -66,7 +66,21 @@ Leer del diseño: secciones 3, 4.3, 4.4, 4.5, 4.6 (LoopSupervisor, CalibrationCo
 
 \## Última entrega
 
-- (vacío: tarea nueva, a completar por Codex.)
+- BLOQUEO: Parte 1 detenida antes de editar codigo. El diseno exige resultados incompatibles entre la histeresis de 4.2 y las pruebas de la seccion 5; requiere aclaracion de Claude, sin redisenar por Codex.
+- Evidencia [Diseno]: `LEEME md/DISENO_encoder_as5600.md:88` fija H=1; la linea 144 define `held=accum-H` al avanzar y `held=accum+H` al retroceder, y `counts()` devuelve las cuentas con histeresis (linea 129). En el caso 3 (linea 204), primera lectura 4090 deja held=0; raw=5 produce accum=11 y counts=10; raw=4000 produce accum=-90 y counts=-89. La prueba pide +11 y -90. La comprobacion aritmetica en PowerShell reprodujo 10 y -89.
+- Evidencia [Codigo]: `PotentiometerPosition.h:27` y `PotentiometerPosition.h:28` implementan exactamente esa banda movil. El caso 5 (diseno, linea 206) tambien pide posiciones sin descontar la histeresis: desde centro 3000, raw=3500 daria 0,499 con H=1, no 0,5.
+- Pendiente para Claude: aclarar las expectativas de los casos 3 y 5 respecto de la banda movil antes de retomar Parte 1. No se modifico el diseno ni se implementaron supuestos.
+- Archivos modificados: solo `HANDOFF.md`. Documentacion del producto: sin cambios. Se conservaron los cambios previos del usuario en tesis/ y los archivos sin seguimiento.
+- Pruebas base: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo`, salida 0:
+  - OK suite simconnect_checks - PASS: 143619 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+  - OK comparar_ensayo
+  - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
+  - OK Pico 2 (configurado) - Sketch uses 105388 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (encoders) - Sketch uses 106540 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23256 bytes (4%) of dynamic memory, leaving 501032 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (potenciometros) - Sketch uses 106380 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
+  - OK puente SimConnect
+- Commit de esta entrega: solo `HANDOFF.md`, mensaje `HANDOFF: bloqueo de Parte 1 por expectativas de histeresis AS5600` (hash consultable en git log).
+- Pruebas finales: no corresponde repetir; no hubo cambios de codigo. Version: no creada (solo HANDOFF; ademas Parte 1 no ejecuta nueva-version.ps1).
 
 \## Revisión
 
