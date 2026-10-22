@@ -28,96 +28,49 @@
 
 \## Plan para Codex
 
-Tarea: **Reorganizar scripts de soporte en la carpeta herramientas** (Claude, 2026-10-15).
-Rama: `cambio/reorganizar-carpetas` (ya creada desde `master` = V2.4, con el diseño commiteado). Plan único, sin partes (un solo commit atómico; ver diseño 7.3).
+Tarea: Encoders magneticos AS5600 como fuente de posicion 3
 
-Diseño aprobado por el usuario: `LEEME md/DISENO_reorganizacion_carpetas.md`. Es una especificación cerrada: aplicarla tal cual, sin redactar ni decidir.
+(Claude, 2026-10-22.) Rama: `mejora/encoder-as5600` (ya creada desde `master`, con el diseño commiteado). Diseño cerrado: `LEEME md/DISENO_encoder_as5600.md`. Aplicarlo tal cual; si algo no coincide con el código real, no improvisar: anotar `BLOQUEO:` en "Última entrega" y terminar.
 
-Leer solo: secciones 3 a 9 del diseño (estructura, tabla origen → destino, cambios exactos por script, `.gitignore`, pasos, pruebas, documentación afectada). Para ubicar líneas, usar grep y leer solo esas líneas.
+Dos partes (archivos nuevos, lógica con estado, renombre en muchos archivos y 16 pruebas: riesgo de agotar el contexto en una sola sesión).
 
-Puntos a respetar:
-- Precondición P1 del diseño: no tocar ni commitear `tesis/main.tex`, `tesis/capitulos/11_maquinas_estado.tex`, `tesis/caracterizacion_motores_775.tex` ni `graphify-ino/`.
-- Movimientos con `git mv` y borrado del PDF duplicado con `git rm` (aprobado por el usuario).
-- Conservar el BOM UTF-8 de los scripts que lo tienen (diseño 5 y 8.4).
-- No editar nada de `tesis/`.
-- **No ejecutar `nueva-version.ps1`** (paso 9 omitido): la versión V2.5 la crea Claude después de la revisión.
-- Pruebas: línea base antes (P4) y diseño 8.1 a 8.6 después. Copiar en HANDOFF solo las líneas OK/FALLO.
-- Commit único del paso 8 (por nombre) y luego `herramientas/flujo/graphify-sync.cmd`.
-- Si algo del diseño no coincide con el archivo real, no improvisar: anotar `BLOQUEO:` en "Última entrega" y terminar.
+Para todas las partes:
+- Orientarse con `graphify query`/`explain`; en archivos grandes leer solo las líneas ubicadas con grep. En el diseño, leer solo las secciones indicadas.
+- No tocar `tesis/` ni `graphify-ino/` (hay cambios del usuario sin commit en `tesis/main.tex` y archivos sin seguimiento en `tesis/`: no agregarlos). Commits por nombre, nunca `git add .`/`-A`.
+- No modificar constantes de seguridad.
+- Pruebas solo con `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 ...`; copiar en HANDOFF solo las líneas OK/FALLO.
 
-Al terminar, completar "Última entrega": commit, líneas OK/FALLO (base y final), "versión: pendiente, la crea Claude" y la lista 8.7 para el usuario.
+\### Parte 1 - Renombre, lógica pura AS5600 y pruebas
+
+Leer del diseño: secciones 1, 2 (solo la lista de registros), 4.1, 4.2, 4.6 (solo los puntos de SimEffects/tests, Build-Pico2, probar.ps1), 5 y 6.
+1. Línea base: `probar.ps1 -Todo` antes de editar.
+2. Renombre `YOKE_USE_SIMULATION` → `YOKE_POSITION_SOURCE` en `mis_defines.h`, `MiYoke_PD.ino`, `CalibrationControls.h`, `SimEffects.h`, `tests/simconnect_checks.cpp`, `tests/sim_position_friction_checks.cpp`, `herramientas/compilacion/Build-Pico2.ps1` (solo renombre en .ino y CalibrationControls en esta parte).
+3. `mis_defines.h`: bloque de 4.1 completo (bandera nueva con `#error` de renombre, bloque AS5600 y `static_assert`).
+4. Nuevo `As5600Position.h` (4.2) y `tests/as5600_checks.h` con los 16 casos de la sección 5, incluido y llamado en `tests/simconnect_checks.cpp`.
+5. Agregar el switch `-As5600` a `Build-Pico2.ps1` y `probar.ps1` (4.6), pero **no ejecutarlo en esta parte**: el modo 3 no compila hasta que la Parte 2 agregue el driver (es lo esperado). `-Todo` todavía no debe incluir `-As5600` en esta parte; la Parte 2 lo agrega.
+6. Pruebas: `probar.ps1 -Todo` OK. Comprobación de renombre de la sección 5: solo las líneas `#ifdef`/`#error` de `mis_defines.h`.
+7. Commit por nombre: `Renombra YOKE_USE_SIMULATION a YOKE_POSITION_SOURCE y agrega logica pura AS5600 con pruebas`. Si se tocó `MiYoke_PD.ino`: `herramientas/flujo/graphify-sync.cmd`.
+8. No ejecutar `nueva-version.ps1`. Completar "Última entrega" (Parte 1): commit, líneas OK/FALLO base y final, desvíos.
+
+\### Parte 2 - Driver I2C, integración en el firmware, documentación y versión
+
+Leer del diseño: secciones 3, 4.3, 4.4, 4.5, 4.6 (LoopSupervisor, CalibrationControls, health_checks), 5 (compilaciones y ensayo), 6, 8 y 9. Precondición: Parte 1 commiteada y verde.
+1. Nuevo `YokeI2C.h` y cambio en `LcdTelemetry.h` (4.3; la rama `WIRE_HAS_TIMEOUT` queda como está, solo cambia el literal).
+2. Nuevo `AxisAs5600.h` (4.4).
+3. `MiYoke_PD.ino` (4.5), `LoopSupervisor.h`, `CalibrationControls.h`, `tests/health_checks.h` (4.6). Incluir `-As5600` en `-Todo` de `probar.ps1`.
+4. Pruebas: `probar.ps1 -Todo -As5600` OK; informar programa/RAM del build AS5600 frente al configurado. Comprobación de renombre (sección 5) sin resultados fuera de `mis_defines.h`.
+5. Documentación (sección 8, sin `tesis/`): nuevo `LEEME md/LEEME_AS5600.md` (con la sección 9 y el ensayo con hardware de la sección 5) y los LEEME/INVENTARIO/AGENTS/CLAUDE/SKILL listados, solo las partes afectadas.
+6. Commit por nombre (código + documentación): `Agrega fuente de posicion 3: encoders magneticos AS5600 por I2C`. Luego `herramientas/flujo/graphify-sync.cmd`.
+7. Versión: `powershell -ExecutionPolicy Bypass -File herramientas/flujo/nueva-version.ps1 -Mensaje "Agrega fuente de posicion 3 (encoders AS5600 I2C) y renombra YOKE_USE_SIMULATION a YOKE_POSITION_SOURCE"`; verificar "Version Vx.y creada" y el ACTUALIZACION.
+8. Completar "Última entrega" (Parte 2): commits, líneas OK/FALLO, tamaños, versión creada, y lo que el usuario debe ensayar cuando tenga los sensores.
 
 \## Última entrega
 
-- Reorganizacion implementada segun secciones 3 a 9 del diseno, rama `cambio/reorganizar-carpetas`: 16 scripts movidos con `git mv` a `herramientas/compilacion`, `herramientas/ensayos` y `herramientas/flujo`; rutas de raiz explicitas; PDF duplicado de la raiz eliminado con `git rm`; `.gitignore` anclado a `/ensayos/`.
-- Documentacion actualizada: `AGENTS.md`, `CLAUDE.md`, regla 6 de `HANDOFF.md`, `.claude/skills/verificacion-antes-de-terminar/SKILL.md`, `LEEME md/ENSAYOS.md`, `LEEME md/LEEME_PICO2.md`, `LEEME md/LEEME_SIMCONNECT.md`, `LEEME md/INVENTARIO_CODIGO.md`. Tesis, firmware, lanzador y diseno sin editar.
-- Commit unico: el que contiene esta entrega, con titulo `Reorganiza scripts de soporte en herramientas/ (compilacion, ensayos, flujo) y elimina PDF duplicado de la raiz` (consultar `git log -1 --oneline` al revisar).
-- Version: pendiente, la crea Claude despues de la revision (no se ejecuto `nueva-version.ps1`, segun P3).
-- BLOQUEO: el criterio literal de 8.5 exige que cambie LastWriteTime de `graphify-ino/MiYoke_PD_ino.cpp`, pero `copy /y` conserva la fecha del origen. La copia y el INO tienen 23770 bytes, el mismo SHA-256 B4CD68D4C47D347547A816A386441F157B93E452E28CC314B9B1A37250475E9C y fecha UTC 2026-10-13 21:39:03. Una copia de control en tmp confirma la conservacion de fecha. `graphify-sync.cmd` se implemento literalmente, sin redisenarlo. Claude debe resolver ese criterio antes de aprobar; no se cambio la fecha artificialmente.
-
-Linea base (P4):
-
-```text
-FALLO compilacion latexmk (codigo -1):
-OK suite simconnect_checks - PASS: 143619 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
-OK comparar_ensayo
-OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-OK Pico 2 (configurado) - Sketch uses 105388 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
-OK Pico 2 (encoders) - Sketch uses 106540 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23256 bytes (4%) of dynamic memory, leaving 501032 bytes for local variables. Maximum is 524288 bytes.
-OK Pico 2 (potenciometros) - Sketch uses 106380 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
-OK puente SimConnect
-OK compilacion latexmk (0 referencias indefinidas, 8 errores ignorados por LaTeX). PDF en tmp\tesis-build
-```
-
-La primera compilacion LaTeX fallo dentro del sandbox. Repetida con acceso a MiKTeX dio el OK registrado arriba; no se editaron archivos de tesis.
-
-Final (8.1):
-
-```text
-OK suite simconnect_checks - PASS: 143619 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
-OK comparar_ensayo
-OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-OK Pico 2 (configurado) - Sketch uses 105388 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
-OK Pico 2 (encoders) - Sketch uses 106540 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23256 bytes (4%) of dynamic memory, leaving 501032 bytes for local variables. Maximum is 524288 bytes.
-OK Pico 2 (potenciometros) - Sketch uses 106380 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
-OK puente SimConnect
-OK compilacion latexmk (0 referencias indefinidas, 8 errores ignorados por LaTeX). PDF en tmp\tesis-build
-```
-
-Comprobaciones 8.2 a 8.6 y 8.8:
-
-```text
-OK suite simconnect_checks - PASS: 143619 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
-OK comparar_ensayo
-OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-OK sintaxis PowerShell: 11 scripts, 0 errores; BOM solo en BANCO, Build-Bridge, CICLOS y ENSAYO.
-OK PSScriptRoot: 10 calculos de raiz y 2 referencias hermanas a FALLA.ps1.
-OK lanzar-codex: REPO apunta a MiYoke_PD; titulo Parte 1 - Reorganizar scripts de soporte en la carpeta herramientas.
-OK ARRANQUE sin hardware: Error: No existe la entrada: noexiste.csv; codigo 1.
-OK estructura: 35 archivos versionados en la raiz; UF2 en build-pico2, build-pico2-encoders y build-pico2-potentiometers; sin build-pico2 en herramientas/compilacion.
-OK gitignore: herramientas/ensayos/ENSAYO.ps1 no ignorado; ensayos/x ignorado por /ensayos/.
-OK graphify update desde TEMP: 1244 nodos, 1626 aristas; rutas nuevas indexadas.
-FALLO criterio 8.5 graphify-sync: fecha sin actualizar (copy conserva la del origen; ver BLOQUEO).
-```
-
-- La primera copia graphify en sandbox fue denegada; se repitio con acceso de escritura. La igualdad de hashes confirma la copia correcta. No se altero manualmente graphify-ino ni se incluyo en el commit.
-- Los cambios previos del usuario en tesis/main.tex, tesis/capitulos/11_maquinas_estado.tex, tesis/caracterizacion_motores_775.tex y graphify-ino/ se conservan fuera del commit. Sin carga de firmware ni ensayos de hardware.
-- Siguiente: Claude revisa el commit, resuelve el criterio 8.5 y crea V2.5 segun P3.
-
-Verificacion manual del usuario (8.7, pendiente):
-1. Doble clic en el acceso directo del escritorio `INICIAR SIMULADOR V3`: debe iniciar igual que antes.
-2. Doble clic en `herramientas\ensayos\ENSAYO.cmd`: debe crear `MiYoke_PD\ensayos\<fecha>_vuelo1\rutina.txt` en la raiz. Si es solo una prueba, cerrar la ventana y borrar esa carpeta.
-3. Primer `ARRANQUE.cmd`/`BANCO.ps1` real: comprobar que los registros aparecen en `ensayos\` de la raiz.
+- (vacío: tarea nueva, a completar por Codex.)
 
 \## Revisión
 
-- Revisor: Claude con el subagente Code Reviewer (2026-10-15). **`fd2e420`: APROBADA.**
-  - 16 renombres y borrado del PDF duplicado; sin archivos de tesis/ ni graphify-ino/.
-  - Todas las rutas usan la raíz del repo (verificado archivo por archivo); BOM y CRLF conservados; `.gitignore` con `/ensayos/`.
-  - `nueva-version.ps1`: versiones fuera del repo, `$flujo` excluye solo las 4 herramientas de flujo/.
-  - Pruebas del revisor: `probar.ps1 -Pico` desde otra carpeta OK; `ARRANQUE.ps1` con entrada inexistente falla con mensaje claro.
-  - El BLOQUEO de 8.5 (fecha de la copia de graphify-ino) era un criterio mal planteado del diseño: `copy` conserva la fecha. Contenido y SHA-256 iguales: resuelto.
-  - Errata del plan de Claude (barra seguida de f convertida en salto de pagina en la ruta de graphify-sync): corregida.
+- (vacío: la completa Claude al revisar.)
 
 \## Ensayos del usuario
 
