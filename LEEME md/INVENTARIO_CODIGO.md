@@ -16,7 +16,7 @@ Estados:
 | Archivo | Estado | Para qué |
 |---|---|---|
 | `MiYoke_PD.ino` | USO | Programa principal de la Pico 2. Lazo de control de 2 ms: lee la posición, recibe la telemetría SC8, calcula los efectos y comanda los motores. También maneja el menú, el LCD, el registro y la supervisión. |
-| `mis_defines.h` | USO | Configuración única del hardware: pines, signos, límites, fuente de posición (`YOKE_USE_SIMULATION`: 0 encoders, 1 SimConnect, 2 potenciómetros) y activación de efectos. |
+| `mis_defines.h` | USO | Configuración única del hardware: pines, signos, límites, fuente de posición (`YOKE_POSITION_SOURCE`: 0 encoders, 1 SimConnect, 2 potenciómetros, 3 AS5600) y activación de efectos. |
 | `SimEffects.h` | USO | Núcleo del cálculo de fuerzas: centrado, damper, fricción, turbulencia, buffets y suelo. Combina efectos y ganancias en el comando PWM por eje. |
 | `SimTelemetry.h` | USO | Protocolo serie con el puente (tramas, CRC y receptor). Documenta las versiones v1 a v7 del protocolo y el SC8 actual. |
 | `RawTelemetry.h` | USO | Formato de la trama SC8: 22 variables de SimConnect en unidades originales (float32). También lo usa el puente. |
@@ -37,9 +37,12 @@ Estados:
 | `PicoLog.h` | USO | Formato de las líneas de registro que la Pico envía al puente para los ensayos. |
 | `LoopSupervisor.h` | USO | Supervisa la etapa del lazo y las demoras, y registra la causa de reinicios y fallas (diagnóstico de HardFault). |
 | `UsbGuard.h` | USO | Bloqueo del mutex USB de TinyUSB para que el lazo no choque con la tarea USB. |
-| `AxisEncoders.h` | USO (condicional) | Lectura de encoders de roll y pitch. Se compila solo con `YOKE_USE_SIMULATION 0` (hoy está en 1). |
+| `AxisEncoders.h` | USO (condicional) | Lectura de encoders de roll y pitch. Se compila solo con `YOKE_POSITION_SOURCE 0` (hoy está en 1). |
 | `PicoEncoder.h` | USO (condicional) | Cuadratura x4 por interrupción para la Pico. Lo usa `AxisEncoders.h`. |
-| `AxisPotentiometers.h` | USO (condicional) | Lectura de los potenciómetros por ADC0/ADC1. Se compila solo con `YOKE_USE_SIMULATION 2`. |
+| `AxisPotentiometers.h` | USO (condicional) | Lectura de los potenciómetros por ADC0/ADC1. Se compila solo con `YOKE_POSITION_SOURCE 2`. |
+| `As5600Position.h` | USO (condicional) | Logica pura AS5600: centro, acumulacion de vueltas, histeresis, fallas y bloqueo; pruebas en `tests/as5600_checks.h`. |
+| `AxisAs5600.h` | USO (condicional) | Driver I2C de los dos AS5600 en modo 3: lecturas, CONF, estado e informe AGC. |
+| `YokeI2C.h` | USO | Configuracion de I2C0 compartida por LCD y AS5600 de pitch. |
 | `PotentiometerPosition.h` | USO | Convierte la lectura ADC en posición y valida la calibración en tiempo de compilación. |
 | `AxisMotion.h`, `filters.h`, `filters.cpp` | ELIMINADOS | Estimador de velocidad de la "Etapa 2" (τ = 18 ms, `VELOCITY_FILTER_TAU_S`), sin uso. Se eliminaron el 2026-10-15; la velocidad la filtra `YokeMotion.h` con τ = 40 ms. |
 
@@ -87,7 +90,7 @@ Estados:
 | Archivo | Estado | Para qué |
 |---|---|---|
 | `probar.ps1` | COMPILAR | Comando único de verificación: suite de pruebas, comparador y, con opciones, firmware y puente. Salida de una línea por paso. |
-| `Build-Pico2.ps1` | COMPILAR | Compila el firmware de la Pico 2 con `arduino-cli`, con variantes de encoders, potenciómetros o prueba de falla. |
+| `Build-Pico2.ps1` | COMPILAR | Compila el firmware de la Pico 2 con `arduino-cli`, con variantes de encoders, potenciómetros, AS5600 o prueba de falla. |
 | `Build-Bridge.ps1` | COMPILAR | Compila `YokeSimConnectBridge.exe` con MSBuild. |
 | `Build-WaitForFlight.ps1` | COMPILAR | Compila `WaitForFlight.exe`. `probar.ps1` no lo incluye; se ejecuta a mano si cambia `WaitForFlight.cpp`. |
 

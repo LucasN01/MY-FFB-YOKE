@@ -3,10 +3,10 @@
 Seleccionar en `mis_defines.h` y recompilar:
 
 ```cpp
-#define YOKE_USE_SIMULATION 2
+#define YOKE_POSITION_SOURCE 2
 ```
 
-0 = encoders; 1 = posicion SimConnect; 2 = potenciometros. El valor guardado
+0 = encoders; 1 = posicion SimConnect; 2 = potenciometros; 3 = AS5600 (ver [LEEME_AS5600.md](LEEME_AS5600.md)). El valor guardado
 por defecto sigue siendo 1. `Build-Pico2.ps1 -Potentiometers` fuerza 2 sin
 editar ese valor y genera `build-pico2-potentiometers/MiYoke_PD_V2.3.ino.uf2`.
 El script de compilacion actual apunta a **Pico 2**; no cargar ese UF2 en una

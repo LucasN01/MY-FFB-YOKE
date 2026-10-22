@@ -9,7 +9,7 @@
 namespace YokeHealth {
 enum Stage : uint8_t { Idle=0, SerialRx=1, Calibration=2, FlashSave=3, Effects=4,
     Motion=5, Force=6, Motor=7, ModelLog=8, DebugLog=9, Lcd=10, PotRead=11,
-    SerialTx=12, Between=14, TestHang=15 };
+    SerialTx=12, Between=14, TestHang=15, SensorRead=16 };
 struct StageTimer {
     uint8_t current=Idle, worst=Idle; uint32_t since=0, worstUs=0;
     void begin(uint32_t us) { current=Idle; since=us; worst=Idle; worstUs=0; }
@@ -74,6 +74,7 @@ inline const char* stageName(uint8_t s) {
     case SerialTx: return "SERIE_TX";
     case Between: return "ENTRE_CICLOS";
     case TestHang: return "PRUEBA";
+    case SensorRead: return "SENSOR_I2C";
     default: return "?";
     }
 }

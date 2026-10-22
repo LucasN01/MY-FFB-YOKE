@@ -1,6 +1,6 @@
 > Nuevo: [menu de calibracion de ganancias y cableado de pulsadores/LED](MENU_CALIBRACION.md). Guarda las ganancias en la Pico y arranca en modo normal.
 
-> Ajustes actuales (01/10/2026): [AJUSTE_FUERZAS_Y_MOVIMIENTO.md](AJUSTE_FUERZAS_Y_MOVIMIENTO.md). Fuente unica simulacion/encoders, sin potenciometros.
+> Ajustes actuales (01/10/2026): [AJUSTE_FUERZAS_Y_MOVIMIENTO.md](AJUSTE_FUERZAS_Y_MOVIMIENTO.md). Fuente unica seleccionable: simulacion, encoders AB, potenciometros o AS5600.
 
 > Configuracion actual: esta Pico recibe SimConnect por USB CDC y controla motores, sin joystick HID ni envio de ejes a Prepar3D. Otra placa maneja los ejes del simulador. La lectura de sensores y la velocidad filtrada local (YokeMotion.h) se conservan.
 > Se utiliza la respuesta YOKE17SC5 que identifica la placa ante el puente y el diagnostico serie; ninguno controla ejes del simulador. Verificar el puerto COM tras cargar el nuevo firmware.
@@ -20,7 +20,7 @@ Actualizacion 30/09/2026. No requiere habilitar FFB nativo en Prepar3D.
 
 ## Cargar firmware
 
-Ejecutar `./herramientas/compilacion/Build-Pico2.ps1` para la fuente elegida por YOKE_USE_SIMULATION (1=simulacion, 0=encoders, 2=potenciometros), o `./herramientas/compilacion/Build-Pico2.ps1 -Encoders` para forzar encoders; `./herramientas/compilacion/Build-Pico2.ps1 -Potentiometers` fuerza ADC0/ADC1.
+Ejecutar `./herramientas/compilacion/Build-Pico2.ps1` para la fuente elegida por YOKE_POSITION_SOURCE (1=simulacion, 0=encoders, 2=potenciometros, 3=AS5600), o `./herramientas/compilacion/Build-Pico2.ps1 -Encoders` para forzar encoders; `./herramientas/compilacion/Build-Pico2.ps1 -Potentiometers` fuerza ADC0/ADC1; `./herramientas/compilacion/Build-Pico2.ps1 -As5600` fuerza modo 3 y genera `build-pico2-as5600/`. Ver [LEEME_AS5600.md](LEEME_AS5600.md). Para verificar: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo -As5600` (AS5600 tambien esta incluido en `-Todo`).
 Con BOOTSEL, copiar a la unidad RP2350 el archivo correspondiente:
 
 - `build-pico2/MiYoke_PD_V2.3.ino.uf2`

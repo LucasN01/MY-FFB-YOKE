@@ -11,6 +11,7 @@
 #endif
 #include <string.h>
 #include "mis_defines.h"
+#include "YokeI2C.h"
 
 // LCD HD44780 con adaptador PCF8574 habitual:
 // P0=RS, P1=RW, P2=E, P3=luz, P4..P7=D4..D7.
@@ -115,19 +116,7 @@ private:
     char _menuRows[2][17]={{0},{0}};
 
     void configureBus() {
-#if defined(ARDUINO_ARCH_RP2040)
-        Wire.setSDA(LCD_SDA_PIN);
-        Wire.setSCL(LCD_SCL_PIN);
-#endif
-        Wire.begin();
-#if defined(ARDUINO_ARCH_RP2040)
-        Wire.setTimeout(2, true);
-#endif
-        Wire.setClock(100000UL);
-#if defined(WIRE_HAS_TIMEOUT)
-        Wire.setWireTimeout(1500, true);
-        Wire.clearWireTimeoutFlag();
-#endif
+        YokeI2C::configureBus0();
     }
 
     void schedule(State state, uint16_t waitMs) {
@@ -152,7 +141,7 @@ private:
 			// Reiniciar el perif�rico I2C despu�s de un bus trabado.
 			Wire.end();
 			Wire.begin();
-			Wire.setClock(100000UL);
+			Wire.setClock(YOKE_I2C0_HZ);
 			Wire.setWireTimeout(1500, true);
 		}
 		#endif

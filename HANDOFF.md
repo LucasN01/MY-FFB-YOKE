@@ -66,35 +66,31 @@ Leer del diseño: secciones 3, 4.3, 4.4, 4.5, 4.6 (LoopSupervisor, CalibrationCo
 
 \## Última entrega
 
-- Parte 1 completada (Codex, 2026-10-22), sin bloqueos. Revision aplicada: casos 3, 4 y 5 descuentan H segun el diseno corregido por Claude.
-- Archivos modificados: `mis_defines.h`, `MiYoke_PD.ino`, `CalibrationControls.h`, `SimEffects.h`, `tests/simconnect_checks.cpp`, `tests/sim_position_friction_checks.cpp`, `herramientas/compilacion/Build-Pico2.ps1`, `herramientas/compilacion/probar.ps1`; nuevos `As5600Position.h` y `tests/as5600_checks.h`.
-- Implementado: renombre, configuracion y validaciones AS5600, logica pura con los 16 casos de prueba y switch `-As5600`. Solo renombre en .ino y CalibrationControls; `-Todo` todavia no incluye AS5600. Constantes de seguridad sin cambios.
-- Documentacion actualizada: este HANDOFF. Documentacion del producto y tesis pendientes de Parte 2 segun el plan; no se abrio ni modifico tesis/. Se conservaron los cambios previos del usuario y archivos sin seguimiento.
-- Pruebas base: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo`, salida 0:
-  - OK suite simconnect_checks - PASS: 143619 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+- Parte 2 implementada (Codex, 2026-10-22), sin bloqueos de implementacion. Parte 1 OK segun el usuario; revision de Parte 2 pendiente de Claude.
+- Codigo: nuevos `YokeI2C.h` y `AxisAs5600.h`; modificados `LcdTelemetry.h`, `MiYoke_PD.ino`, `LoopSupervisor.h`, `CalibrationControls.h`, `tests/health_checks.h`, `herramientas/compilacion/probar.ps1` y `.gitignore`.
+- Implementado segun diseno: buses compartido/propio, CONF volatil verificada y comprobada cada segundo alternando ejes, lectura de STATUS/RAW y AGC, estado serie, etapa SENSOR_I2C=16, excusa del hueco de flash, fuerza cero si cualquier eje no esta sano y reinicio del estimador de velocidad. Constantes de seguridad sin cambios. `-Todo` incluye AS5600.
+- Documentacion: nuevo `LEEME md/LEEME_AS5600.md`; actualizados `AJUSTE_FUERZAS_Y_MOVIMIENTO.md`, `LEEME_POTENCIOMETROS.md`, `LEEME_SIMCONNECT.md`, `MENU_CALIBRACION.md`, `MOBIFLIGHT_PICO_Y_UNO.md`, `LEEME_PICO2.md`, `LEEME_ENCODERS.md`, `CENTRADO_Y_RODAJE.md` e `INVENTARIO_CODIGO.md` (todos en `LEEME md/`), mas switches de `AGENTS.md`, `CLAUDE.md` y `.claude/skills/verificacion-antes-de-terminar/SKILL.md`.
+- Tesis pendiente de Claude al aprobar: `tesis/capitulos/03_centrado.tex`, `09_damper.tex`, `10_friccion.tex` y `tesis/fundamento_efectos/` segun seccion 8 del diseno. No se abrio ni modifico tesis/; sus cambios previos y archivos sin seguimiento se conservan.
+- Pruebas: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo -As5600`, salida 0:
+  - OK suite simconnect_checks - PASS: 143769 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
   - OK comparar_ensayo
   - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-  - OK Pico 2 (configurado) - Sketch uses 105388 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (encoders) - Sketch uses 106540 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23256 bytes (4%) of dynamic memory, leaving 501032 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (potenciometros) - Sketch uses 106380 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (configurado) - Sketch uses 105404 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (encoders) - Sketch uses 106556 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23256 bytes (4%) of dynamic memory, leaving 501032 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (potenciometros) - Sketch uses 106388 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
+  - OK Pico 2 (AS5600) - Sketch uses 106940 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23084 bytes (4%) of dynamic memory, leaving 501204 bytes for local variables. Maximum is 524288 bytes.
   - OK puente SimConnect
-- Pruebas finales: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo`, salida 0:
-  - OK suite simconnect_checks - PASS: 143765 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
-  - OK comparar_ensayo
-  - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-  - OK Pico 2 (configurado) - Sketch uses 105388 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (encoders) - Sketch uses 106540 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23256 bytes (4%) of dynamic memory, leaving 501032 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (potenciometros) - Sketch uses 106380 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
-  - OK puente SimConnect
-- Comprobacion de renombre: en codigo/scripts fuera de tesis/ solo quedan `#ifdef` y `#error` de `mis_defines.h:55-56`. La busqueda general todavia encuentra la documentacion y el plan de HANDOFF; su actualizacion corresponde a Parte 2.
-- `git diff --check`: sin errores. `herramientas/flujo/graphify-sync.cmd` y `graphify update .` ejecutados; copia .ino verificada por SHA256. La copia inicial dio acceso denegado en sandbox; ejecutar la sincronizacion con permisos ampliados resolvio el problema.
-- Commit de esta entrega (codigo y HANDOFF): `Renombra YOKE_USE_SIMULATION a YOKE_POSITION_SOURCE y agrega logica pura AS5600 con pruebas` (hash consultable en git log).
-- Version: no creada; el paso 8 de Parte 1 la reserva para Parte 2. No se compilo `-As5600`, como exige esta parte.
-- Sigue: Parte 2 del plan (driver I2C, integracion, documentacion y version). Observacion para Parte 2: `.gitignore` enumera builds concretos y no tiene el patron `build-pico2*/` supuesto por el diseno; falta cubrir `build-pico2-as5600/` antes de generar ese build. No se amplio el alcance de Parte 1.
+- AS5600 frente a configurado: +1536 bytes de programa y +164 bytes de RAM. Sin advertencias nuevas de compilacion.
+- Renombre: fuera de tesis/ y documentos DISENO_*, solo quedan las dos lineas de compatibilidad de `mis_defines.h` y las menciones literales del Plan para Codex en este HANDOFF (pasos/commit/mensaje historicos); ningun otro archivo conserva la bandera anterior.
+- `git diff --check`: sin errores. `.gitignore` requirio agregar `build-pico2-as5600/` porque enumeraba builds concretos; `git check-ignore` confirmado. Sin cambios fuera del alcance.
+- Grafo: `herramientas/flujo/graphify-sync.cmd` y `graphify update .` ejecutados; copia .ino verificada por SHA256. La copia inicial dio acceso denegado en sandbox; la sincronizacion con permisos ampliados lo resolvio.
+- Commit de implementacion: `Agrega fuente de posicion 3: encoders magneticos AS5600 por I2C` (hash consultable en git log).
+- Version: pendiente de ejecutar el script inmediatamente despues del commit. Se usara un worktree limpio del mismo commit, junto al repositorio, para preservar sin tocar los cambios de tesis del usuario que impiden versionar desde el arbol original.
+- Ensayo pendiente del usuario cuando tenga sensores: s=OK y g cerca de 64 en ambos ejes; a= suave, sentido/magnitud correctos en todo el recorrido; desconexion SDA corta fuerza, reconexion recupera con centro absoluto o BLQ hasta reiniciar con centro al encender y hueco >40 ms. Comparar loopWorstUs/ciclos lentos con modo 2 sin aumento. Detalle en `LEEME md/LEEME_AS5600.md`. No se cargo firmware ni se hizo ensayo con hardware.
 
 \## Revisión
 
-- BLOQUEO de Parte 1 (histeresis) resuelto por Claude (2026-10-22): el bloqueo era correcto; los casos 3, 4 y 5 de la seccion 5 del diseno ahora descuentan H. Retomar la Parte 1 desde el paso 2 (la linea base ya esta hecha).
+- Parte 1: OK informado por el usuario (2026-10-22). Parte 2: pendiente de Claude.
 
 \## Ensayos del usuario
 

@@ -3,6 +3,8 @@
 #include "AxisEncoders.h"
 #elif YOKE_POSITION_SOURCE == 2
 #include "AxisPotentiometers.h"
+#elif YOKE_POSITION_SOURCE == 3
+#include "AxisAs5600.h"
 #endif
 #include "YokeMotion.h"
 #include "MotorDriver.h"
@@ -89,6 +91,8 @@ YokeSC::Effects simEffects(gainSettings);
 AxisEncoders positionInput;
 #elif YOKE_POSITION_SOURCE == 2
 AxisPotentiometers positionInput(potSettings);
+#elif YOKE_POSITION_SOURCE == 3
+AxisAs5600 positionInput;
 #endif
 #if YOKE_POSITION_SOURCE != 1
 YokeMotion localMotion[2];
@@ -161,6 +165,15 @@ void debugPrintMotion(unsigned long now, const float* motorCommands) {
         (long)(yokeVelocity[axis] * 1000.0f),
         (int)(motorCommands[axis] * 10000.0f), (int)pwm,
         printPitch ? " | " : "\n");
+#elif YOKE_POSITION_SOURCE == 3
+    const int length = snprintf_P(
+        line, sizeof(line), PSTR("%c a=%u s=%s g=%u x=%ld v=%ld f=%d p=%d%s"),
+        printPitch ? 'P' : 'R', (unsigned)positionInput.raw(axis),
+        positionInput.statusText(axis), (unsigned)positionInput.agc(axis),
+        (long)(yokePosition[axis] * 10000.0f),
+        (long)(yokeVelocity[axis] * 1000.0f),
+        (int)(motorCommands[axis] * 10000.0f), (int)pwm,
+        printPitch ? " | " : "\n");
 #else
     // v: velocidad en milesimas/s. f: comando SimConnect en 1/10000.
     // p: PWM final con polaridad.
@@ -226,7 +239,7 @@ void setup() {
 #endif
     lcd.begin(); // programar inicio; LCD se inicializa por etapas desde update()
 #if YOKE_POSITION_SOURCE != 1
-    positionInput.begin(); // encoders: centrar al iniciar; potes: centro calibrado
+    positionInput.begin(); // encoders: centrar al iniciar; potes: centro calibrado; AS5600: centro configurado o al encender
 #endif
     lastControlLoopUs = micros();
 #if YOKE_CALIBRATION_ENABLED
@@ -260,6 +273,9 @@ void loop() {
 #if YOKE_CALIBRATION_ENABLED
     calibration.menu.potReadings(positionInput.raw(0),positionInput.raw(1));
 #endif
+#elif YOKE_POSITION_SOURCE == 3
+    markStage(YokeHealth::SensorRead);
+    positionInput.update(now);
 #endif
 
 #if SIMCONNECT_ADDITIONS_ENABLED
@@ -295,6 +311,9 @@ void loop() {
         rp2040.wdt_begin(YOKE_WDT_FLASH_MS);
 #endif
         calibration.save();
+#if YOKE_POSITION_SOURCE == 3
+        positionInput.excuseGap();
+#endif
 #if defined(ARDUINO_ARCH_RP2040)
         rp2040.wdt_begin(YOKE_WDT_MS);
 #endif
@@ -323,6 +342,9 @@ void loop() {
         rp2040.wdt_begin(YOKE_WDT_FLASH_MS);
 #endif
         calibration.save();
+#if YOKE_POSITION_SOURCE == 3
+        positionInput.excuseGap();
+#endif
 #if defined(ARDUINO_ARCH_RP2040)
         rp2040.wdt_begin(YOKE_WDT_MS);
 #endif
@@ -356,6 +378,14 @@ void loop() {
     const float positions[2]={positionInput.position(0),positionInput.position(1)};
 #endif
     for(uint8_t axis=0;axis<2;++axis) {
+#if YOKE_POSITION_SOURCE == 3
+        if(!positionInput.healthy()) {
+            localMotion[axis].reset();
+            yokePosition[axis]=positionInput.position(axis);
+            yokeVelocity[axis]=0;
+            continue;
+        }
+#endif
         localMotion[axis].update(positions[axis],nowUs);
         yokePosition[axis]=localMotion[axis].position;
         yokeVelocity[axis]=localMotion[axis].velocity;
@@ -373,6 +403,9 @@ void loop() {
 #endif
 #if YOKE_CALIBRATION_ENABLED
     if(calibration.menu.active()) motorCommands[0]=motorCommands[1]=0;
+#endif
+#if YOKE_POSITION_SOURCE == 3
+    if(!positionInput.healthy()) motorCommands[0]=motorCommands[1]=0;
 #endif
     const float motorCommandRoll = motorCommands[0];
     const float motorCommandPitch = motorCommands[1];

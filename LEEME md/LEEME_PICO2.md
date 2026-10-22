@@ -1,4 +1,4 @@
-> Antecedente de versiones anteriores. Los ajustes y seleccion de fuente vigentes estan en [AJUSTE_FUERZAS_Y_MOVIMIENTO.md](AJUSTE_FUERZAS_Y_MOVIMIENTO.md). Usar YOKE_USE_SIMULATION (1=simulacion, 0=encoders, 2=potenciometros ADC en Pico); ver LEEME_POTENCIOMETROS.md para el modo 2 actual. Los valores de ganancias y banderas anteriores de este documento ya no aplican.
+> Antecedente de versiones anteriores. Los ajustes y seleccion de fuente vigentes estan en [AJUSTE_FUERZAS_Y_MOVIMIENTO.md](AJUSTE_FUERZAS_Y_MOVIMIENTO.md). Usar YOKE_POSITION_SOURCE (1=simulacion, 0=encoders, 2=potenciometros ADC en Pico, 3=AS5600; ver LEEME_AS5600.md); ver LEEME_POTENCIOMETROS.md para el modo 2 actual. Los valores de ganancias y banderas anteriores de este documento ya no aplican.
 
 > Version actual: fuerzas solo por SimConnect; sin CONSTANT/SINE ni centrado. Ver [LEEME_SIMCONNECT.md](LEEME_SIMCONNECT.md).
 
@@ -27,7 +27,7 @@ No se necesita MicroPython ni un sistema operativo en la Pico.
 
 Binarios generados:
 
-- `build-pico2/MiYoke_PD_V2.2.ino.uf2`: posicion desde SimConnect (YOKE_USE_SIMULATION=1), configuracion predeterminada.
+- `build-pico2/MiYoke_PD_V2.2.ino.uf2`: posicion desde SimConnect (YOKE_POSITION_SOURCE=1), configuracion predeterminada.
 - `build-pico2-encoders/MiYoke_PD_V2.2.ino.uf2`: encoders, con la bandera de sensores en 0.
 
 Los binarios reflejan la configuracion del momento de compilacion. Si se cambian

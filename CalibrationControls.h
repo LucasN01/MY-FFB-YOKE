@@ -15,7 +15,8 @@ constexpr bool available(uint8_t p) {
         p!=PITCH_ENC_A && p!=PITCH_ENC_B && p!=ROLL_PWM_LEFT && p!=ROLL_PWM_RIGHT &&
         p!=PITCH_PWM_LEFT && p!=PITCH_PWM_RIGHT && p!=ROLL_EN_PIN && p!=PITCH_EN_PIN &&
         p!=LCD_SDA_PIN && p!=LCD_SCL_PIN &&
-        (YOKE_POSITION_SOURCE!=2 || (p!=ROLL_POT_PIN && p!=PITCH_POT_PIN));
+        (YOKE_POSITION_SOURCE!=2 || (p!=ROLL_POT_PIN && p!=PITCH_POT_PIN)) &&
+        (YOKE_POSITION_SOURCE!=3 || (p!=ROLL_AS5600_SDA_PIN && p!=ROLL_AS5600_SCL_PIN));
 }
 constexpr bool valid(uint8_t i=0,uint8_t j=1) {
     return i>=7 ? true : (!available(all[i]) ? false :

@@ -33,7 +33,7 @@ observar si vuelve a ocurrir durante la falla de los mandos.
    la alimentación de potencia de los motores.
 2. Desconectar la Pico del USB. Mantener BOOTSEL mientras se vuelve a conectar.
 3. Copiar `build-pico2/MiYoke_PD_V2.3.ino.uf2` a la unidad de arranque RP2350.
-   Este archivo usa la posición de SimConnect (YOKE_USE_SIMULATION=1), como
+   Este archivo usa la posición de SimConnect (YOKE_POSITION_SOURCE=1), como
    está configurado actualmente. No elegir los archivos V2.1 o V2.2 que también
    están en esa carpeta. La variante de encoders es para sensores locales.
 4. Dejar que reinicie y anotar el COM que aparece en Administrador de dispositivos.

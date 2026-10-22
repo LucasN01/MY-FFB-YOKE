@@ -4,9 +4,9 @@
 static void healthChecks() {
     using namespace YokeHealth;
     const uint8_t stages[]={Idle,SerialRx,Calibration,FlashSave,Effects,Motion,Force,
-        Motor,ModelLog,DebugLog,Lcd,PotRead,SerialTx,TestHang};
+        Motor,ModelLog,DebugLog,Lcd,PotRead,SerialTx,TestHang,SensorRead};
     const char* names[]={"INACTIVO","SERIE_RX","CALIB","FLASH","EFECTOS","MOVIM",
-        "FUERZA","MOTOR","LOGMOD","LOGDBG","LCD","POTES","SERIE_TX","PRUEBA"};
+        "FUERZA","MOTOR","LOGMOD","LOGDBG","LCD","POTES","SERIE_TX","PRUEBA","SENSOR_I2C"};
     for(unsigned i=0;i<sizeof(stages)/sizeof(stages[0]);++i) {
         uint8_t stage=127; bool fault=true;
         CHECK(decode(encode(stages[i]),stage,fault));

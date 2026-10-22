@@ -6,10 +6,10 @@
 #   -Pico            compila firmware Pico 2 con la configuracion del codigo (Build-Pico2.ps1)
 #   -Encoders        compila tambien la variante encoders
 #   -Potentiometers  compila tambien la variante potenciometros
-#   -As5600          compila tambien la variante AS5600 (aun no entra en -Todo)
+#   -As5600          compila tambien la variante AS5600 (incluida en -Todo)
 #   -Bridge          compila el puente SimConnect (Build-Bridge.ps1)
 #   -PruebaFalla     compila potenciometros con HardFault a los 20 s (no entra en -Todo)
-#   -Todo            suite, lanzador, Pico configurado, encoders, potenciometros y puente
+#   -Todo            suite, lanzador, Pico configurado, encoders, potenciometros, AS5600 y puente
 # No carga firmware ni ejecuta el simulador.
 
 param(
@@ -27,7 +27,7 @@ $ErrorActionPreference = 'Stop'
 $Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'MiYoke_PD.ino'))) { throw "No se encontro MiYoke_PD.ino en $Raiz (raiz del repositorio)." }
 Set-Location $Raiz
-if ($Todo) { $Pico = $true; $Encoders = $true; $Potentiometers = $true; $Bridge = $true }
+if ($Todo) { $Pico = $true; $Encoders = $true; $Potentiometers = $true; $As5600 = $true; $Bridge = $true }
 $fallos = 0
 
 function Resumir([string]$nombre, [int]$codigo, [string[]]$salida, [string]$patronOk, [string]$patronError) {

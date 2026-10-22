@@ -4,10 +4,10 @@ Esta guia reemplaza los ajustes de fuerza/fuente de versiones anteriores.
 Los parametros de fabrica estan en `mis_defines.h`. Las ganancias ahora se pueden editar y guardar desde el [menu de calibracion](MENU_CALIBRACION.md), sin recompilar. Otros parametros requieren recompilar y cargar el UF2. Se conserva el puente/protocolo SC4: no hace falta reemplazar
 el EXE SC4 que ya funciona.
 
-## Una sola bandera: simulacion, encoders o potenciometros
+## Una sola bandera: simulacion, encoders, potenciometros o AS5600
 
 ```cpp
-#define YOKE_USE_SIMULATION 1
+#define YOKE_POSITION_SOURCE 1
 ```
 
 - **1:** posicion y velocidad desde YOKE X/Y POSITION de SimConnect. No se
@@ -20,11 +20,14 @@ el EXE SC4 que ya funciona.
   (Pitch), velocidad local con el mismo estimador que los encoders.
   Ver [cableado y calibracion ADC](LEEME_POTENCIOMETROS.md).
 
+- **3:** posicion desde encoders magneticos AS5600 por I2C; velocidad local con el mismo estimador. Ver [cableado, montaje y configuracion](LEEME_AS5600.md).
+
 La bandera gobierna centrado y toda la compensacion por movimiento.
 `Build-Pico2.ps1` respeta la bandera y escribe en `build-pico2`.
 `-Encoders` fuerza 0 y escribe en `build-pico2-encoders`.
 `-Potentiometers` fuerza 2 y escribe en `build-pico2-potentiometers`.
-Los tres generan `MiYoke_PD_V2.3.ino.uf2` para Pico 2.
+`-As5600` fuerza 3 y escribe en `build-pico2-as5600`.
+Los cuatro generan `MiYoke_PD_V2.3.ino.uf2` para Pico 2.
 
 ## Rango y ganancias
 

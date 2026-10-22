@@ -41,7 +41,7 @@ OK y CALIBRACION no repiten. ATRAS tiene prioridad sobre OK si coinciden.
 
 ## Calibracion guiada de potenciometros
 
-Requiere `YOKE_USE_SIMULATION=2`. Los modos 0 y 1 muestran REQUIERE MODO 2
+Requiere `YOKE_POSITION_SOURCE=2`. Los modos 0, 1 y 3 muestran REQUIERE MODO 2
 al intentar iniciar; no leen ADC ni permiten guardar una calibracion ficticia.
 Roll usa ADC0/GP26 y Pitch ADC1/GP27.
 

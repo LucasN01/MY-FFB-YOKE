@@ -32,7 +32,7 @@ ANTES de afirmar cualquier estado:
 
 | Afirmacion | Evidencia necesaria | No alcanza |
 |---|---|---|
-| Pasan las pruebas | `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1` (con -Pico, -Encoders, -Potentiometers, -Bridge o -Todo segun el plan): todas las lineas OK | Una corrida anterior al ultimo cambio, "deberia pasar" |
+| Pasan las pruebas | `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1` (con -Pico, -Encoders, -Potentiometers, -As5600, -Bridge o -Todo segun el plan): todas las lineas OK | Una corrida anterior al ultimo cambio, "deberia pasar" |
 | Compila el firmware / bridge | Linea OK del paso correspondiente de `probar.ps1` | Que el editor no marque errores |
 | Compila la tesis | `powershell -ExecutionPolicy Bypass -File herramientas/flujo/compilar-tesis.ps1`: linea OK | "El LaTeX se ve bien" |
 | Version creada | Salida "Version Vx.y creada" y existe `..\MiYoke_PD_VERSIONES\Vx_y\ACTUALIZACION_Vx_y.txt` | Que el commit exista |
