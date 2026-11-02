@@ -1,7 +1,7 @@
 # Inventario de archivos de código
 
 Relevamiento del 2026-10-15 (rama `cambio/posicion-simconnect`, versión V2.3). Indica para qué se usa cada archivo de código y si quedó de versiones anteriores.
-Método: cadena de `#include` desde `MiYoke_PD.ino`, `SimConnectBridge/main.cpp` y `tests/`, archivos que compila cada `.vcxproj` y llamadas entre scripts.
+Método: cadena de `#include` desde `src/main.cpp` (antes `MiYoke_PD.ino`; firmware migrado al Pico SDK con CMake), `SimConnectBridge/main.cpp` y `tests/`, archivos que compila cada `.vcxproj` y llamadas entre scripts.
 
 Estados:
 - **USO**: forma parte del producto o de su operación.
@@ -11,11 +11,14 @@ Estados:
 - **TESIS**: herramienta para generar o respaldar documentos de la tesis.
 - **SIN USO**: nada lo incluye ni lo llama; quedó de etapas anteriores.
 
-## 1. Firmware de la Pico 2 (`MiYoke_PD.ino` y cabeceras de la raíz)
+## 1. Firmware de la Pico 2 (`src/main.cpp`, cabeceras de `include/` y capa HAL)
 
 | Archivo | Estado | Para qué |
 |---|---|---|
-| `MiYoke_PD.ino` | USO | Programa principal de la Pico 2. Lazo de control de 2 ms: lee la posición, recibe la telemetría SC8, calcula los efectos y comanda los motores. También maneja el menú, el LCD, el registro y la supervisión. |
+| `src/main.cpp` | USO | Programa principal de la Pico 2 (Pico SDK). Lazo de control de 2 ms: lee la posición, recibe la telemetría SC8, calcula los efectos y comanda los motores. También maneja el menú, el LCD, el registro y la supervisión. |
+| `CMakeLists.txt`, `pico_sdk_import.cmake` | COMPILAR | Proyecto CMake del firmware con el Pico SDK (raíz del repositorio). Las variantes se eligen con opciones que pasa `Build-Pico2.ps1`. |
+| `include/hal/*.h` | USO | Interfaces de la capa HAL (tiempo, GPIO, PWM, ADC, I2C, watchdog, EEPROM emulada, USB CDC) que usan las cabeceras del firmware. |
+| `src/hal/rp2350/` | USO | Implementación de la HAL con el Pico SDK: `time_gpio`, `pwm_adc`, `i2c`, `watchdog`, `eeprom_flash`, `usb_cdc`, `usb_descriptors`, `newlib_locks` y `tusb_config.h`. |
 | `mis_defines.h` | USO | Configuración única del hardware: pines, signos, límites, fuente de posición (`YOKE_POSITION_SOURCE`: 0 encoders, 1 SimConnect, 2 potenciómetros, 3 AS5600) y activación de efectos. |
 | `SimEffects.h` | USO | Núcleo del cálculo de fuerzas: centrado, damper, fricción, turbulencia, buffets y suelo. Combina efectos y ganancias en el comando PWM por eje. |
 | `SimTelemetry.h` | USO | Protocolo serie con el puente (tramas, CRC y receptor). Documenta las versiones v1 a v7 del protocolo y el SC8 actual. |
@@ -69,6 +72,7 @@ Estados:
 | `sim_position_friction_checks.cpp` | PRUEBA | Verifica que con posición SimConnect se use la fricción por velocidad. |
 | `calibration_checks.h`, `ground_checks.h`, `health_checks.h`, `link_checks.h`, `picolog_checks.h`, `raw_checks.h`, `realism_checks.h` | PRUEBA | Comprobaciones por tema: menú y guardado, suelo, supervisor, enlace serie, registro, trama SC8 y ruido/realismo. |
 | `comparar_ensayo.h` / `.cpp` / `.vcxproj` | USO | Programa `comparar_ensayo.exe`: al terminar un ensayo, compara la telemetría con el registro de la Pico. Lo usan `ENSAYO.ps1` y `BANCO.ps1`; lo compila `probar.ps1`. |
+| `hal_checks.cpp`, `hal_fake.cpp` / `.h`, `hal_checks.vcxproj` | PRUEBA | Pruebas en la PC de la capa HAL con un doble (`hal_fake`) en lugar del hardware. La ejecuta `probar.ps1`. |
 | `launcher_port_checks.ps1` | PRUEBA | Prueba la detección del puerto COM del lanzador con puertos simulados, sin tocar puertos reales. |
 
 ## 4. Scripts de uso del yugo (lanzador en la raíz; ensayos en `herramientas/ensayos/`)
@@ -90,7 +94,7 @@ Estados:
 | Archivo | Estado | Para qué |
 |---|---|---|
 | `probar.ps1` | COMPILAR | Comando único de verificación: suite de pruebas, comparador y, con opciones, firmware y puente. Salida de una línea por paso. |
-| `Build-Pico2.ps1` | COMPILAR | Compila el firmware de la Pico 2 con `arduino-cli`, con variantes de encoders, potenciómetros, AS5600 o prueba de falla. |
+| `Build-Pico2.ps1` | COMPILAR | Compila el firmware de la Pico 2 con el Pico SDK (CMake y Ninja), con variantes de encoders, potenciómetros, AS5600 o prueba de falla. |
 | `Build-Bridge.ps1` | COMPILAR | Compila `YokeSimConnectBridge.exe` con MSBuild. |
 | `Build-WaitForFlight.ps1` | COMPILAR | Compila `WaitForFlight.exe`. `probar.ps1` no lo incluye; se ejecuta a mano si cambia `WaitForFlight.cpp`. |
 
@@ -101,7 +105,7 @@ Estados:
 | `lanzar-codex.py` | FLUJO | Lanza a Codex como chat visible en la app de Codex, con el título de la tarea. |
 | `nueva-version.ps1` | FLUJO | Crea la versión (etiqueta y copia en `MiYoke_PD_VERSIONES`) cuando cambió código del proyecto. |
 | `compilar-tesis.ps1` | FLUJO | Compila y verifica la tesis LaTeX. Con `-CopiarPdf` deja `main.pdf` junto a `main.tex`. |
-| `graphify-sync.cmd` | FLUJO | Copia el `.ino` a `graphify-ino/` y actualiza el grafo de código que usan los agentes. |
+| `graphify-sync.cmd` | FLUJO | Actualiza el grafo de código que usan los agentes (`graphify update .`). |
 | `.claude/settings.json`, `.codex/hooks.json` | FLUJO | Configuración de Claude y Codex (permisos y hook de graphify). |
 
 ## 7. Scripts de la tesis (`tesis/`, no generan versión)
@@ -119,7 +123,6 @@ Estados:
 |---|---|---|
 | `VPforce-TelemFFB-refactor/` | REFERENCIA | Código fuente de TelemFFB (Python, unos 300 archivos). Fuente de los modelos citados en diseños y tesis, y la leen `auditar_modelo.py` y `generar_documento.py`. No se compila ni se ejecuta. Conservarla mientras se cite. |
 | `backups/` | ELIMINADA | Copias manuales de antes de SC7/SC8. Se envió a la Papelera el 2026-10-15. |
-| `graphify-ino/` | FLUJO | Copia automática del `.ino` para el grafo. La regenera `graphify-sync.cmd`. |
 
 ## Resumen
 

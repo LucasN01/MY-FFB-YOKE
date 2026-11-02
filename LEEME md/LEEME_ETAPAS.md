@@ -1,3 +1,5 @@
+Historico: el firmware actual solo compila para Pico 2 con el Pico SDK (ver LEEME_PICO2.md).
+
 NOTA 30/09/2026: documento historico. La version activa usa solo SimConnect, sin FFB nativo ni amortiguacion local. Ver LEEME_SIMCONNECT.md.
 
 # Implementacion gradual: etapas 1 y 2

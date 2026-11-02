@@ -1,3 +1,5 @@
+Historico: el firmware actual solo compila para Pico 2 con el Pico SDK (ver LEEME_PICO2.md).
+
 > Antecedente de versiones anteriores. Los ajustes y seleccion de fuente vigentes estan en [AJUSTE_FUERZAS_Y_MOVIMIENTO.md](AJUSTE_FUERZAS_Y_MOVIMIENTO.md). Usar YOKE_POSITION_SOURCE (1=simulacion, 0=encoders, 2=potenciometros ADC en Pico, 3=AS5600; ver LEEME_AS5600.md); ver LEEME_POTENCIOMETROS.md para el modo 2 actual. Los valores de ganancias y banderas anteriores de este documento ya no aplican.
 
 > Estado actual en Pico 2: sensores conservados para lectura local, diagnostico y futuras funciones; no se envian ejes al simulador y no hay amortiguacion local. Para cableado Pico 2 y niveles de 3,3 V, ver LEEME_PICO2.md; las secciones Micro siguientes describen el hardware anterior.

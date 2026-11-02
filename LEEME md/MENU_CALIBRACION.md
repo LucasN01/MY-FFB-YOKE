@@ -117,7 +117,14 @@ navegar ni cancelar. Una escritura interrumpida por corte de alimentacion
 puede causar que el proximo arranque use valores de fabrica.
 `YOKE_SETTINGS_VERSION` reinicia ganancias/efectos, no la calibracion de potes.
 
+Los registros se guardan en el penultimo sector de 4 KiB de la flash (0x103FE000),
+el mismo sector y formato que la EEPROM emulada anterior; la calibracion se
+conserva al migrar del firmware Arduino-Pico al Pico SDK.
+
 ## Compilacion
+
+Se compila con el Pico SDK y CMake mediante `Build-Pico2.ps1` (lo llama
+`probar.ps1 -Pico`; ver LEEME_PICO2.md). El UF2 es `MiYoke_PD.uf2` en cada carpeta `build-pico2*`.
 
 - `Build-Pico2.ps1`: usa la fuente de mis_defines.h (actualmente 1).
 - `Build-Pico2.ps1 -Encoders`: fuerza modo 0.
@@ -130,7 +137,7 @@ apagar/encender queda pendiente de la prueba en banco.
 
 ## Validacion del asistente LCD (05/10/2026)
 
-Compilacion Arduino-Pico 6.1.1, Pico 2 ARM con TinyUSB:
+Compilacion Arduino-Pico 6.1.1 (anterior a la migracion al Pico SDK), Pico 2 ARM con TinyUSB:
 
 | Modo | Flash (bytes) | RAM global (bytes) |
 | --- | ---: | ---: |

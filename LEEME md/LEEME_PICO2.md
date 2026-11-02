@@ -4,48 +4,60 @@
 
 # MiYoke en Raspberry Pi Pico 2 (RP2350)
 
-El mismo sketch `MiYoke_PD_V2.2.ino` ahora selecciona automaticamente el hardware
+El mismo firmware (`src/main.cpp`) selecciona automaticamente el hardware
 segun la placa elegida. La configuracion predeterminada sigue siendo dos
 potenciometros (`USE_POTENTIOMETERS = 1`). Tambien se adapto el modo encoders.
 No se necesita MicroPython ni un sistema operativo en la Pico.
 
-## Configuracion de Arduino IDE
+## Compilacion con Pico SDK
 
-1. Usar el paquete **Raspberry Pi Pico/RP2040/RP2350 de Earle F. Philhower**.
-   La migracion se compilo con la version **6.1.1**, ya instalada en esta PC.
-   URL del gestor, si hay que instalarlo en otra PC:
-   `https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json`.
-2. Abrir `MiYoke_PD_V2.2.ino` dentro de su carpeta actual, con todos los `.h` y `.cpp`.
-3. Elegir **Raspberry Pi Pico 2**, arquitectura **ARM**.
-4. En **Tools / Herramientas > USB Stack**, elegir **Adafruit TinyUSB**.
-   La libreria viene incluida en ese paquete. No elegir Pico SDK, No USB ni USB Host.
-5. Compilar. Para la primera carga, conectar por USB manteniendo BOOTSEL.
-   Soltar BOOTSEL y copiar el `.uf2` a la unidad **RP2350** que aparece.
-   La placa se reinicia y presenta el puerto serie USB CDC, sin joystick HID.
-6. Para cargas posteriores se puede usar Subir desde Arduino IDE con el puerto
-   de la Pico seleccionado; si no lo detecta, repetir BOOTSEL.
+El firmware se compila con el Pico SDK y CMake, sin Arduino. Programa principal:
+`src/main.cpp`; cabeceras en `include/` y `include/hal/`; implementacion del
+hardware en `src/hal/rp2350/`; `CMakeLists.txt` y `pico_sdk_import.cmake` en la raiz.
+
+Requisitos (rutas por defecto de `Build-Pico2.ps1`):
+
+- Pico SDK 2.2.0 en `D:/pico/pico-sdk` (`PICO_SDK_PATH`).
+- TinyUSB 0.20.1 (commit `e954302c1`) en `D:/pico/tinyusb` (`PICO_TINYUSB_PATH`).
+- Compilador pqt-gcc 5.0.0 (GCC 16.1.0) en `D:/pico/toolchains/pqt-gcc-5.0.0` (`PICO_TOOLCHAIN_PATH`).
+- picotool en `D:/pico/picotool/picotool` y pioasm en `D:/pico/sdk-tools/pioasm`.
+- CMake 4.4 (`C:/Program Files/CMake`) y Ninja (instalado con winget).
+
+Lo normal es compilar con `probar.ps1`, desde la raiz del repositorio:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Pico
+```
+
+Opciones de variante: `-Encoders`, `-Potentiometers`, `-As5600`, `-PruebaFalla`;
+`-Todo` incluye todo y `-Bridge` el puente. `probar.ps1` llama a
+`herramientas/compilacion/Build-Pico2.ps1`, que admite los mismos interruptores
+de variante y estos parametros: `-SdkPath`, `-TinyUsbPath`, `-ToolchainBin`,
+`-CMake`, `-Ninja`, `-PicotoolDir`, `-PioasmDir` y `-BuildRoot`.
+
+- La compilacion de CMake se hace en `%TEMP%\myk` (o `MIYOKE_BUILD_ROOT`):
+  ruta corta para no superar el limite MAX_PATH de Windows.
+- Si cambian el SDK, TinyUSB o el compilador respecto de la cache, reconfigura solo.
+- Antes de copiar comprueba que el `.bin` no alcance 0x3FE000 (sector de calibracion).
+- Copia `MiYoke_PD.uf2`, `.elf`, `.bin` y `.map` a la carpeta de la variante.
+- Tamano de la variante configurada (modo 1): flash 65460 bytes, RAM 8608 bytes.
 
 Binarios generados:
 
-- `build-pico2/MiYoke_PD_V2.2.ino.uf2`: posicion desde SimConnect (YOKE_POSITION_SOURCE=1), configuracion predeterminada.
-- `build-pico2-encoders/MiYoke_PD_V2.2.ino.uf2`: encoders, con la bandera de sensores en 0.
+- `build-pico2/MiYoke_PD.uf2`: configuracion de `mis_defines.h` (hoy YOKE_POSITION_SOURCE=1, posicion desde SimConnect).
+- `build-pico2-encoders/MiYoke_PD.uf2`: fuerza encoders (modo 0).
+- `build-pico2-potentiometers/MiYoke_PD.uf2`: fuerza potenciometros (modo 2).
+- `build-pico2-as5600/MiYoke_PD.uf2`: fuerza AS5600 (modo 3).
+- `build-pico2-prueba-falla/MiYoke_PD.uf2`: HardFault provocado a los 20 s, solo para validar el diagnostico; no usar para volar.
 
 Los binarios reflejan la configuracion del momento de compilacion. Si se cambian
-pines, ganancias o calibracion, hay que volver a compilar.
+pines, ganancias o calibracion, hay que volver a compilar. Ningun comando carga
+ni activa la placa.
 
-Tambien se puede compilar desde PowerShell, situado en la raiz del repositorio:
-
-```powershell
-.\herramientas\compilacion\Build-Pico2.ps1
-.\herramientas\compilacion\Build-Pico2.ps1 -Encoders
-```
-
-El primer comando respeta `USE_POTENTIOMETERS` del archivo de configuracion;
-el segundo fuerza encoders. Ninguno carga ni activa la placa.
-
-herramientas/compilacion/probar.ps1 -PruebaFalla compila build-pico2-prueba-falla (HardFault provocado a los 20 s, solo para validar el diagnostico; no usar para volar).
-
-FQBN utilizado: `rp2040:rp2040:rpipico2:usbstack=tinyusb,arch=arm`.
+Carga: conectar por USB manteniendo BOOTSEL, soltarlo y copiar el `.uf2` a la
+unidad **RP2350**. La placa se reinicia y presenta el puerto serie USB CDC, sin
+joystick HID. Con el firmware cargado, abrir el puerto a 1200 baudios reinicia la
+Pico en modo BOOTSEL sin tocar el boton.
 
 ## Nuevo cableado
 
@@ -93,7 +105,7 @@ motores separada y masa comun. Si no se usan enables, configurar sus pines en -1
 ## Implementacion actual
 
 - TinyUSB mantiene el puerto serie USB CDC sin registrar una interfaz joystick HID.
-- El sketch recibe SimConnect por CDC. Otra placa envia los ejes a Prepar3D.
+- El firmware recibe SimConnect por CDC. Otra placa envia los ejes a Prepar3D.
 - La lectura de posicion y la velocidad filtrada (YokeMotion.h) siguen activas a 2 ms para diagnostico y futuras funciones locales.
 - Se conservan ADC a 10 bits, encoders x4, LCD y sus reintentos, mapas de pines y PWM a 490 Hz con rango 0..255.
 - Las fuerzas son exclusivamente las de SimConnect. No hay centrado ni amortiguacion local.
@@ -120,8 +132,7 @@ Antes de editar se guardaron los 20 archivos originales de firmware en
 
 ## Referencias oficiales
 
-- [Arduino-Pico: USB y seleccion de TinyUSB](https://arduino-pico.readthedocs.io/en/latest/usb.html).
-- [Arduino-Pico: ADC y PWM](https://arduino-pico.readthedocs.io/en/latest/analog.html).
+- [Raspberry Pi Pico-series C/C++ SDK](https://www.raspberrypi.com/documentation/pico-sdk/).
 - [Pinout de Pico 2](https://datasheets.raspberrypi.com/pico/Pico-2-Pinout.pdf).
 - [Datasheet de Pico 2](https://datasheets.raspberrypi.com/pico/pico-2-datasheet.pdf).
 

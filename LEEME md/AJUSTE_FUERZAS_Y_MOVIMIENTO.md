@@ -27,7 +27,7 @@ La bandera gobierna centrado y toda la compensacion por movimiento.
 `-Encoders` fuerza 0 y escribe en `build-pico2-encoders`.
 `-Potentiometers` fuerza 2 y escribe en `build-pico2-potentiometers`.
 `-As5600` fuerza 3 y escribe en `build-pico2-as5600`.
-Los cuatro generan `MiYoke_PD_V2.3.ino.uf2` para Pico 2.
+Los cuatro generan `MiYoke_PD.uf2` para Pico 2 (Pico SDK con CMake; ver LEEME_PICO2.md).
 
 ## Rango y ganancias
 

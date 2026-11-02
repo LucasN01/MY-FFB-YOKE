@@ -5,7 +5,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'src/main.cpp'))) { throw "No 
 Set-Location $Raiz
 
 # 1. Exigir árbol limpio (se ignora la copia de graphify)
-$sucio = git status --porcelain | Where-Object { $_ -notmatch 'graphify-ino/' }
+$sucio = git status --porcelain
 if ($sucio) { throw "Hay cambios sin commit. Hace commit por nombre antes de versionar." }
 if (git tag --points-at HEAD) { throw "Este commit ya tiene version: $(git tag --points-at HEAD)" }
 
@@ -19,7 +19,7 @@ if ($vers.Count -gt 0) {
 if ($prev -and -not $Forzar) {
   # No cuentan: herramientas del flujo entre agentes y todo lo de tesis/ (redaccion del PDF)
   $flujo = '^(herramientas/flujo/(lanzar-codex\.py|compilar-tesis\.ps1|nueva-version\.ps1|graphify-sync\.cmd)|tesis/.*)$'
-  $cod = git -c core.quotepath=off diff --name-only $prev HEAD | Where-Object { $_ -match '\.(h|hpp|c|cpp|ino|ps1|cmd|py|vcxproj)$' -and $_ -notmatch $flujo }
+  $cod = git -c core.quotepath=off diff --name-only $prev HEAD | Where-Object { $_ -match '(\.(h|hpp|c|cpp|ino|ps1|cmd|py|vcxproj|cmake)|(^|/)CMakeLists\.txt)$' -and $_ -notmatch $flujo }
   if (-not $cod) { Write-Host "Sin cambios de codigo desde $prev. No se crea version."; exit 0 }
 }
 $tag = "V$maj.$min"; $carpeta = "V${maj}_${min}"

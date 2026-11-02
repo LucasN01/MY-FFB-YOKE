@@ -23,10 +23,10 @@ Actualizacion 30/09/2026. No requiere habilitar FFB nativo en Prepar3D.
 Ejecutar `./herramientas/compilacion/Build-Pico2.ps1` para la fuente elegida por YOKE_POSITION_SOURCE (1=simulacion, 0=encoders, 2=potenciometros, 3=AS5600), o `./herramientas/compilacion/Build-Pico2.ps1 -Encoders` para forzar encoders; `./herramientas/compilacion/Build-Pico2.ps1 -Potentiometers` fuerza ADC0/ADC1; `./herramientas/compilacion/Build-Pico2.ps1 -As5600` fuerza modo 3 y genera `build-pico2-as5600/`. Ver [LEEME_AS5600.md](LEEME_AS5600.md). Para verificar: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo -As5600` (AS5600 tambien esta incluido en `-Todo`).
 Con BOOTSEL, copiar a la unidad RP2350 el archivo correspondiente:
 
-- `build-pico2/MiYoke_PD_V2.3.ino.uf2`
-- `build-pico2-encoders/MiYoke_PD_V2.3.ino.uf2`
+- `build-pico2/MiYoke_PD.uf2`
+- `build-pico2-encoders/MiYoke_PD.uf2`
 
-No usar los antiguos archivos V2.1 que puedan seguir en esas carpetas. Ver LEEME_PICO2.md para pines y configuracion del IDE. Verificar el nuevo puerto COM si Windows lo reasigna al retirar la interfaz HID. Los ejes del simulador se configuran en la otra placa.
+No usar los antiguos archivos `MiYoke_PD*.ino.uf2` que puedan seguir en esas carpetas. Ver LEEME_PICO2.md para pines y compilacion con Pico SDK. Verificar el nuevo puerto COM si Windows lo reasigna al retirar la interfaz HID. Los ejes del simulador se configuran en la otra placa.
 
 ## PC con Prepar3D v3
 

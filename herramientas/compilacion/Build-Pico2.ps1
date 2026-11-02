@@ -34,7 +34,24 @@ try {
                        (Join-Path $toolchainPath 'bin/arm-none-eabi-gcc.exe'), $PicotoolDir, $PioasmDir)) {
         if (-not (Test-Path -LiteralPath $path)) { throw "No existe la dependencia: $path" }
     }
-    if (-not (Test-Path -LiteralPath (Join-Path $BuildRoot 'CMakeCache.txt'))) {
+    # Una cache configurada con otro SDK, TinyUSB o compilador se descarta: CMake
+    # ignoraria los parametros nuevos sin avisar.
+    $cachePath = Join-Path $BuildRoot 'CMakeCache.txt'
+    if (Test-Path -LiteralPath $cachePath) {
+        $cache = Get-Content -LiteralPath $cachePath
+        $wanted = @{ PICO_SDK_PATH = $SdkPath; PICO_TINYUSB_PATH = $TinyUsbPath; PICO_TOOLCHAIN_PATH = $toolchainPath }
+        foreach ($name in $wanted.Keys) {
+            $line = $cache | Where-Object { $_ -match "^$name(:[A-Z]+)?=" } | Select-Object -First 1
+            $cached = if ($line) { ($line -split '=', 2)[1] } else { '' }
+            if (($cached -replace '\\', '/').TrimEnd('/') -ne ($wanted[$name] -replace '\\', '/').TrimEnd('/')) {
+                Write-Host "Reconfigurando: $name cambio ($cached -> $($wanted[$name]))."
+                Remove-Item -LiteralPath $cachePath -Force
+                Remove-Item -LiteralPath (Join-Path $BuildRoot 'CMakeFiles') -Recurse -Force -ErrorAction SilentlyContinue
+                break
+            }
+        }
+    }
+    if (-not (Test-Path -LiteralPath $cachePath)) {
         & $CMake -G Ninja -S $Raiz -B $BuildRoot "-DCMAKE_MAKE_PROGRAM=$Ninja" `
             "-DPICO_SDK_PATH=$SdkPath" "-DPICO_TINYUSB_PATH=$TinyUsbPath" `
             "-DPICO_TOOLCHAIN_PATH=$toolchainPath" "-Dpicotool_DIR=$PicotoolDir" `
@@ -45,6 +62,10 @@ try {
     $outputFolder = if ($PruebaFalla) { 'build-pico2-prueba-falla' } elseif ($As5600) { 'build-pico2-as5600' } elseif ($Encoders) { 'build-pico2-encoders' } elseif ($Potentiometers) { 'build-pico2-potentiometers' } else { 'build-pico2' }
     & $CMake --build $BuildRoot --target $target
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    # Antes de copiar: un UF2 que alcance el sector de calibracion no debe quedar listo para cargar.
+    if ((Get-Item -LiteralPath (Join-Path $BuildRoot "$target.bin")).Length -ge 0x3FE000) {
+        throw 'El firmware alcanza el sector EEPROM (0x3FE000); no se copio a la carpeta de salida.'
+    }
     $outputPath = Join-Path $Raiz $outputFolder
     New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
     foreach ($ext in @('uf2', 'elf', 'bin', 'map')) {
@@ -52,9 +73,6 @@ try {
         Copy-Item -LiteralPath (Join-Path $BuildRoot "$target.$sourceExt") -Destination (Join-Path $outputPath "MiYoke_PD.$ext") -Force
         $oldArtifact = Join-Path $outputPath "MiYoke_PD.ino.$ext"
         if (Test-Path -LiteralPath $oldArtifact) { Remove-Item -LiteralPath $oldArtifact -Force }
-    }
-    if ((Get-Item -LiteralPath (Join-Path $outputPath 'MiYoke_PD.bin')).Length -ge 0x3FE000) {
-        throw 'El firmware alcanza el sector EEPROM (0x3FE000).'
     }
     $sizeOutput = @(& (Join-Path $toolchainPath 'bin/arm-none-eabi-size.exe') (Join-Path $outputPath 'MiYoke_PD.elf'))
     if ($LASTEXITCODE -ne 0) { throw 'Fallo arm-none-eabi-size.' }

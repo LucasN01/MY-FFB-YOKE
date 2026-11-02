@@ -8,9 +8,9 @@ Seleccionar en `mis_defines.h` y recompilar:
 
 0 = encoders; 1 = posicion SimConnect; 2 = potenciometros; 3 = AS5600 (ver [LEEME_AS5600.md](LEEME_AS5600.md)). El valor guardado
 por defecto sigue siendo 1. `Build-Pico2.ps1 -Potentiometers` fuerza 2 sin
-editar ese valor y genera `build-pico2-potentiometers/MiYoke_PD_V2.3.ino.uf2`.
-El script de compilacion actual apunta a **Pico 2**; no cargar ese UF2 en una
-Pico original (RP2040). Para ella seleccionar la placa correspondiente al compilar.
+editar ese valor y genera `build-pico2-potentiometers/MiYoke_PD.uf2` (Pico SDK con CMake; ver LEEME_PICO2.md).
+El proyecto CMake compila solo para **Pico 2**; no cargar ese UF2 en una
+Pico original (RP2040).
 
 ## Cableado compartido con MobiFlight
 
@@ -27,7 +27,7 @@ permanezca entre 0 y 3.3 V en todo el recorrido, con ambas placas conectadas.
 No unir las salidas de alimentacion de las dos placas.
 
 Referencia: [pinout oficial Pico 2](https://datasheets.raspberrypi.com/pico/Pico-2-Pinout.pdf).
-Lecturas de 12 bits: [Arduino-Pico](https://arduino-pico.readthedocs.io/en/latest/analog.html).
+Lecturas de 12 bits con `adc_read` del [Pico SDK](https://www.raspberrypi.com/documentation/pico-sdk/).
 El divisor carga el cursor y puede modificar su respuesta: calibrar con
 el cableado definitivo conectado, tambien del lado MobiFlight si corresponde.
 
@@ -79,7 +79,7 @@ esas verificaciones requieren el hardware.
 
 ## Validacion anterior al asistente LCD (05/10/2026)
 
-Core Arduino-Pico 6.1.1, placa Pico 2 ARM con USB TinyUSB:
+Core Arduino-Pico 6.1.1 (anterior a la migracion al Pico SDK), placa Pico 2 ARM con USB TinyUSB:
 
 | Modo | Flash (bytes) | RAM global (bytes) |
 | --- | ---: | ---: |

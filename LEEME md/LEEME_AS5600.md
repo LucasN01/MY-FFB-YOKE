@@ -8,7 +8,7 @@ Ambos sensores tienen direccion fija 0x36; por eso usan buses distintos.
 
 | Senal | Roll | Pitch |
 |---|---|---|
-| Bus | I2C1 (`Wire1`), propio | I2C0 (`Wire`), compartido con LCD 0x27/0x3F |
+| Bus | I2C1 (`hal::wire1`), propio | I2C0 (`hal::wire0`), compartido con LCD 0x27/0x3F |
 | SDA | GP14, pin fisico 19 | GP4, pin fisico 6 |
 | SCL | GP15, pin fisico 20 | GP5, pin fisico 7 |
 | Reloj | `YOKE_I2C1_HZ`: 400 kHz | `YOKE_I2C0_HZ`: 100 kHz |
@@ -36,7 +36,7 @@ Seleccionar `#define YOKE_POSITION_SOURCE 3`. Los valores 0, 1 y 2 conservan su 
 - Histeresis movil: `YOKE_AS5600_HYSTERESIS_COUNTS=1`; normalizacion limitada a [-1,1].
 - `YOKE_AS5600_CONF=0x0500`: SF=8x (1,1 ms), FTH=6 LSB, WD=0, modo nominal. Se escribe y verifica al iniciar y se comprueba cada segundo alternando ejes; si se perdio, se reescribe. Es volatil: nunca se usa BURN.
 
-Compilar y verificar con `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo -As5600`. `-Todo` incluye AS5600. La variante usa `Build-Pico2.ps1 -As5600`, fuerza modo 3 y deja el UF2 en `build-pico2-as5600/`; es excluyente con encoders, potenciometros y prueba de falla. No se carga automaticamente.
+Compilar y verificar con `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo -As5600`. `-Todo` incluye AS5600. La variante usa `Build-Pico2.ps1 -As5600` (Pico SDK con CMake), fuerza modo 3 y deja el UF2 en `build-pico2-as5600/MiYoke_PD.uf2`; es excluyente con encoders, potenciometros y prueba de falla. No se carga automaticamente.
 
 ## Telemetria y fallas
 

@@ -268,7 +268,7 @@ private:
     }
 	
 	bool busAvailable() {
-		// Si el LCD est� apagado y deja SDA o SCL clavados en LOW,
+		// Si el LCD esta apagado y deja SDA o SCL clavados en LOW,
 		// no intentar una transferencia I2C.
 		
 		return hal::digitalRead(LCD_SDA_PIN) == true &&
@@ -276,8 +276,8 @@ private:
 	}
 	
 	void lcdUnavailable() {
-		// Abandonar cualquier actualizaci�n actual y volver a probar
-		// m�s adelante. El FFB contin�a funcionando normalmente.
+		// Abandonar cualquier actualizacion actual y volver a probar
+		// mas adelante. El FFB continua funcionando normalmente.
 		_step = 34;
 		schedule(State::Probe, LCD_RETRY_MS);
 	}

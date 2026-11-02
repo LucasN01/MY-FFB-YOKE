@@ -27,7 +27,7 @@ Corregir el sintoma no es corregir la falla. Si no se completo la Fase 1, no se 
 2. **Reproducir.** Pasos exactos y condicion (aeronave, fase de vuelo, eje, valor de fuerza). Si no se reproduce siempre, juntar mas datos; no adivinar.
 3. **Revisar cambios recientes.** `git log`, `git diff Vx.y..HEAD`, HANDOFF ("Ultima entrega"). Si una version anterior funcionaba, comparar contra ella (`..\MiYoke_PD_VERSIONES\Vx_y`).
 4. **Evidencia en cada frontera.** El sistema tiene varias capas: SimConnect → bridge (PC) → protocolo serie → Pico → calculo de fuerza → saturacion → PWM → motor/encoder. Antes de corregir, verificar que entra y que sale en cada frontera (log por capa, una sola corrida) para ubicar DONDE se rompe. En el firmware, el registro de diagnostico no debe bloquear el lazo de 2 ms (nada de Serial bloqueante ni String dentro del lazo).
-5. **Rastrear el dato hacia atras.** De donde viene el valor malo, quien lo produjo, hasta encontrar el origen. Corregir en el origen. Para ubicar llamadas usar `graphify query/path/explain`; recordar que las llamadas desde setup()/loop() no estan en el grafo y hay que leer MiYoke_PD.ino.
+5. **Rastrear el dato hacia atras.** De donde viene el valor malo, quien lo produjo, hasta encontrar el origen. Corregir en el origen. Para ubicar llamadas usar `graphify query/path/explain`; recordar que las llamadas desde setup()/loop() no estan en el grafo y hay que leer src/main.cpp.
 
 ## Fase 2: Patrones
 

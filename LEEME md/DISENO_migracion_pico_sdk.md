@@ -577,13 +577,12 @@ entorno que los reemplaza:
 | `-PioasmDir` | - | `D:/pico/sdk-tools/pioasm` |
 | `-BuildRoot` | `MIYOKE_BUILD_ROOT` | `$env:TEMP\myk` |
 
-Pasos: (1) si no existe `<BuildRoot>/CMakeCache.txt`, configurar: `cmake -G Ninja -S <Raiz> -B
+Pasos: (0) si existe `<BuildRoot>/CMakeCache.txt` y su `PICO_SDK_PATH`, `PICO_TINYUSB_PATH` o `PICO_TOOLCHAIN_PATH` difiere del pedido, borrar la cache y `CMakeFiles/` (revision de la parte 4); (1) si no existe `<BuildRoot>/CMakeCache.txt`, configurar: `cmake -G Ninja -S <Raiz> -B
 <BuildRoot> -DCMAKE_MAKE_PROGRAM=<ninja> -DPICO_SDK_PATH=... -DPICO_TOOLCHAIN_PATH=... -Dpicotool_DIR=...
 -Dpioasm_DIR=... -DCMAKE_BUILD_TYPE=MinSizeRel`; (2) `cmake --build <BuildRoot> --target <myk_*>`;
-(3) copiar `<myk_*>.uf2/.elf/.bin/.elf.map` a `<Raiz>/<carpeta>/MiYoke_PD.uf2/.elf/.bin/.map` y borrar
+(2b) guarda del sector EEPROM con el tamano de `<BuildRoot>/<myk_*>.bin` (error si >= `0x3FE000` bytes, 4.9) **antes de copiar**, para que no quede en `build-pico2*/` un UF2 que pise la calibracion (revision de la parte 4); (3) copiar `<myk_*>.uf2/.elf/.bin/.elf.map` a `<Raiz>/<carpeta>/MiYoke_PD.uf2/.elf/.bin/.map` y borrar
 de esa carpeta los `MiYoke_PD.ino.*` viejos (solo esos cuatro nombres exactos; los `MiYoke_PD_V2.x.ino.*`
-historicos de `build-pico2-encoders/` y `build-pico2-potentiometers/` no se tocan); (4) guarda del
-sector EEPROM con el tamano del `.bin` (error si >= `0x3FE000` bytes, 4.9); (5) imprimir una linea
+historicos de `build-pico2-encoders/` y `build-pico2-potentiometers/` no se tocan); (5) imprimir una linea
 `Flash usada: <text+data> bytes; RAM usada: <data+bss> bytes` (de `arm-none-eabi-size`) y
 `Firmware generado en <carpeta>. No se cargo en la placa.`. Codigo de salida != 0 ante cualquier falla.
 Carpetas de salida y mapeo: configurado -> `build-pico2`/`myk_cfg`; encoders -> `build-pico2-encoders`/

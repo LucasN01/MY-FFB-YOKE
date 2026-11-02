@@ -12,29 +12,30 @@ Rules:
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 
 ## ESTRUCTURA DE CARPETAS
-- Raiz: solo el proyecto. Firmware (MiYoke_PD.ino y sus .h; Arduino exige que esten juntos en la carpeta MiYoke_PD y el puente y tests/ los incluyen como ../X.h), lanzador (INICIAR SIMULADOR*.cmd e Iniciar-Simulador.ps1; los usa el acceso directo del escritorio) y reglas de agentes (CLAUDE.md, AGENTS.md, HANDOFF.md).
+- Raiz: solo el proyecto. Compilacion del firmware (CMakeLists.txt y pico_sdk_import.cmake; Pico SDK 2.2.0, sin Arduino), lanzador (INICIAR SIMULADOR*.cmd e Iniciar-Simulador.ps1; los usa el acceso directo del escritorio) y reglas de agentes (CLAUDE.md, AGENTS.md, HANDOFF.md).
 - SimConnectBridge/ (puente), tests/ (pruebas C++ y del lanzador), tesis/ (LaTeX), LEEME md/ (documentacion).
 - herramientas/compilacion/: probar.ps1, Build-Pico2.ps1, Build-Bridge.ps1, Build-WaitForFlight.ps1.
 - herramientas/ensayos/: ENSAYO, CICLOS y ARRANQUE (.cmd y .ps1), BANCO.ps1, FALLA.ps1. Guardan resultados en ensayos/ de la raiz.
 - herramientas/flujo/: lanzar-codex.py, nueva-version.ps1, compilar-tesis.ps1, graphify-sync.cmd (no generan version).
 - Los scripts de herramientas/ calculan la raiz como dos niveles arriba de su carpeta y funcionan desde cualquier directorio. Los comandos de estas reglas se escriben desde la raiz y con / (sirven en PowerShell y en Git Bash).
-- Generadas e ignoradas, en la raiz: build-pico2*/, ensayos/, logs/, tmp/, graphify-out/, graphify-ino/. Fuera de git: Prepar3D-v3/ (la configuracion de Prepar3D V3 apunta ahi: no mover) y VPforce-TelemFFB-refactor/ (referencia).
+- Firmware: src/main.cpp y src/hal/rp2350/ (implementacion de la HAL para el RP2350); include/ (cabeceras del firmware, que tambien usan el puente y tests/ como ../include/X.h) e include/hal/ (interfaces de la HAL). Herramientas externas fuera del repo en D:/pico/ (pico-sdk, tinyusb, toolchains/pqt-gcc-5.0.0, picotool, sdk-tools).
+- Generadas e ignoradas, en la raiz: build-pico2*/ (MiYoke_PD.uf2/.elf/.bin/.map de cada variante), ensayos/, logs/, tmp/, graphify-out/. El build de CMake va en %TEMP%\myk (o MIYOKE_BUILD_ROOT): ruta corta por el limite MAX_PATH de Windows. Fuera de git: Prepar3D-v3/ (la configuracion de Prepar3D V3 apunta ahi: no mover) y VPforce-TelemFFB-refactor/ (referencia).
 
 ## AHORRO DE TOKENS: graphify, PDF y LaTeX (regla del usuario)
 - Codigo: antes de buscar o abrir archivos, orientarse con `graphify query`/`explain`/`path`. Leer directamente solo las lineas puntuales de un archivo ya identificado.
 - PDF: no leer el PDF directamente. Convertirlo con `markitdown archivo.pdf -o tmp/<nombre>.md` (instalado; tmp/ esta en .gitignore) y leer solo la seccion necesaria con grep. Si una tabla o formula sale desordenada, verificar solo esa pagina.
 - Tesis (tesis/*.tex, tesis/capitulos/NN_*.tex): la redacta y edita Claude, no Codex (regla del usuario, 2026-10-15). Codex no la abre ni la modifica; si ve que falta actualizar algo, lo anota en HANDOFF para Claude.
-- Pruebas y compilacion: usar `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1` (suite C++ + lanzador; agregar -Pico, -Encoders, -Potentiometers, -As5600, -Bridge o -Todo segun el plan). Imprime una linea OK/FALLO por paso con solo las lineas de error. No invocar MSBuild, arduino-cli ni Build-*.ps1 directamente, no volcar logs completos y no repetir una compilacion que ya dio OK salvo que el codigo haya cambiado. En HANDOFF copiar solo esas lineas de resultado.
+- Pruebas y compilacion: usar `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1` (suite C++ + lanzador; agregar -Pico, -Encoders, -Potentiometers, -As5600, -Bridge o -Todo segun el plan). Imprime una linea OK/FALLO por paso con solo las lineas de error. No invocar MSBuild, cmake, ninja ni Build-*.ps1 directamente, no volcar logs completos y no repetir una compilacion que ya dio OK salvo que el codigo haya cambiado. En HANDOFF copiar solo esas lineas de resultado.
 - Versionado: ejecutar herramientas/flujo/nueva-version.ps1 siempre desde PowerShell (si falla la copia, el script lo detecta, borra la etiqueta y se repite).
 
 ## Limitaciones del grafo en este proyecto
-- MiYoke_PD.ino se indexa vía copia en graphify-ino/ (ejecutar herramientas/flujo/graphify-sync.cmd tras editarlo).
+- src/main.cpp se indexa directo (ya no hay copia en graphify-ino/); tras editar codigo, `graphify update .`.
 - Las llamadas desde setup()/loop() a objetos globales NO aparecen en el grafo.
-  Para trazar el flujo completo, leer MiYoke_PD.ino directamente.
-- SimConnectBridge/*Model.h son wrappers de un include; la lógica está en la raíz.
+  Para trazar el flujo completo, leer src/main.cpp directamente.
+- SimConnectBridge/*Model.h son wrappers de un include; la lógica está en include/.
 
 ## VERSIONADO OBLIGATORIO Y AUTOMATICO (regla del usuario)
-Cada vez que un agente (Claude o Codex) modifique codigo (.h .hpp .c .cpp .ino .ps1 .cmd .py .vcxproj), DEBE crear una version nueva sin que el usuario lo pida. Pasos, en este orden:
+Cada vez que un agente (Claude o Codex) modifique codigo (.h .hpp .c .cpp .ps1 .cmd .py .vcxproj, CMakeLists.txt y .cmake), DEBE crear una version nueva sin que el usuario lo pida. Pasos, en este orden:
 1. Hacer commit por nombre de los archivos modificados (nunca git add . ni git add -A).
 2. Ejecutar: powershell -ExecutionPolicy Bypass -File herramientas/flujo/nueva-version.ps1 -Mensaje "<una linea breve, sin tildes, que diga que se modifico>"
 3. Verificar que imprima "Version Vx.y creada" y que exista ..\MiYoke_PD_VERSIONES\Vx_y\ACTUALIZACION_Vx_y.txt.
