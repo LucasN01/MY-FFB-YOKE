@@ -1,0 +1,157 @@
+\section{MAQUINAS DE ESTADO EN EL FIRMWARE}
+\label{sec:maquinas_estado}
+
+\subsection{Aplicación de contenidos de la carrera}
+\label{sec:fsm_carrera}
+
+Las máquinas de estados finitos (FSM, \textit{finite state machines}) forman parte de los contenidos de sistemas secuenciales de la carrera. En este proyecto no aparecen como un ejercicio aislado: son la técnica que permite que el firmware atienda varias tareas lentas (pantalla, menú, recepción serie) sin detener el lazo de fuerza de 2~ms. Esta sección identifica las FSM ya implementadas en el código, las clasifica según el modelo formal y describe las que se proponen para el control de corriente.
+
+Formalmente, una FSM es una quíntupla
+\[
+M = (S,\ E,\ \Sigma,\ \delta,\ \lambda,\ s_0),
+\]
+con conjunto finito de estados $S$, alfabeto de entrada $E$, alfabeto de salida $\Sigma$, función de transición $\delta: S \times E \to S$, función de salida $\lambda$ y estado inicial $s_0$. En una máquina de \textbf{Moore} la salida depende solo del estado ($\lambda: S \to \Sigma$); en una de \textbf{Mealy} depende del estado y de la entrada ($\lambda: S \times E \to \Sigma$).
+
+\subsection{Por qué el firmware necesita máquinas de estado}
+\label{sec:fsm_motivo}
+
+La función \code{loop()} de \code{MiYoke_PD.ino} se ejecuta cada \code{CONTROL_LOOP_MS} $= 2$~ms y en cada ciclo calcula la fuerza y actualiza el PWM. Una tarea que espera (por ejemplo, los retardos de inicialización del LCD o la llegada de los bytes de un paquete) no puede bloquear ese ciclo. La solución es dividir la tarea en pasos: el estado se guarda entre ciclos y cada llamada avanza como máximo un paso y retorna. El watchdog por hardware (\code{YOKE_WDT_MS} $=250$~ms) reinicia la placa si alguna tarea rompe esta regla.
+
+\subsection{Máquinas de estado implementadas}
+\label{sec:fsm_implementadas}
+
+\begin{center}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.2\linewidth}>{\raggedright\arraybackslash}p{0.12\linewidth}>{\raggedright\arraybackslash}p{0.31\linewidth}}
+\toprule
+FSM & Archivo & Tipo & Variable de estado \\
+\midrule
+Decodificador de cuadratura & \code{PicoEncoder.h} & Mealy & \code{previous} (4 estados) \\
+Receptor del protocolo serie & \code{SimTelemetry.h} & Mealy & \code{count} y \code{buf} \\
+Inicialización y refresco del LCD & \code{LcdTelemetry.h} & Mealy temporizada & \code{_state}, \code{_step} \\
+Menú de calibración & \code{CalibrationMenu.h} & Moore (pantalla) & \code{screen}, \code{notice} \\
+Habilitación de efectos & \code{SimEffects.h} & 2 estados & \code{enabled}, \code{started} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{Decodificador de cuadratura}
+\label{sec:fsm_cuadratura}
+
+Un encoder incremental entrega dos señales A y B desfasadas 90$^\circ$. El par $(A,B)$ recorre la secuencia de Gray $00 \to 01 \to 11 \to 10$ en un sentido y la inversa en el otro. \code{PicoEncoder.h} implementa la FSM con una tabla de 16 entradas indexada por el estado anterior y la entrada actual:
+\[
+\Delta = \code{delta}[\,s_{k-1} + 4\,s_k\,], \qquad \Delta \in \{-1,\ 0,\ +1\},
+\]
+donde $s = A + 2B$. La tabla es a la vez $\delta$ (el nuevo estado es la entrada leída) y $\lambda$ (el incremento de cuenta). Como la salida depende del estado anterior y de la entrada, es una máquina de Mealy. Las transiciones imposibles (cambio simultáneo de A y B) producen $\Delta = 0$.
+
+\subsubsection{Receptor del protocolo serie}
+\label{sec:fsm_receptor}
+
+\code{YokeSC::Receiver::feed()} procesa un byte por llamada y nunca espera al siguiente. El estado es la cantidad de bytes aceptados (\code{count}):
+
+\begin{center}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.25\linewidth}>{\raggedright\arraybackslash}p{0.33\linewidth}>{\raggedright\arraybackslash}p{0.32\linewidth}}
+\toprule
+Estado & Entrada / condición & Acción y siguiente estado \\
+\midrule
+Espera de sincronismo (0) & byte \code{0xA5} & guardar; pasar a 1 \\
+Segundo sincronismo (1) & byte \code{0x5A} / otro & pasar a 2 / volver a 0 (o 1 si es \code{0xA5}) \\
+Versión (2) & versión 1..8 / fuera de rango & fijar longitud esperada / volver a 0 \\
+Carga útil (3..$n-1$) & cualquier byte & acumular \\
+Trama completa ($n$) & CRC y rangos válidos & publicar la muestra; volver a 0 \\
+Cualquiera & más de 40~ms sin bytes & descartar; volver a 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+La salida (una muestra nueva de telemetría) se produce en la transición que completa la trama, por lo que es una máquina de Mealy. Las guardas de número de secuencia y de tiempo de captura evitan que una trama repetida mantenga viva una fuerza vieja.
+
+\subsubsection{Inicialización y refresco del LCD}
+\label{sec:fsm_lcd}
+
+El controlador del LCD (HD44780 detrás de un expansor PCF8574) necesita retardos de varios milisegundos entre comandos. \code{LcdTelemetry} los resuelve con una FSM temporizada: \code{schedule()} fija el siguiente estado y el tiempo de espera, y \code{update()} no hace nada hasta que ese tiempo transcurre.
+
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+Estado & Acción por I$^2$C & Siguiente & Espera [ms] \\
+\midrule
+\code{Probe} & prueba de dirección 0x27 / 0x3F & \code{IdlePins} & 100 \\
+\code{IdlePins} & retroiluminación, líneas en reposo & \code{Reset1} & 5 \\
+\code{Reset1} & nibble 0x30 & \code{Reset2} & 5 \\
+\code{Reset2} & nibble 0x30 & \code{Reset3} & 1 \\
+\code{Reset3} & nibble 0x30 & \code{FourBits} & 1 \\
+\code{FourBits} & nibble 0x20 (modo 4 bits) & \code{FunctionSet} & 1 \\
+\code{FunctionSet}, \code{DisplayOn}, \code{EntryMode} & comandos de configuración & siguiente & 1 \\
+\code{Home} & retorno al inicio & \code{Finish} & 3 \\
+\code{Finish} & --- & \code{Ready} & --- \\
+\code{Ready} & un carácter por ciclo (\code{_step} 0..33) & \code{Ready} & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Transiciones de excepción: cualquier falla o timeout de I$^2$C lleva a \code{Probe} tras \code{LCD_RETRY_MS} $=500$~ms, y en \code{Ready} se reinicializa periódicamente cada \code{LCD_RESYNC_MS} $=5000$~ms para recuperar un LCD que se reinició solo. En \code{Ready} la variable \code{_step} es una segunda FSM anidada que envía una posición de la pantalla por ciclo, de modo que la escritura de 32 caracteres se reparte en 34 ciclos.
+
+\subsubsection{Menú de calibración}
+\label{sec:fsm_menu}
+
+\code{CalibrationMenu} es una FSM manejada por eventos: las entradas son los botones \code{Mode}, \code{Ok}, \code{Back}, \code{Plus} y \code{Minus}, y la condición de simulador en pausa.
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Estado & Evento & Siguiente \\
+\midrule
+\code{Normal} & \code{Mode} & \code{Browse} \\
+\code{Browse} $\to$ \code{BrowseEffects} $\to$ \code{BrowsePots} & \code{Mode} & siguiente lista (cíclico) \\
+\code{Browse} / \code{BrowseEffects} & \code{Ok} & \code{Edit} / \code{EditEffect} \\
+\code{Edit} / \code{EditEffect} & \code{Ok} (guardado correcto) & \code{Browse} / \code{BrowseEffects} \\
+\code{BrowsePots} & \code{Ok} & \code{CalibratePots} \\
+\code{CalibratePots} & \code{Ok} en el último paso (guardado) & \code{BrowsePots} \\
+\code{Edit}, \code{EditEffect}, \code{CalibratePots} & \code{Back} & lista de origen \\
+listas & \code{Back} & \code{Normal} \\
+cualquiera $\neq$ \code{Normal} & simulador no pausado & \code{Normal} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+El texto que muestra el LCD depende solo de la pantalla actual y del aviso vigente, por lo que la salida es de tipo Moore. Los avisos (\code{Notice}) forman una segunda FSM con retorno temporizado: vuelven a \code{None} a los 2~s. Mientras hay un guardado en flash pendiente, los botones se ignoran.
+
+\subsubsection{Habilitación de efectos}
+\label{sec:fsm_efectos}
+
+\code{YokeSC::Effects::update()} usa dos estados: \textit{inactivo} y \textit{activo}. Pasa a activo cuando la telemetría es reciente y armada y el enlace USB está conectado; vuelve a inactivo si deja de cumplirse o si el ciclo se demora más de 50~ms. Al entrar a inactivo reinicia todos los filtros, fases y generadores de ruido. Así, al reanudar, ningún efecto arranca con un estado viejo.
+
+\subsubsection{Marca de etapa para diagnóstico}
+\label{sec:fsm_health}
+
+\code{YokeHealth::Stage} (\code{LoopSupervisor.h}) no es una FSM: no tiene transiciones condicionadas. Es una marca de la etapa del ciclo que se escribe en un registro del watchdog que sobrevive al reinicio. Tras un reinicio por watchdog, la placa informa en qué etapa estaba, lo que permite localizar el bloqueo.
+
+\subsection{Máquinas de estado por hardware: PIO del RP2350}
+\label{sec:fsm_pio}
+
+El RP2350 de la Raspberry Pi Pico~2 incluye tres bloques PIO con cuatro máquinas de estado cada uno (doce en total). Cada una es un procesador mínimo con nueve instrucciones, memoria de programa de 32 palabras por bloque, colas FIFO y dos registros contadores. No realizan aritmética general, por lo que no pueden ejecutar el cálculo de fuerzas ni un controlador PI, pero sí tareas de entrada/salida con temporización exacta.
+
+La aplicación natural en este proyecto es el decodificador de cuadratura de la Sección~\ref{sec:fsm_cuadratura}. Hoy se ejecuta por interrupción en cada flanco de A y B; con encoders de 1000~PPR leídos $\times 4$, un movimiento rápido de pitch puede generar del orden de $2{,}5 \times 10^4$ flancos por segundo. Implementada en PIO (ejemplo oficial \code{pico-examples/pio/quadrature_encoder}), la misma FSM cuenta por hardware sin consumir tiempo de CPU ni introducir variaciones en el lazo de 2~ms. Esta migración es una propuesta y no está implementada.
+
+\subsection{Propuesta: FSM supervisora para el control de corriente}
+\label{sec:fsm_supervisora}
+
+Actualmente el estado global del sistema está repartido en variables booleanas (\code{fresh}, \code{armed}, \code{paused}, menú activo, guardado pendiente, efectos habilitados). Al incorporar medición y control de corriente se propone reunirlo en una FSM supervisora explícita. Esta máquina es una propuesta y no está implementada.
+
+\begin{center}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.2\linewidth}>{\raggedright\arraybackslash}p{0.3\linewidth}>{\raggedright\arraybackslash}p{0.4\linewidth}}
+\toprule
+Estado & Salida (Moore) & Transiciones \\
+\midrule
+\code{ARRANQUE} & PWM $=0$, EN bajo & $\to$ \code{CENTRADO} al terminar la configuración \\
+\code{CENTRADO} & PWM $=0$ & $\to$ \code{CAL_OFFSET} al confirmar el yugo centrado (encoders sin índice) \\
+\code{CAL_OFFSET} & PWM $=0$, medir cero de corriente & $\to$ \code{DESARMADO} si el offset está en rango; $\to$ \code{FALLA} si no \\
+\code{DESARMADO} & $I_{ref}=0$, lazo de corriente activo & $\to$ \code{ACTIVO} con telemetría válida y armada \\
+\code{ACTIVO} & $I_{ref} = cmd \cdot I_{\max}$ & $\to$ \code{DESARMADO} al perder telemetría o pausa \\
+\code{MENU} / \code{FLASH} & PWM $=0$ & $\to$ \code{DESARMADO} al salir del menú o terminar el guardado \\
+\code{FALLA} & PWM $=0$, EN bajo & solo por acción explícita del usuario \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Desde cualquier estado se pasa a \code{FALLA} por sobrecorriente, sensor de corriente fuera de rango, sobrevelocidad, posición fuera de los topes o pérdida de enlace prolongada. Las ventajas son que cada transición puede verificarse con pruebas en PC (carpeta \code{tests/}), que las condiciones de seguridad quedan en un único lugar y que el estado puede registrarse en \code{pico.log} junto con la etapa de \code{YokeHealth}.

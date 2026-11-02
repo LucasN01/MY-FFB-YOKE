@@ -50,8 +50,11 @@ static_assert(LCD_POWER_ON_WAIT_MS >= 50 && LCD_RETRY_MS >= 100 && LCD_RESYNC_MS
               "Tiempos LCD demasiado cortos");
 
 // Fuente UNICA de posicion y velocidad para todos los efectos.
-// 0 = encoders incrementales AB; 1 = SimConnect; 2 = potenciometros ADC0/ADC1;
+// 0 = encoders incrementales AB; 
+// 1 = SimConnect; 
+// 2 = potenciometros ADC0/ADC1;
 // 3 = encoders magneticos absolutos AS5600 por I2C (solo Pico).
+
 #ifdef YOKE_USE_SIMULATION
 #error "YOKE_USE_SIMULATION se renombro a YOKE_POSITION_SOURCE (0..2 iguales; 3 = AS5600)"
 #endif
