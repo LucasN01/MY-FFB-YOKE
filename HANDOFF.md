@@ -61,25 +61,13 @@ Seccion 6 "Parte 5" y seccion 9, sin `tesis/`. Incluye U4 (`CMakeLists.txt|\.cma
 
 \## Última entrega
 
-- Parte 3 implementada (Codex, 2026-11-02), rama `firmware/pico-sdk`. Commit: `2c99677` (`Pico SDK parte 3: cabeceras en include y modulos sobre la HAL`). Cierre pendiente del criterio de compilacion del puente; esta entrega se commitea aparte.
-BLOQUEO: `probar.ps1 -Bridge` falla con C1083 en `SimConnectBridge/main.cpp:12`: falta `SimConnect.h`. No existe `C:/Program Files/Lockheed Martin/Prepar3D v4/redist/Interface/FSX-SP2-XPACK/retail/inc/SimConnect.h`, ruta definida por `P3DSdkDir` en el proyecto. La busqueda de SimConnect.h/SimConnect.lib en `C:/Program Files/Lockheed Martin`, `Prepar3D-v3` y `D:/pico` no encontro archivos. No se cambio esa configuracion ni se instalo un SDK: hace falta restaurar el SDK o indicar su ruta para completar la verificacion.
-- Movidas las 28 cabeceras de la raiz a `include/`. Adaptadas a HAL: `mis_defines.h`, `MotorDriver.h`, `LcdTelemetry.h`, `YokeI2C.h`, `PicoEncoder.h`, `AxisEncoders.h`, `AxisPotentiometers.h`, `AxisAs5600.h`, `CalibrationControls.h`, `UsbGuard.h`, `LoopSupervisor.h`. Eliminadas ramas AVR y WIRE_HAS_TIMEOUT; modelos puros conservan contenido identico. Sin cambios de constantes de seguridad.
-- Rutas actualizadas en `tests/{simconnect_checks.cpp,legacy_effects_checks.cpp,sim_position_friction_checks.cpp,as5600_checks.h,calibration_checks.h,comparar_ensayo.h,health_checks.h,picolog_checks.h}` y `SimConnectBridge/{main.cpp,Replay.h,BuffetModel.h,GroundModel.h,GustModel.h,YokeSimConnectBridge.vcxproj,WaitForFlight.vcxproj}`. Retirado el include provisorio de la raiz en `CMakeLists.txt`.
-- Incorporadas sugerencias de las partes 1/2: declaraciones compartidas en `tests/hal_fake.h`; sondas vacias registradas como i2cProbe en `tests/hal_fake.cpp`; reinicio de estado en I2cBus::begin (`src/hal/rp2350/i2c.cpp`); guarda de definicion YOKE_USB_GUARD (`usb_cdc.cpp`); rechazo de pines >=30 en pwmWrite (`pwm_adc.cpp`).
-- `tests/hal_checks.cpp`: cinco grupos nuevos sobre modulos reales (motor, cuadratura, persistencia de ganancias, LCD por transacciones y tiempos, AS5600 por ambos buses), mas UsbLock y las regresiones de begin/I2C y pin invalido/PWM. Las pruebas host de estas dos ultimas verifican el contrato del fake, no ejecutan registros del RP2350. La guarda de preprocesador en usb_cdc.cpp no es comprobable con hal_fake: ese archivo depende del SDK/TinyUSB; compilacion SDK normal OK, sin prueba negativa de macro ausente.
-- Documentacion actualizada: seccion 2.1 del diseno, reinicio de slices de pwmSetup aunque frecuencia/rango no cambien (solo al arrancar), y este HANDOFF. Documentacion general y reglas de estructura siguen asignadas a la parte 5. No se abrio ni modifico tesis/.
-- Verificacion mediante `probar.ps1 -Bridge -Sdk`: primera corrida encontro dos aserciones incorrectas nuevas (candidate antes de savePending y un espacio extra esperado en LCD); corregidas segun las APIs existentes y el literal de 16 caracteres del diseno. Ninja quedo sin actividad dentro del sandbox; se detuvieron solo los procesos de esa corrida y se repitio fuera del sandbox. Resultado final (codigo 1 por puente):
-  - OK suite simconnect_checks - PASS: 143769 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
-  - OK comparar_ensayo
-  - OK suite hal_checks - PASS hal_checks (694 casos)
-  - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-  - OK SDK myk_hal (RP2350) - HAL RP2350 compilada: myk_hal. No se genero ni cargo firmware.
-  - FALLO puente SimConnect (codigo 1): C1083, falta SimConnect.h.
-- `git diff --cached --check` sin errores; `graphify update .` ejecutado. `graphify-ino/` ya estaba sin seguimiento y se dejo intacto. Sin carga de firmware ni ensayos de hardware.
-- Entre las partes 3 y 4 NO se puede generar UF2: el .ino sigue en la raiz y las cabeceras ya estan en include/. No se ejecuto -Pico.
-- Version: no corresponde en esta sesion; nueva-version.ps1 solo en la parte 5, segun el plan.
-- Sigue: resolver el SDK de SimConnect y repetir `probar.ps1 -Bridge`; revision de Claude de la parte 3 antes de iniciar la parte 4. No repetir -Sdk si no cambia el codigo de destino.
-
+- Parte 4 detenida antes de implementar (Codex, 2026-11-02), rama `firmware/pico-sdk`; base `c2e039c`. Sin cambios de codigo.
+BLOQUEO: instrucciones contradictorias sobre `graphify-ino/`: HANDOFF, "Para todas las partes", prohibe tocar esa carpeta; `LEEME md/DISENO_migracion_pico_sdk.md`, seccion 6, Parte 4, punto 6, ordena borrarla. Se conserva intacta. Claude debe aclarar expresamente si el borrado de la parte 4 es una excepcion a esa prohibicion antes de continuar, segun la regla de detenerse ante especificaciones contradictorias.
+- Verificacion: `git status --short` inicial muestra solo `?? graphify-ino/`; `git ls-files graphify-ino` no lista archivos. Consultado el grafo y leidas las secciones del diseno correspondientes a esta parte.
+- Documentacion modificada: solo esta seccion de HANDOFF. No se abrio ni modifico tesis/.
+- Pruebas/compilacion: no ejecutadas; no hubo cambios de codigo. No se afirma ningun OK/FALLO nuevo.
+- Version: no creada; el plan reserva nueva-version.ps1 para la parte 5.
+- Sigue: Claude unifica las instrucciones; luego ejecutar la parte 4 completa y sus verificaciones. Este bloqueo se registra en un commit separado de HANDOFF.
 \## Revisión
 
 - Pendiente: Claude debe revisar la parte 2 (`8688f0a`). La parte 1 estaba aprobada al comenzar (registro anterior en `818c6ba`).
