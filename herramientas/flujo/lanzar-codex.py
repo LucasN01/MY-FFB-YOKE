@@ -21,8 +21,8 @@ import threading
 
 # El script vive en herramientas/flujo/: la raiz del repo esta dos niveles arriba.
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if not os.path.isfile(os.path.join(REPO, "MiYoke_PD.ino")):
-    sys.exit(f"[lanzar-codex] no se encontro MiYoke_PD.ino en {REPO} (raiz del repositorio)")
+if not os.path.isfile(os.path.join(REPO, "src/main.cpp")):
+    sys.exit(f"[lanzar-codex] no se encontro src/main.cpp en {REPO} (raiz del repositorio)")
 
 
 def titulo_desde_handoff(mensaje):

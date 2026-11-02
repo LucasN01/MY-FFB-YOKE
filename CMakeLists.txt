@@ -15,18 +15,26 @@ pico_sdk_init()
 
 set(MIYOKE_HAL_SOURCES src/hal/rp2350/time_gpio.cpp src/hal/rp2350/pwm_adc.cpp src/hal/rp2350/i2c.cpp
     src/hal/rp2350/watchdog.cpp src/hal/rp2350/eeprom_flash.cpp src/hal/rp2350/usb_cdc.cpp
-    src/hal/rp2350/usb_descriptors.cpp)
+    src/hal/rp2350/usb_descriptors.cpp src/hal/rp2350/newlib_locks.cpp)
 set(MIYOKE_LIBS pico_stdlib hardware_pwm hardware_adc hardware_i2c hardware_flash hardware_watchdog
     hardware_sync hardware_irq pico_unique_id pico_bootrom tinyusb_device)
 
-# Temporary target until the firmware entry point is migrated in part 4.
-add_library(myk_hal STATIC ${MIYOKE_HAL_SOURCES})
-# mis_defines.h remains at the root until part 3.
-target_include_directories(myk_hal PRIVATE include src/hal/rp2350)
-target_compile_definitions(myk_hal PRIVATE YOKE_TARGET_RP2350=1 PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64)
-target_compile_options(myk_hal PRIVATE -Werror=return-type -Wno-psabi
-    $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
-target_link_libraries(myk_hal PRIVATE ${MIYOKE_LIBS})
-pico_enable_stdio_usb(myk_hal 0)
-pico_enable_stdio_uart(myk_hal 0)
-# pico_set_printf_implementation applies only to executables (part 4).
+function(miyoke_firmware name)
+  add_executable(${name} src/main.cpp ${MIYOKE_HAL_SOURCES})
+  target_include_directories(${name} PRIVATE include src/hal/rp2350)
+  target_compile_definitions(${name} PRIVATE YOKE_TARGET_RP2350=1
+      PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64 ${ARGN})
+  target_compile_options(${name} PRIVATE -Werror=return-type -Wno-psabi
+      $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
+  target_link_libraries(${name} PRIVATE ${MIYOKE_LIBS})
+  pico_enable_stdio_usb(${name} 0)
+  pico_enable_stdio_uart(${name} 0)
+  pico_set_printf_implementation(${name} compiler)
+  pico_add_extra_outputs(${name})
+endfunction()
+
+miyoke_firmware(myk_cfg)
+miyoke_firmware(myk_enc YOKE_POSITION_SOURCE=0)
+miyoke_firmware(myk_pot YOKE_POSITION_SOURCE=2)
+miyoke_firmware(myk_as YOKE_POSITION_SOURCE=3)
+miyoke_firmware(myk_falla YOKE_POSITION_SOURCE=2 YOKE_TEST_HANG=3 YOKE_TEST_HANG_MS=20000)

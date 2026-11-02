@@ -16,9 +16,6 @@
 // v8: raw telemetry only, 113 bytes. Timestamp at 6; 22 float32 at 10;
 // three config float32 at 98, options at 110, CRC at 111. See RawTelemetry.h.
 namespace YokeSC {
-#ifdef __AVR__
-__attribute__((noinline))
-#endif
 inline float clip(float x, float lo, float hi) { return x < lo ? lo : (x > hi ? hi : x); }
 inline uint16_t read16(const uint8_t* p) { return uint16_t(p[0]) | (uint16_t(p[1]) << 8); }
 inline void put16(uint8_t* p, uint16_t n) { p[0]=uint8_t(n); p[1]=uint8_t(n>>8); }

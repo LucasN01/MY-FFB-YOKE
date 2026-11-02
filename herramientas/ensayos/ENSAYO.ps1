@@ -4,7 +4,7 @@
 )
 $ErrorActionPreference = 'Stop'
 $Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
-if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'MiYoke_PD.ino'))) { throw "No se encontro MiYoke_PD.ino en $Raiz (raiz del repositorio)." }
+if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'src/main.cpp'))) { throw "No se encontro src/main.cpp en $Raiz (raiz del repositorio)." }
 $destino = Join-Path $Raiz ('ensayos\' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '_' + $Nombre)
 New-Item -ItemType Directory -Path $destino | Out-Null
 $fases = @(

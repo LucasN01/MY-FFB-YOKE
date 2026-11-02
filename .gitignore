@@ -26,6 +26,7 @@ VPforce-TelemFFB-refactor/
 
 # Graphify (el grafo es local, se regenera)
 graphify-out/
+graphify-ino/
 # Artefactos de Visual Studio
 tests/bin/
 tests/obj/

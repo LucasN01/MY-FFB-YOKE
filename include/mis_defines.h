@@ -168,7 +168,7 @@ static_assert(MOTOR_PWM_HARD_LIMIT >= 0 && MOTOR_PWM_HARD_LIMIT <= 220, "Techo P
 // Tiempo de ciclo de control, en milisegundos.
 #define CONTROL_LOOP_MS  2   // 2ms = 500Hz, igual orden que el proyecto original
 #define YOKE_WDT_MS        250   // reinicio por hardware si loop() no corre en 250 ms
-#define YOKE_WDT_FLASH_MS  3000  // durante hal::eeprom.commit (borrado de sector, max ~400 ms)
+#define YOKE_WDT_FLASH_MS  3000  // durante commit de EEPROM (borrado de sector, max ~400 ms)
 #define YOKE_USB_GUARD     1     // serializar CDC con mutex de la HAL (correccion H5)
 #ifndef YOKE_TEST_HANG
 #define YOKE_TEST_HANG     0     // SOLO ENSAYO: 0=no, 1=for(;;), 2=noInterrupts+for(;;), 3=__builtin_trap

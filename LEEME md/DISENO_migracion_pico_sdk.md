@@ -488,6 +488,19 @@ Prototipos: en `MiYoke_PD.ino` todas las funciones (`markStage`, `slowFlags`, `f
 `debugPrintMotion`, `setup`, `loop`) estan definidas antes de usarse; con `main()` al final no hacen
 falta prototipos. Si Codex reordena, agrega prototipos explicitos arriba.
 
+### 4.12 Cerrojos de newlib - `src/hal/rp2350/newlib_locks.cpp` (agregado por Claude en la parte 4)
+
+La newlib de `pqt-gcc` (U3) esta compilada con `_RETARGETABLE_LOCKING`
+[`D:/pico/toolchains/pqt-gcc-5.0.0/arm-none-eabi/include/sys/lock.h:26-66`]: el enlace falla con
+`undefined reference to __retarget_lock_*` y `__lock___*_mutex` si el firmware no los define. El core
+los daba en [ARD `cores/rp2040/lock.cpp`]; el SDK 2.2.0 no los trae. `newlib_locks.cpp` replica la
+rama sin FreeRTOS de ese archivo: los nueve objetos `__lock___*` son `mutex_t`/`recursive_mutex_t`
+en la seccion `.mutex_array` (los inicializa `runtime_init_mutex` antes de `main()`, marca
+`spin_lock = 1` para los recursivos, igual que `auto_init_recursive_mutex` [SDK
+`src/common/pico_sync/include/pico/mutex.h:306`, `mutex.c:24-35`]) y las funciones
+`__retarget_lock_*` llaman a `mutex_*`/`recursive_mutex_*`. `static_assert`: ambos tipos entran en
+`struct __lock` (8 bytes). Con guarda D13 y agregado a `MIYOKE_HAL_SOURCES`.
+
 ---
 
 ## 5. CMake y variantes

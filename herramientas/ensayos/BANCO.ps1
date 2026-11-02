@@ -6,7 +6,7 @@
 )
 $ErrorActionPreference = 'Stop'
 $Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
-if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'MiYoke_PD.ino'))) { throw "No se encontro MiYoke_PD.ino en $Raiz (raiz del repositorio)." }
+if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'src/main.cpp'))) { throw "No se encontro src/main.cpp en $Raiz (raiz del repositorio)." }
 if (Get-Process -Name Prepar3D,YokeSimConnectBridge -ErrorAction SilentlyContinue) {
     throw 'Cerra Prepar3D y YokeSimConnectBridge antes del banco: el puerto COM es exclusivo.'
 }

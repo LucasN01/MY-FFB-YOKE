@@ -1,7 +1,7 @@
 param([Parameter(Mandatory=$true)][string]$Mensaje, [switch]$Forzar)
 $ErrorActionPreference = 'Stop'
 $Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
-if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'MiYoke_PD.ino'))) { throw "No se encontro MiYoke_PD.ino en $Raiz (raiz del repositorio)." }
+if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'src/main.cpp'))) { throw "No se encontro src/main.cpp en $Raiz (raiz del repositorio)." }
 Set-Location $Raiz
 
 # 1. Exigir árbol limpio (se ignora la copia de graphify)

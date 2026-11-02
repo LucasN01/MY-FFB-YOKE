@@ -1,6 +1,9 @@
 #if defined(YOKE_TARGET_RP2350)
 #include "hal/hal_usb.h"
 #include "mis_defines.h"
+#ifndef YOKE_USB_GUARD
+#error "YOKE_USB_GUARD must be defined"
+#endif
 #include "tusb.h"
 #include "pico/mutex.h"
 #include "pico/bootrom.h"
@@ -31,9 +34,6 @@ void init() {
 void background() {
     if (mutex_try_enter(&usbMutex, nullptr)) {
         tud_task();
-#ifndef YOKE_USB_GUARD
-#error "YOKE_USB_GUARD must be defined"
-#endif
 #if YOKE_USB_GUARD
         tud_cdc_write_flush();
 #endif

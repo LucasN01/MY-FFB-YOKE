@@ -2,8 +2,7 @@
 # Compila y ejecuta las verificaciones con salida minima (ahorro de tokens para agentes).
 # Imprime una linea por paso: "OK ..." o "FALLO ..." con hasta -MaxLineas lineas de error.
 # Por defecto: suites C++ (simconnect_checks, comparar_ensayo, hal_checks) y pruebas del lanzador.
-# Uso: powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 [-Sdk] [-Pico] [-Encoders] [-Potentiometers] [-As5600] [-Bridge] [-PruebaFalla] [-Todo]
-#   -Sdk             compila la HAL estatica para RP2350 (parte 2 de la migracion)
+# Uso: powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 [-Pico] [-Encoders] [-Potentiometers] [-As5600] [-Bridge] [-PruebaFalla] [-Todo]
 #   -Pico            compila firmware Pico 2 con la configuracion del codigo (Build-Pico2.ps1)
 #   -Encoders        compila tambien la variante encoders
 #   -Potentiometers  compila tambien la variante potenciometros
@@ -14,7 +13,6 @@
 # No carga firmware ni ejecuta el simulador.
 
 param(
-    [switch]$Sdk,
     [switch]$Pico,
     [switch]$Encoders,
     [switch]$Potentiometers,
@@ -27,7 +25,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
-if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'MiYoke_PD.ino'))) { throw "No se encontro MiYoke_PD.ino en $Raiz (raiz del repositorio)." }
+if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'src/main.cpp'))) { throw "No se encontro src/main.cpp en $Raiz (raiz del repositorio)." }
 Set-Location $Raiz
 if ($Todo) { $Pico = $true; $Encoders = $true; $Potentiometers = $true; $As5600 = $true; $Bridge = $true }
 $fallos = 0
@@ -88,12 +86,8 @@ $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'tests\lau
 $fallos += Resumir 'launcher_port_checks' $r.Codigo $r.Salida 'PASS|OK' '(?i)error|fail|exception|excepcion'
 
 # 3. Firmware y puente (opcionales)
-$patronTam = '(?i)(sketch uses|el sketch usa|global variables|las variables globales)'
+$patronTam = '(?i)(flash usada|ram usada)'
 $patronErr = '(?i)(error|warning|advertencia)'
-if ($Sdk) {
-    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-PicoSdk.ps1' }
-    $fallos += Resumir 'SDK myk_hal (RP2350)' $r.Codigo $r.Salida '^HAL RP2350' $patronErr
-}
 if ($Pico) {
     $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Pico2.ps1' }
     $fallos += Resumir 'Pico 2 (configurado)' $r.Codigo $r.Salida $patronTam $patronErr

@@ -3,8 +3,6 @@
 
 #include "hal/hal.h"
 #include <stdio.h>
-#include <stdio.h>
-#include <string.h>
 #include <string.h>
 #include "mis_defines.h"
 #include "YokeI2C.h"
@@ -270,7 +268,7 @@ private:
     }
 	
 	bool busAvailable() {
-		// Si el LCD est� apagado y deja SDA o SCL clavados en false,
+		// Si el LCD est� apagado y deja SDA o SCL clavados en LOW,
 		// no intentar una transferencia I2C.
 		
 		return hal::digitalRead(LCD_SDA_PIN) == true &&

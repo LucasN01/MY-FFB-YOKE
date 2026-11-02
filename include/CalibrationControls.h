@@ -66,7 +66,7 @@ public:
     bool save() {
         if(!menu.savePending()) return true;
         static_assert(YokeGains::recordSize<=YokePots::recordOffset &&
-                      YokePots::recordOffset+YokePots::recordSize<=256,"hal::eeprom solapada");
+                      YokePots::recordOffset+YokePots::recordSize<=256,"EEPROM solapada");
         uint8_t record[64], previous[64];
         const bool recording=menu.savingRecord();
         const bool pots=menu.savingPots();

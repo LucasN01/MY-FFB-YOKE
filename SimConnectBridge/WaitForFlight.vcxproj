@@ -17,7 +17,8 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
-    <P3DSdkDir Condition="'$(P3DSdkDir)'==''">C:\Program Files\Lockheed Martin\Prepar3D v4\redist\Interface\FSX-SP2-XPACK\retail</P3DSdkDir>
+    <P3DSdkDir Condition="'$(P3DSdkDir)'=='' and Exists('C:\Program Files\Lockheed Martin\Prepar3D v4\redist\Interface\FSX-SP2-XPACK\retail\inc\SimConnect.h')">C:\Program Files\Lockheed Martin\Prepar3D v4\redist\Interface\FSX-SP2-XPACK\retail</P3DSdkDir>
+    <P3DSdkDir Condition="'$(P3DSdkDir)'=='' and Exists('C:\Program Files (x86)\Lockheed Martin\Prepar3D v3\redist\Interface\FSX-SP2-XPACK\retail\inc\SimConnect.h')">C:\Program Files (x86)\Lockheed Martin\Prepar3D v3\redist\Interface\FSX-SP2-XPACK\retail</P3DSdkDir>
     <OutDir>$(MSBuildProjectDirectory)\bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(MSBuildProjectDirectory)\obj\WaitForFlight\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>

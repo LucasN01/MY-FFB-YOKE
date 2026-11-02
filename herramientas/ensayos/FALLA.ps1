@@ -9,10 +9,11 @@ try {
     $elfFile = Get-Item -LiteralPath $Elf
     Write-Host ('.elf: {0} (fecha {1})' -f $elfFile.FullName, $elfFile.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss'))
     Write-Host 'El .elf debe ser de la misma compilacion que el UF2 cargado'
-    $pattern = Join-Path $env:LOCALAPPDATA 'Arduino15\packages\rp2040\tools\pqt-gcc\*\bin\arm-none-eabi-addr2line.exe'
-    $addr2line = Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue |
-        Sort-Object { $_.Directory.Parent.LastWriteTime } -Descending | Select-Object -First 1
-    if (-not $addr2line) { throw 'No se encontro arm-none-eabi-addr2line.exe en las herramientas de rp2040.' }
+    $toolchainPath = if ($env:PICO_TOOLCHAIN_PATH) { $env:PICO_TOOLCHAIN_PATH } else { 'D:/pico/toolchains/pqt-gcc-5.0.0' }
+    if ((Split-Path $toolchainPath -Leaf) -ne 'bin') { $toolchainPath = Join-Path $toolchainPath 'bin' }
+    $addr2linePath = Join-Path $toolchainPath 'arm-none-eabi-addr2line.exe'
+    if (-not (Test-Path -LiteralPath $addr2linePath -PathType Leaf)) { throw "No se encontro arm-none-eabi-addr2line.exe en $toolchainPath (PICO_TOOLCHAIN_PATH)." }
+    $addr2line = Get-Item -LiteralPath $addr2linePath
     $addresses = @(@{ Name='PC'; Value=$Pc })
     if ($Lr) { $addresses += @{ Name='LR'; Value=$Lr } }
     $failed = $false

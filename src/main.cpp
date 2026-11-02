@@ -14,15 +14,17 @@
 #include "SimEffects.h"
 #include "PicoLog.h"
 #endif
-#if defined(ARDUINO_ARCH_RP2040) && defined(USE_TINYUSB)
-// USB CDC (Serial) para SimConnect y diagnostico; no se registra joystick HID.
-#include <Adafruit_TinyUSB.h>
-#endif
 #include "LcdTelemetry.h"
 #include <stdio.h>
+#include <pico.h>
+#include "hal/hal_time.h"
+#include "hal/hal_pwm.h"
+#include "hal/hal_gpio.h"
+#include "hal/hal_usb.h"
+#include "hal/hal_watchdog.h"
 #include "UsbGuard.h"
 #include "LoopSupervisor.h"
-#if defined(ARDUINO_ARCH_RP2040)
+#if defined(YOKE_TARGET_RP2350)
 #if defined(PICO_RP2350) && PICO_RP2350
 #include <hardware/structs/powman.h>
 #endif
@@ -54,20 +56,6 @@ extern "C" void isr_hardfault(void) {
     for(;;){}
 }
 #endif
-#endif
-#if defined(ARDUINO_ARCH_RP2040) && defined(USE_TINYUSB) && YOKE_USB_GUARD
-extern "C" void yield() {
-    if (mutex_try_enter(&__usb_mutex, nullptr)) {
-        tud_task();
-        TinyUSB_Device_FlushCDC();
-        mutex_exit(&__usb_mutex);
-    }
-}
-#endif
-#if defined(ARDUINO_ARCH_AVR)
-#include <avr/pgmspace.h>
-#else
-#include <pgmspace.h>
 #endif
 
 // Fuerzas exclusivamente desde SimConnect. La otra placa envia los ejes al simulador.
@@ -118,10 +106,10 @@ bool bootStageValid = false, bootFault = false, bootSent = false;
 YokeHealth::StageTimer stageTimer;
 YokeHealth::SlowLog slowLog;
 uint32_t prevElapsedUs=0;
-inline void markStage(uint8_t s) { YokeHealth::mark(s); stageTimer.enter(s,micros()); }
+inline void markStage(uint8_t s) { YokeHealth::mark(s); stageTimer.enter(s,hal::micros()); }
 uint8_t slowFlags() {
     uint8_t flags;
-    { UsbLock usb; flags=Serial.dtr() ? 1 : 0; }
+    { UsbLock usb; flags=hal::usbSerial.dtr() ? 1 : 0; }
     if(simTelemetry.rawAvailable) flags|=2;
 #if YOKE_CALIBRATION_ENABLED
     if(calibration.menu.active()) flags|=4;
@@ -133,12 +121,12 @@ uint8_t slowFlags() {
 inline void markStage(uint8_t s) { YokeHealth::mark(s); }
 #endif
 void finishLoop(uint32_t nowUs) {
-    const uint32_t elapsedUs=micros()-nowUs;
+    const uint32_t elapsedUs=hal::micros()-nowUs;
     if(elapsedUs>loopWorstUs) loopWorstUs=elapsedUs;
 #if YOKE_RECORD_OPTION
-    stageTimer.enter(YokeHealth::Idle,micros());
+    stageTimer.enter(YokeHealth::Idle,hal::micros());
     if(elapsedUs>=YOKE_SLOW_LOOP_US)
-        slowLog.push({millis(),elapsedUs,0,stageTimer.worstUs,stageTimer.worst,slowFlags()});
+        slowLog.push({hal::millis(),elapsedUs,0,stageTimer.worstUs,stageTimer.worst,slowFlags()});
     prevElapsedUs=elapsedUs;
 #endif
     YokeHealth::mark(YokeHealth::Idle);
@@ -150,24 +138,24 @@ void debugPrintMotion(unsigned long now, const float* motorCommands) {
     static bool printPitch = true; // cada linea empieza por Pitch
     if (now - lastPrint < MOTION_TELEMETRY_MS) return;
     lastPrint = now;
-    // En AVR, operator bool de Serial introduce delay(10); dtr() no espera.
-    { UsbLock usb; if (!Serial.dtr()) return; }
+    // dtr() no espera la conexion del monitor.
+    { UsbLock usb; if (!hal::usbSerial.dtr()) return; }
 
 
     const uint8_t axis = printPitch ? 1 : 0;
     const int16_t pwm = printPitch ? pitchMotor.getLastAppliedPWM() : rollMotor.getLastAppliedPWM();
     char line[64];
 #if YOKE_POSITION_SOURCE == 2
-    const int length = snprintf_P(
-        line, sizeof(line), PSTR("%c a=%u x=%ld v=%ld f=%d p=%d%s"),
+    const int length = snprintf(
+        line, sizeof(line), "%c a=%u x=%ld v=%ld f=%d p=%d%s",
         printPitch ? 'P' : 'R', (unsigned)positionInput.raw(axis),
         (long)(yokePosition[axis] * 10000.0f),
         (long)(yokeVelocity[axis] * 1000.0f),
         (int)(motorCommands[axis] * 10000.0f), (int)pwm,
         printPitch ? " | " : "\n");
 #elif YOKE_POSITION_SOURCE == 3
-    const int length = snprintf_P(
-        line, sizeof(line), PSTR("%c a=%u s=%s g=%u x=%ld v=%ld f=%d p=%d%s"),
+    const int length = snprintf(
+        line, sizeof(line), "%c a=%u s=%s g=%u x=%ld v=%ld f=%d p=%d%s",
         printPitch ? 'P' : 'R', (unsigned)positionInput.raw(axis),
         positionInput.statusText(axis), (unsigned)positionInput.agc(axis),
         (long)(yokePosition[axis] * 10000.0f),
@@ -178,8 +166,8 @@ void debugPrintMotion(unsigned long now, const float* motorCommands) {
     // v: velocidad en milesimas/s. f: comando SimConnect en 1/10000.
     // p: PWM final con polaridad.
     // Linea compacta para caber en el buffer USB sin bloquear.
-    const int length = snprintf_P(
-        line, sizeof(line), PSTR("%c x=%ld v=%ld f=%d p=%d%s"),
+    const int length = snprintf(
+        line, sizeof(line), "%c x=%ld v=%ld f=%d p=%d%s",
         printPitch ? 'P' : 'R',
         (long)(yokePosition[axis] * 10000.0f),
         (long)(yokeVelocity[axis] * 1000.0f),
@@ -192,9 +180,9 @@ void debugPrintMotion(unsigned long now, const float* motorCommands) {
     // Cada fragmento cabe en un paquete USB. No esperar si el host no recibe.
     {
         UsbLock usb;
-        if (length > 0 && length < (int)sizeof(line) && Serial.availableForWrite() >= length) {
+        if (length > 0 && length < (int)sizeof(line) && hal::usbSerial.availableForWrite() >= length) {
             YokeHealth::mark(YokeHealth::SerialTx);
-            Serial.write((const uint8_t*)line, length);
+            hal::usbSerial.write((const uint8_t*)line, length);
             printPitch = !printPitch;
         }
     }
@@ -202,15 +190,16 @@ void debugPrintMotion(unsigned long now, const float* motorCommands) {
 }
 
 void setup() {
+    hal::pwmSetup(MOTOR_PWM_HZ, 255);
     rollMotor.begin();
     pitchMotor.begin();
-#if defined(ARDUINO_ARCH_RP2040) && defined(__ARM_ARCH_8M_MAIN__)
+#if defined(YOKE_TARGET_RP2350) && defined(__ARM_ARCH_8M_MAIN__)
     uint32_t* stackCurrent;
     __asm volatile("mrs %0, msp" : "=r"(stackCurrent));
     YokeHealth::paintStack(&__StackBottom,stackCurrent,0xA5A5A5A5u);
 #endif
-#if defined(ARDUINO_ARCH_RP2040)
-    bootReason=rp2040.getResetReason();
+#if defined(YOKE_TARGET_RP2350)
+    bootReason=static_cast<int>(hal::resetReason());
     bootWd=watchdog_hw->reason;
 #if defined(PICO_RP2350) && PICO_RP2350
     bootPm=powman_hw->chip_reset;
@@ -222,39 +211,25 @@ void setup() {
     }
     watchdog_hw->scratch[1]=watchdog_hw->scratch[2]=watchdog_hw->scratch[3]=0;
     YokeHealth::mark(YokeHealth::Idle);
-    analogWriteRange(255);
-    analogWriteFreq(MOTOR_PWM_HZ);
-#endif
-#if defined(ARDUINO_ARCH_RP2040) && defined(USE_TINYUSB)
-    // TinyUSB usa 239A:CAFE por defecto; el lanzador busca la Pico 2 como 2E8A:000F.
-    TinyUSBDevice.setID(0x2E8A, 0x000F);
-    if (TinyUSBDevice.mounted()) { // ya enumerada con el ID anterior: re-enumerar
-        TinyUSBDevice.detach();
-        delay(10);
-        TinyUSBDevice.attach();
-    }
-#endif
-#if DEBUG_MOTION_TELEMETRY || SIMCONNECT_ADDITIONS_ENABLED
-    Serial.begin(115200); // USB CDC: no esperar la conexion del monitor
 #endif
     lcd.begin(); // programar inicio; LCD se inicializa por etapas desde update()
 #if YOKE_POSITION_SOURCE != 1
     positionInput.begin(); // encoders: centrar al iniciar; potes: centro calibrado; AS5600: centro configurado o al encender
 #endif
-    lastControlLoopUs = micros();
+    lastControlLoopUs = hal::micros();
 #if YOKE_CALIBRATION_ENABLED
     calibration.begin(); // cargar ganancias guardadas; arrancar siempre en modo normal
 #endif
-#if defined(ARDUINO_ARCH_RP2040)
-    rp2040.wdt_begin(YOKE_WDT_MS);
+#if defined(YOKE_TARGET_RP2350)
+    hal::watchdogBegin(YOKE_WDT_MS);
 #endif
 }
 
 void loop() {
-#if defined(ARDUINO_ARCH_RP2040)
-    rp2040.wdt_reset();
+#if defined(YOKE_TARGET_RP2350)
+    hal::watchdogFeed();
 #endif
-    const uint32_t nowUs = micros();
+    const uint32_t nowUs = hal::micros();
     if (nowUs - lastControlLoopUs < CONTROL_LOOP_MS * 1000UL) return;
     const uint32_t gapUs=nowUs-lastControlLoopUs;
     if(gapUs>gapWorstUs) gapWorstUs=gapUs;
@@ -262,10 +237,10 @@ void loop() {
 #if YOKE_RECORD_OPTION
     const uint32_t idleUs=gapUs-prevElapsedUs;
     if(YokeHealth::slowBetween(gapUs,prevElapsedUs,YOKE_SLOW_LOOP_US))
-        slowLog.push({millis(),0,idleUs,idleUs,YokeHealth::Between,slowFlags()});
+        slowLog.push({hal::millis(),0,idleUs,idleUs,YokeHealth::Between,slowFlags()});
     stageTimer.begin(nowUs);
 #endif
-    const unsigned long now = millis();
+    const unsigned long now = hal::millis();
 
 #if YOKE_POSITION_SOURCE == 2
     markStage(YokeHealth::PotRead);
@@ -284,19 +259,19 @@ void loop() {
     markStage(YokeHealth::SerialRx);
     {
         UsbLock usb;
-        for (uint8_t n = 0; n < 128 && Serial.available(); ++n) {
-            const uint8_t b = Serial.read();
+        for (uint8_t n = 0; n < 128 && hal::usbSerial.available(); ++n) {
+            const uint8_t b = hal::usbSerial.read();
             if (b == '?' && simTelemetry.idle()) {
-                if (Serial.availableForWrite() >= 10) {
+                if (hal::usbSerial.availableForWrite() >= 10) {
                     markStage(YokeHealth::SerialTx);
-                    Serial.write("YOKE17SC8\n", 10);
+                    hal::usbSerial.write("YOKE17SC8\n", 10);
                     markStage(YokeHealth::SerialRx);
                 }
             } else simTelemetry.feed(b, now);
         }
     }
     bool dtr;
-    { UsbLock usb; dtr=Serial.dtr(); }
+    { UsbLock usb; dtr=hal::usbSerial.dtr(); }
 #endif
 
 #if SIMCONNECT_ADDITIONS_ENABLED
@@ -307,15 +282,15 @@ void loop() {
         // La escritura flash bloquea brevemente CPU/interrupciones: PWM cero antes.
         rollMotor.stop(); pitchMotor.stop();
         markStage(YokeHealth::FlashSave);
-#if defined(ARDUINO_ARCH_RP2040)
-        rp2040.wdt_begin(YOKE_WDT_FLASH_MS);
+#if defined(YOKE_TARGET_RP2350)
+        hal::watchdogBegin(YOKE_WDT_FLASH_MS);
 #endif
         calibration.save();
 #if YOKE_POSITION_SOURCE == 3
         positionInput.excuseGap();
 #endif
-#if defined(ARDUINO_ARCH_RP2040)
-        rp2040.wdt_begin(YOKE_WDT_MS);
+#if defined(YOKE_TARGET_RP2350)
+        hal::watchdogBegin(YOKE_WDT_MS);
 #endif
 #if YOKE_POSITION_SOURCE != 1
         localMotion[0].reset(); localMotion[1].reset();
@@ -325,10 +300,10 @@ void loop() {
         return; // recalcular fuerza con hora/telemetria actuales en el proximo ciclo
     }
 #endif
-    const uint32_t effectsStartUs=micros();
+    const uint32_t effectsStartUs=hal::micros();
     markStage(YokeHealth::Effects);
     simEffects.update(simTelemetry, now, dtr);
-    const uint32_t effectsElapsedUs=micros()-effectsStartUs;
+    const uint32_t effectsElapsedUs=hal::micros()-effectsStartUs;
     if(effectsElapsedUs>effectsWorstUs) effectsWorstUs=effectsElapsedUs;
 #endif
 
@@ -338,15 +313,15 @@ void loop() {
     if(calibration.menu.savePending()) {
         rollMotor.stop(); pitchMotor.stop();
         markStage(YokeHealth::FlashSave);
-#if defined(ARDUINO_ARCH_RP2040)
-        rp2040.wdt_begin(YOKE_WDT_FLASH_MS);
+#if defined(YOKE_TARGET_RP2350)
+        hal::watchdogBegin(YOKE_WDT_FLASH_MS);
 #endif
         calibration.save();
 #if YOKE_POSITION_SOURCE == 3
         positionInput.excuseGap();
 #endif
-#if defined(ARDUINO_ARCH_RP2040)
-        rp2040.wdt_begin(YOKE_WDT_MS);
+#if defined(YOKE_TARGET_RP2350)
+        hal::watchdogBegin(YOKE_WDT_MS);
 #endif
 #if YOKE_POSITION_SOURCE != 1
         localMotion[0].reset(); localMotion[1].reset();
@@ -423,9 +398,9 @@ void loop() {
         const int n=YokeHealth::formatBoot(bootLine+1,sizeof(bootLine)-1,bootReason,
             bootWd,bootPm,bootStageValid,bootStage,bootFault,bootExc,bootPc,bootLr,bootCfsr);
         UsbLock usb;
-        if(n>0 && Serial.availableForWrite()>=n+1) {
+        if(n>0 && hal::usbSerial.availableForWrite()>=n+1) {
             markStage(YokeHealth::SerialTx);
-            Serial.write((const uint8_t*)bootLine,n+1); markStage(YokeHealth::ModelLog); bootSent=true;
+            hal::usbSerial.write((const uint8_t*)bootLine,n+1); markStage(YokeHealth::ModelLog); bootSent=true;
         }
     }
     markStage(YokeHealth::ModelLog);
@@ -436,7 +411,7 @@ void loop() {
     static bool recordSent=false, lastRecordSent=true;
     static uint32_t lastRecordMs=0, lastSlowMs=0;
     static uint16_t slowSeq=0;
-#if defined(ARDUINO_ARCH_RP2040) && defined(__ARM_ARCH_8M_MAIN__)
+#if defined(YOKE_TARGET_RP2350) && defined(__ARM_ARCH_8M_MAIN__)
     static uint32_t lastStackCheckMs=0, lastStackMs=0, lastStackBytes=0xFFFFFFFFu, stackBytes=0xFFFFFFFFu;
     if(uint32_t(now-lastStackCheckMs)>=1000) {
         stackBytes=YokeHealth::freeStackBytes(&__StackBottom,&__StackTop,0xA5A5A5A5u);
@@ -452,7 +427,7 @@ void loop() {
     }
     if(dtr && !lastDtr) {
         logSynced=false; recordSent=false; gainsSent=false;
-#if defined(ARDUINO_ARCH_RP2040) && defined(__ARM_ARCH_8M_MAIN__)
+#if defined(YOKE_TARGET_RP2350) && defined(__ARM_ARCH_8M_MAIN__)
         lastStackBytes=0xFFFFFFFFu;
 #endif
     }
@@ -465,20 +440,20 @@ void loop() {
     const bool logReady=dtr && simTelemetry.rawAvailable && uint32_t(now-simTelemetry.last)<300;
     if(logReady) {
         UsbLock usb;
-        if(Serial.availableForWrite()>=YOKE_LOG_M_MAX) {
+        if(hal::usbSerial.availableForWrite()>=YOKE_LOG_M_MAX) {
             char line[YOKE_LOG_M_MAX]; YokeHealth::SlowEvent event;
             if(slowLog.front(event) && uint32_t(now-lastSlowMs)>=20) {
-                const int n=YokeHealth::formatSlow(line,sizeof(line),slowSeq,millis()-event.atMs,event,slowLog.total,slowLog.lost);
+                const int n=YokeHealth::formatSlow(line,sizeof(line),slowSeq,hal::millis()-event.atMs,event,slowLog.total,slowLog.lost);
                 if(n>0) {
-                    markStage(YokeHealth::SerialTx); Serial.write((const uint8_t*)line,n);
+                    markStage(YokeHealth::SerialTx); hal::usbSerial.write((const uint8_t*)line,n);
                     markStage(YokeHealth::ModelLog);
                     slowLog.pop(); ++slowSeq; lastSlowMs=now; modelWritten=true;
                 }
-#if defined(ARDUINO_ARCH_RP2040) && defined(__ARM_ARCH_8M_MAIN__)
+#if defined(YOKE_TARGET_RP2350) && defined(__ARM_ARCH_8M_MAIN__)
             } else if(stackBytes!=0xFFFFFFFFu && (stackBytes<lastStackBytes || uint32_t(now-lastStackMs)>=60000)) {
                 const int n=snprintf(line,sizeof(line),"\nS,%lu\n",(unsigned long)stackBytes);
                 if(n>0 && n<int(sizeof(line))) {
-                    markStage(YokeHealth::SerialTx); Serial.write((const uint8_t*)line,n);
+                    markStage(YokeHealth::SerialTx); hal::usbSerial.write((const uint8_t*)line,n);
                     markStage(YokeHealth::ModelLog);
                     lastStackBytes=stackBytes; lastStackMs=now; modelWritten=true;
                 }
@@ -486,7 +461,7 @@ void loop() {
             } else if(!recordSent || recordSettings.enabled!=lastRecordSent || uint32_t(now-lastRecordMs)>=5000) {
                 const int n=YokeLog::formatRecord(line,sizeof(line),recordSettings.enabled);
                 if(n>0) {
-                    markStage(YokeHealth::SerialTx); Serial.write((const uint8_t*)line,n);
+                    markStage(YokeHealth::SerialTx); hal::usbSerial.write((const uint8_t*)line,n);
                     markStage(YokeHealth::ModelLog);
                     recordSent=true; lastRecordSent=recordSettings.enabled; lastRecordMs=now; modelWritten=true;
                 }
@@ -495,7 +470,7 @@ void loop() {
     }
     if(!modelWritten && logReady && recordSettings.enabled && recordSent && (r!=lastLoggedRev || uint32_t(now-lastLineMs)>=100)) {
         UsbLock usb;
-        if(Serial.availableForWrite()>=YOKE_LOG_M_MAX) {
+        if(hal::usbSerial.availableForWrite()>=YOKE_LOG_M_MAX) {
             const uint16_t nextDrop=YokeLog::nextDrop(drop,r,lastLoggedRev,simEffects.skipped(),lastSkip);
             YokeLog::Frame f{};
             f.seq=seq; f.t=simTelemetry.raw.timeMs; f.rev=r;
@@ -519,7 +494,7 @@ void loop() {
             const int n=YokeLog::formatModel(line,sizeof(line),f);
             if(n>0) {
                 markStage(YokeHealth::SerialTx);
-                Serial.write((const uint8_t*)line,n);
+                hal::usbSerial.write((const uint8_t*)line,n);
                 markStage(YokeHealth::ModelLog);
                 ++seq; drop=nextDrop; if(r!=0) lastLoggedRev=r;
                 lastSkip=simEffects.skipped();
@@ -537,12 +512,12 @@ void loop() {
         }
         if(!gainsSent || changed || uint32_t(now-lastGainsMs)>=5000) {
             UsbLock usb;
-            if(Serial.availableForWrite()>=YOKE_LOG_M_MAX) {
+            if(hal::usbSerial.availableForWrite()>=YOKE_LOG_M_MAX) {
                 char line[YOKE_LOG_M_MAX];
                 const int n=YokeLog::formatGains(line,sizeof(line),gainSeq,bits,raw,YokeGains::Count);
                 if(n>0) {
                     markStage(YokeHealth::SerialTx);
-                    Serial.write((const uint8_t*)line,n);
+                    hal::usbSerial.write((const uint8_t*)line,n);
                     markStage(YokeHealth::ModelLog);
                     ++gainSeq; gainsSent=true; lastGainsMs=now; lastBits=bits;
                     for(uint8_t i=0;i<YokeGains::Count;++i) lastGains[i]=raw[i];
@@ -562,9 +537,9 @@ void loop() {
             int(model.ground[1]*10000),int(pwmRoll),int(pwmPitch),(unsigned long)effectsWorstUs,
             (unsigned long)loopWorstUs,(unsigned long)gapWorstUs);
         UsbLock usb;
-        if(n>0 && n<int(sizeof(modelLine)) && Serial.availableForWrite()>=n) {
+        if(n>0 && n<int(sizeof(modelLine)) && hal::usbSerial.availableForWrite()>=n) {
             markStage(YokeHealth::SerialTx);
-            Serial.write((const uint8_t*)modelLine,n); markStage(YokeHealth::ModelLog); lastModelLog=now;
+            hal::usbSerial.write((const uint8_t*)modelLine,n); markStage(YokeHealth::ModelLog); lastModelLog=now;
         }
     }
 #endif
@@ -582,25 +557,31 @@ void loop() {
 #if YOKE_USB_STRESS > 0
     {
         UsbLock usb;
-        if(Serial.availableForWrite()>=2) {
+        if(hal::usbSerial.availableForWrite()>=2) {
             markStage(YokeHealth::SerialTx);
-            Serial.write("S\n",2);
+            hal::usbSerial.write("S\n",2);
         }
     }
 #endif
-#if defined(ARDUINO_ARCH_RP2040) && YOKE_TEST_HANG > 0
+#if defined(YOKE_TARGET_RP2350) && YOKE_TEST_HANG > 0
     static bool testHung=false;
-    if(!testHung && now>=YOKE_TEST_HANG_MS && bootReason!=RP2040::WDT_RESET) {
+    if(!testHung && now>=YOKE_TEST_HANG_MS && bootReason!=static_cast<int>(hal::ResetReason::Wdt)) {
         testHung=true;
         markStage(YokeHealth::TestHang);
 #if YOKE_TEST_HANG == 1
         for(;;){}
 #elif YOKE_TEST_HANG == 2
-        noInterrupts(); for(;;){}
+        hal::irqSave(); for(;;){}
 #elif YOKE_TEST_HANG == 3
         __builtin_trap();
 #endif
     }
 #endif
     finishLoop(nowUs);
+}
+
+int main() {
+    hal::usb::init();
+    setup();
+    for (;;) { loop(); hal::usb::background(); }
 }

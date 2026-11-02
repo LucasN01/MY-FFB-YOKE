@@ -4,10 +4,10 @@ param(
     [string]$Elf
 )
 $Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
-if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'MiYoke_PD.ino'))) { throw "No se encontro MiYoke_PD.ino en $Raiz (raiz del repositorio)." }
+if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'src/main.cpp'))) { throw "No se encontro src/main.cpp en $Raiz (raiz del repositorio)." }
 function Select-Elf([string]$boot) {
     $build = if ($boot -match '\betapa=15:PRUEBA\b') { 'build-pico2-prueba-falla' } else { 'build-pico2' }
-    Join-Path $Raiz ($build + '\MiYoke_PD.ino.elf')
+    Join-Path $Raiz ($build + '\MiYoke_PD.elf')
 }
 $ErrorActionPreference = 'Stop'
 try {
