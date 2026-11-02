@@ -2,7 +2,8 @@
 # Compila y ejecuta las verificaciones con salida minima (ahorro de tokens para agentes).
 # Imprime una linea por paso: "OK ..." o "FALLO ..." con hasta -MaxLineas lineas de error.
 # Por defecto: suites C++ (simconnect_checks, comparar_ensayo, hal_checks) y pruebas del lanzador.
-# Uso: powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 [-Pico] [-Encoders] [-Potentiometers] [-As5600] [-Bridge] [-PruebaFalla] [-Todo]
+# Uso: powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 [-Sdk] [-Pico] [-Encoders] [-Potentiometers] [-As5600] [-Bridge] [-PruebaFalla] [-Todo]
+#   -Sdk             compila la HAL estatica para RP2350 (parte 2 de la migracion)
 #   -Pico            compila firmware Pico 2 con la configuracion del codigo (Build-Pico2.ps1)
 #   -Encoders        compila tambien la variante encoders
 #   -Potentiometers  compila tambien la variante potenciometros
@@ -13,6 +14,7 @@
 # No carga firmware ni ejecuta el simulador.
 
 param(
+    [switch]$Sdk,
     [switch]$Pico,
     [switch]$Encoders,
     [switch]$Potentiometers,
@@ -88,6 +90,10 @@ $fallos += Resumir 'launcher_port_checks' $r.Codigo $r.Salida 'PASS|OK' '(?i)err
 # 3. Firmware y puente (opcionales)
 $patronTam = '(?i)(sketch uses|el sketch usa|global variables|las variables globales)'
 $patronErr = '(?i)(error|warning|advertencia)'
+if ($Sdk) {
+    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-PicoSdk.ps1' }
+    $fallos += Resumir 'SDK myk_hal (RP2350)' $r.Codigo $r.Salida '^HAL RP2350' $patronErr
+}
 if ($Pico) {
     $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Pico2.ps1' }
     $fallos += Resumir 'Pico 2 (configurado)' $r.Codigo $r.Salida $patronTam $patronErr
