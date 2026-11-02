@@ -113,7 +113,7 @@ Notacion: "HAL x" = funcion o clase de `include/hal/` (seccion 4).
 | | `micros()/millis()` | HAL `hal::micros()/hal::millis()` |
 | | `snprintf_P`, `PSTR`, `<pgmspace.h>`, `<avr/pgmspace.h>` | `snprintf` con literal normal (en RP2350 PSTR ya era identidad) |
 | | `noInterrupts()` (solo `YOKE_TEST_HANG==2`) | `hal::irqSave()` |
-| | `hardware/structs/{powman,io_bank0,sio,watchdog}.h`, `__StackBottom/__StackTop`, `isr_hardfault`, `__not_in_flash_func` | Se conservan tal cual (son del SDK, no de Arduino). `main.cpp` es solo de destino y puede incluir SDK. Hoy `__not_in_flash_func` llega por `Arduino.h`: `main.cpp` agrega `#include <pico/platform.h>` explicito (y conserva `hardware/structs/io_bank0.h`, que define `GPIO_FUNC_SIO`). |
+| | `hardware/structs/{powman,io_bank0,sio,watchdog}.h`, `__StackBottom/__StackTop`, `isr_hardfault`, `__not_in_flash_func` | Se conservan tal cual (son del SDK, no de Arduino). `main.cpp` es solo de destino y puede incluir SDK. Hoy `__not_in_flash_func` llega por `Arduino.h`: `main.cpp` agrega `#include <pico.h>` explicito (correccion de Claude, 2026-11-02: SDK 2.2.0 da `#error` si se incluye `pico/platform.h` directo [SDK `src/rp2350/pico_platform/include/pico/platform.h:20`]; `pico.h:64` lo incluye y trae `pico/platform/sections.h`) (y conserva `hardware/structs/io_bank0.h`, que define `GPIO_FUNC_SIO`). |
 | | `TinyUSB_Device_FlushCDC()`, `__usb_mutex` (en el `yield()` propio) | Desaparecen con el `yield()`; los reemplaza `hal::usb::background()` (4.7) |
 | | `#include <pgmspace.h>` / `<avr/pgmspace.h>` (l. 67-71) | Se eliminan |
 | | `#if defined(ARDUINO_ARCH_RP2040)`, `USE_TINYUSB`, `ARDUINO_ARCH_AVR` | `YOKE_TARGET_RP2350` o se elimina la condicion (ver 6.3) |
@@ -705,7 +705,7 @@ Alcance:
 1. `git mv MiYoke_PD.ino src/main.cpp` y adaptar segun la tabla de 3 y 4.11 (`main()` al final,
    `hal::pwmSetup` antes de `rollMotor.begin()`, sin `setID/detach/attach`, sin `yield()`, sin
    `Serial.begin`, `Serial` -> `hal::usbSerial`, `snprintf_P/PSTR` -> `snprintf`, sin
-   `<pgmspace.h>`, con `#include <pico/platform.h>` para `__not_in_flash_func`,
+   `<pgmspace.h>`, con `#include <pico.h>` para `__not_in_flash_func` (no `pico/platform.h`: ver tabla de 3),
    `rp2040.getResetReason()`/`RP2040::WDT_RESET` -> `hal::resetReason()`/`hal::ResetReason::Wdt`
    convertido a `int` donde hoy se guarda en `bootReason`). Ninguna otra modificacion de logica.
    `main.cpp` conserva la guarda D13 solo si sigue en `src/` junto al `.ino`; como el `.ino` deja de
