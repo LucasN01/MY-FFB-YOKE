@@ -48,10 +48,10 @@ Seguir la seccion 6 "Parte 1" del diseno (alcance, lecturas, 5 grupos de pruebas
 Seccion 6 "Parte 2". `Build-PicoSdk.ps1` con el parametro `-TinyUsbPath` de 10.1. Precondicion: parte 1 commiteada y verde.
 
 \### Parte 3 - cabeceras a `include/` y modulos con hardware sobre la HAL
-Seccion 6 "Parte 3", con U1 = eliminar ramas AVR. Anotar en HANDOFF que entre la parte 3 y la 4 no se puede generar UF2. Ademas (revision de la parte 1): mover los `extern` de `tests/hal_checks.cpp:14-33` a un `tests/hal_fake.h` comun; en `tests/hal_fake.cpp` registrar `endTransmission` de longitud 0 como `i2cProbe` (no `i2cWrite`); eliminar (no portar) las ramas `WIRE_HAS_TIMEOUT` de `LcdTelemetry.h:135-147` y `YokeI2C.h:17-20`, que son codigo muerto con el Wire de arduino-pico y no tienen equivalente en `I2cBus`.
+Seccion 6 "Parte 3", con U1 = eliminar ramas AVR. Anotar en HANDOFF que entre la parte 3 y la 4 no se puede generar UF2. Ademas (revision de la parte 1): mover los `extern` de `tests/hal_checks.cpp:14-33` a un `tests/hal_fake.h` comun; en `tests/hal_fake.cpp` registrar `endTransmission` de longitud 0 como `i2cProbe` (no `i2cWrite`); eliminar (no portar) las ramas `WIRE_HAS_TIMEOUT` de `LcdTelemetry.h:135-147` y `YokeI2C.h:17-20`, que son codigo muerto con el Wire de arduino-pico y no tienen equivalente en `I2cBus`. Y (revision de la parte 2): en `src/hal/rp2350/i2c.cpp` `I2cBus::begin()` poner `transmitting_ = false; length_ = offset_ = 0;` (como `Wire.cpp:133-134`); en `src/hal/rp2350/usb_cdc.cpp` agregar `#ifndef YOKE_USB_GUARD` + `#error` antes del primer `#if YOKE_USB_GUARD`; en `src/hal/rp2350/pwm_adc.cpp` `pwmWrite` agregar `if (pin >= 30) return;` (como `analogWrite`); quitar de `CMakeLists.txt:25` el include provisorio de la raiz (queda solo `include/`, como 5.1); anotar en el diseno 2.1 que `pwmSetup` reinicia los slices aunque frecuencia y rango no cambien (inocuo: solo se llama en el arranque). Agregar una prueba host por cada uno de los tres cambios de codigo que sea comprobable con `hal_fake` o, si no lo es, decirlo en la entrega.
 
 \### Parte 4 - `src/main.cpp`, 5 variantes y scripts
-Seccion 6 "Parte 4" (puntos 1 y 4 en el mismo commit). `Build-Pico2.ps1` con `-TinyUsbPath`. UF2 = `MiYoke_PD.uf2` (U2). Despues del commit: `graphify update .`.
+Seccion 6 "Parte 4" (puntos 1 y 4 en el mismo commit). `Build-Pico2.ps1` con `-TinyUsbPath`. UF2 = `MiYoke_PD.uf2` (U2). Restaurar `pico_set_printf_implementation` en cada ejecutable (en la parte 2 se difirio porque el SDK no lo acepta en una biblioteca STATIC). Despues del commit: `graphify update .`.
 
 \### Parte 5 - documentacion, reglas de agentes y version
 Seccion 6 "Parte 5" y seccion 9, sin `tesis/`. Incluye U4 (`CMakeLists.txt|\.cmake$` generan version en `nueva-version.ps1`, CLAUDE.md y AGENTS.md) y reemplazar en CLAUDE.md/AGENTS.md la regla "Arduino exige que esten juntos" y la estructura de carpetas, y en este HANDOFF las reglas 6 y 8 (ya no hay `.ino` ni `graphify-ino/`). Version: `powershell -ExecutionPolicy Bypass -File herramientas/flujo/nueva-version.ps1 -Mensaje "Firmware migrado de Arduino-Pico al Pico SDK con CMake, HAL propia y estructura src/include"`; verificar "Version Vx.y creada" y el ACTUALIZACION. En "Ultima entrega": la lista de ensayos con hardware H0-H13 que debe hacer el usuario, en orden (H0 respaldo del sector de calibracion y H13 osciloscopio antes de mover el yugo).
@@ -78,6 +78,10 @@ Seccion 6 "Parte 5" y seccion 9, sin `tesis/`. Incluye U4 (`CMakeLists.txt|\.cma
 \## Revisión
 
 - Pendiente: Claude debe revisar la parte 2 (`8688f0a`). La parte 1 estaba aprobada al comenzar (registro anterior en `818c6ba`).
+- Revisor: Claude con el subagente Code Reviewer (2026-11-02). **Parte 2 (`8688f0a`): APROBADA, 0 bloqueantes.**
+  - EEPROM en flash (0x3FE000, erase+program con IRQ deshabilitadas), USB (init, IRQ de software, 1200 baudios, DTR, serie por `pico_get_unique_board_id`), I2C (sonda, recuperacion, codigos 0/2/4/5), PWM sin pulso al arrancar, watchdog y guarda D13 verificados contra arduino-pico 6.1.1. Desvio de printf aceptado (restaurar en parte 4).
+  - Suite del revisor (`probar.ps1 -Sdk`): OK simconnect_checks, OK comparar_ensayo, OK hal_checks (394), OK launcher_port_checks, OK SDK myk_hal (RP2350).
+  - Sugerencias trasladadas a las partes 3 y 4 del plan.
 
 \## Ensayos del usuario
 
