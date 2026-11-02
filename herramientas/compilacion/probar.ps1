@@ -1,7 +1,7 @@
 # probar.ps1
 # Compila y ejecuta las verificaciones con salida minima (ahorro de tokens para agentes).
 # Imprime una linea por paso: "OK ..." o "FALLO ..." con hasta -MaxLineas lineas de error.
-# Por defecto: suite tests\simconnect_checks (Release Win32) y tests\launcher_port_checks.ps1.
+# Por defecto: suites C++ (simconnect_checks, comparar_ensayo, hal_checks) y pruebas del lanzador.
 # Uso: powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 [-Pico] [-Encoders] [-Potentiometers] [-As5600] [-Bridge] [-PruebaFalla] [-Todo]
 #   -Pico            compila firmware Pico 2 con la configuracion del codigo (Build-Pico2.ps1)
 #   -Encoders        compila tambien la variante encoders
@@ -72,6 +72,13 @@ if (-not $msbuild) {
     }
     $r = Ejecutar { & $msbuild 'tests\comparar_ensayo.vcxproj' /p:Configuration=Release /p:Platform=Win32 /verbosity:quiet /nologo }
     $fallos += Resumir 'comparar_ensayo' $r.Codigo $r.Salida '^$' '(error|warning) [A-Z]+\d+'
+    $r = Ejecutar { & $msbuild 'tests\hal_checks.vcxproj' /p:Configuration=Release /p:Platform=Win32 /verbosity:quiet /nologo }
+    if ($r.Codigo -ne 0) {
+        $fallos += Resumir 'compilacion hal_checks' $r.Codigo $r.Salida '^$' '(error|warning) [A-Z]+\d+'
+    } else {
+        $r = Ejecutar { & 'tests\bin\hal_checks.exe' }
+        $fallos += Resumir 'suite hal_checks' $r.Codigo $r.Salida '^PASS' 'FAIL'
+    }
 }
 
 # 2. Pruebas del lanzador (solo funciones, sin puertos)

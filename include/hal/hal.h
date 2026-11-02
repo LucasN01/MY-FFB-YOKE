@@ -1,0 +1,10 @@
+#pragma once
+#include "hal_time.h"
+#include "hal_gpio.h"
+#include "hal_pwm.h"
+#include "hal_adc.h"
+#include "hal_i2c.h"
+#include "hal_usb.h"
+#include "hal_watchdog.h"
+#include "hal_eeprom.h"
+#include "hal_util.h"
