@@ -28,74 +28,41 @@
 
 \## Plan para Codex
 
-Tarea: Encoders magneticos AS5600 como fuente de posicion 3
+Tarea: Migrar el firmware de Arduino al Pico SDK con CMake
 
-(Claude, 2026-10-22.) Rama: `mejora/encoder-as5600` (ya creada desde `master`, con el diseño commiteado). Diseño cerrado: `LEEME md/DISENO_encoder_as5600.md`. Aplicarlo tal cual; si algo no coincide con el código real, no improvisar: anotar `BLOQUEO:` en "Última entrega" y terminar.
+(Claude, 2026-11-02.) Rama: `firmware/pico-sdk` (ya creada, con el diseno commiteado). Diseno cerrado y revisado: `LEEME md/DISENO_migracion_pico_sdk.md`. Las decisiones del usuario estan en su seccion **10.1** y son vinculantes (rutas de compilador, SDK y TinyUSB incluidas). Aplicar el diseno tal cual; si algo no coincide con el codigo real o con el entorno, no improvisar: anotar `BLOQUEO:` en "Ultima entrega" y terminar.
 
-Dos partes (archivos nuevos, lógica con estado, renombre en muchos archivos y 16 pruebas: riesgo de agotar el contexto en una sola sesión).
+Cinco partes, una por sesion (HAL nueva, ~20 archivos nuevos, logica con estado, movimiento de todas las cabeceras y cambio del marcador de raiz de los scripts del flujo: no entra en una sesion). Cada parte cierra con commit por nombre y HANDOFF, y deja `probar.ps1` en verde segun sus criterios. `nueva-version.ps1` solo en la parte 5.
 
 Para todas las partes:
-- Orientarse con `graphify query`/`explain`; en archivos grandes leer solo las líneas ubicadas con grep. En el diseño, leer solo las secciones indicadas.
-- No tocar `tesis/` ni `graphify-ino/` (hay cambios del usuario sin commit en `tesis/main.tex` y archivos sin seguimiento en `tesis/`: no agregarlos). Commits por nombre, nunca `git add .`/`-A`.
-- No modificar constantes de seguridad.
-- Pruebas solo con `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 ...`; copiar en HANDOFF solo las líneas OK/FALLO.
+- Leer del diseno solo las secciones que indica la parte (seccion 6) mas 10.1. Orientarse con `graphify query`/`explain`; en archivos grandes leer solo las lineas ubicadas con grep. Para [ARD] (`%LOCALAPPDATA%/Arduino15/packages/rp2040/hardware/rp2040/6.1.1`) y [SDK] (`D:/pico/pico-sdk`), solo las lineas citadas.
+- Entorno (verificado por Claude): SDK `D:/pico/pico-sdk` (2.2.0), TinyUSB `D:/pico/tinyusb` (commit `e954302c1` = 0.20.1), compilador `D:/pico/toolchains/pqt-gcc-5.0.0` (GCC 16.1), picotool `D:/pico/picotool/picotool`, pioasm `D:/pico/sdk-tools/pioasm`, CMake `C:/Program Files/CMake/bin/cmake.exe`, ninja `C:/Users/norie/AppData/Local/Microsoft/WinGet/Packages/Ninja-build.Ninja_Microsoft.Winget.Source_8wekyb3d8bbwe/ninja.exe` (no esta en PATH). El directorio de build de CMake debe tener ruta corta (MAX_PATH): usar el de 5.2.
+- No tocar `tesis/` (la actualiza Claude al aprobar), `graphify-ino/` ni constantes de seguridad. No cambiar el tamano de pila (2 KiB, igual que hoy): el hallazgo de pila baja de "Ensayos del usuario" es otra tarea.
+- Commits por nombre, nunca `git add .`/`-A`. Pruebas solo con `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 ...`; copiar en HANDOFF solo las lineas OK/FALLO.
+- Al terminar cada parte: completar "Ultima entrega" (parte, commit, lineas OK/FALLO, desvios) y commitear HANDOFF aparte.
 
-\### Parte 1 - Renombre, lógica pura AS5600 y pruebas
+\### Parte 1 - logica pura de la HAL y pruebas de host
+Seguir la seccion 6 "Parte 1" del diseno (alcance, lecturas, 5 grupos de pruebas, criterios y mensaje de commit). Linea base antes de editar: `probar.ps1` y `probar.ps1 -Pico`.
 
-Leer del diseño: secciones 1, 2 (solo la lista de registros), 4.1, 4.2, 4.6 (solo los puntos de SimEffects/tests, Build-Pico2, probar.ps1), 5 y 6.
-1. Línea base: `probar.ps1 -Todo` antes de editar.
-2. Renombre `YOKE_USE_SIMULATION` → `YOKE_POSITION_SOURCE` en `mis_defines.h`, `MiYoke_PD.ino`, `CalibrationControls.h`, `SimEffects.h`, `tests/simconnect_checks.cpp`, `tests/sim_position_friction_checks.cpp`, `herramientas/compilacion/Build-Pico2.ps1` (solo renombre en .ino y CalibrationControls en esta parte).
-3. `mis_defines.h`: bloque de 4.1 completo (bandera nueva con `#error` de renombre, bloque AS5600 y `static_assert`).
-4. Nuevo `As5600Position.h` (4.2) y `tests/as5600_checks.h` con los 16 casos de la sección 5, incluido y llamado en `tests/simconnect_checks.cpp`.
-5. Agregar el switch `-As5600` a `Build-Pico2.ps1` y `probar.ps1` (4.6), pero **no ejecutarlo en esta parte**: el modo 3 no compila hasta que la Parte 2 agregue el driver (es lo esperado). `-Todo` todavía no debe incluir `-As5600` en esta parte; la Parte 2 lo agrega.
-6. Pruebas: `probar.ps1 -Todo` OK. Comprobación de renombre de la sección 5: solo las líneas `#ifdef`/`#error` de `mis_defines.h`.
-7. Commit por nombre: `Renombra YOKE_USE_SIMULATION a YOKE_POSITION_SOURCE y agrega logica pura AS5600 con pruebas`. Si se tocó `MiYoke_PD.ino`: `herramientas/flujo/graphify-sync.cmd`.
-8. No ejecutar `nueva-version.ps1`. Completar "Última entrega" (Parte 1): commit, líneas OK/FALLO base y final, desvíos.
+\### Parte 2 - HAL de destino y CMake base
+Seccion 6 "Parte 2". `Build-PicoSdk.ps1` con el parametro `-TinyUsbPath` de 10.1. Precondicion: parte 1 commiteada y verde.
 
-\### Parte 2 - Driver I2C, integración en el firmware, documentación y versión
+\### Parte 3 - cabeceras a `include/` y modulos con hardware sobre la HAL
+Seccion 6 "Parte 3", con U1 = eliminar ramas AVR. Anotar en HANDOFF que entre la parte 3 y la 4 no se puede generar UF2.
 
-Leer del diseño: secciones 3, 4.3, 4.4, 4.5, 4.6 (LoopSupervisor, CalibrationControls, health_checks), 5 (compilaciones y ensayo), 6, 8 y 9. Precondición: Parte 1 commiteada y verde.
-1. Nuevo `YokeI2C.h` y cambio en `LcdTelemetry.h` (4.3; la rama `WIRE_HAS_TIMEOUT` queda como está, solo cambia el literal).
-2. Nuevo `AxisAs5600.h` (4.4).
-3. `MiYoke_PD.ino` (4.5), `LoopSupervisor.h`, `CalibrationControls.h`, `tests/health_checks.h` (4.6). Incluir `-As5600` en `-Todo` de `probar.ps1`.
-4. Pruebas: `probar.ps1 -Todo -As5600` OK; informar programa/RAM del build AS5600 frente al configurado. Comprobación de renombre (sección 5) sin resultados fuera de `mis_defines.h`.
-5. Documentación (sección 8, sin `tesis/`): nuevo `LEEME md/LEEME_AS5600.md` (con la sección 9 y el ensayo con hardware de la sección 5) y los LEEME/INVENTARIO/AGENTS/CLAUDE/SKILL listados, solo las partes afectadas.
-6. Commit por nombre (código + documentación): `Agrega fuente de posicion 3: encoders magneticos AS5600 por I2C`. Luego `herramientas/flujo/graphify-sync.cmd`.
-7. Versión: `powershell -ExecutionPolicy Bypass -File herramientas/flujo/nueva-version.ps1 -Mensaje "Agrega fuente de posicion 3 (encoders AS5600 I2C) y renombra YOKE_USE_SIMULATION a YOKE_POSITION_SOURCE"`; verificar "Version Vx.y creada" y el ACTUALIZACION.
-8. Completar "Última entrega" (Parte 2): commits, líneas OK/FALLO, tamaños, versión creada, y lo que el usuario debe ensayar cuando tenga los sensores.
+\### Parte 4 - `src/main.cpp`, 5 variantes y scripts
+Seccion 6 "Parte 4" (puntos 1 y 4 en el mismo commit). `Build-Pico2.ps1` con `-TinyUsbPath`. UF2 = `MiYoke_PD.uf2` (U2). Despues del commit: `graphify update .`.
+
+\### Parte 5 - documentacion, reglas de agentes y version
+Seccion 6 "Parte 5" y seccion 9, sin `tesis/`. Incluye U4 (`CMakeLists.txt|\.cmake$` generan version en `nueva-version.ps1`, CLAUDE.md y AGENTS.md) y reemplazar en CLAUDE.md/AGENTS.md la regla "Arduino exige que esten juntos" y la estructura de carpetas, y en este HANDOFF las reglas 6 y 8 (ya no hay `.ino` ni `graphify-ino/`). Version: `powershell -ExecutionPolicy Bypass -File herramientas/flujo/nueva-version.ps1 -Mensaje "Firmware migrado de Arduino-Pico al Pico SDK con CMake, HAL propia y estructura src/include"`; verificar "Version Vx.y creada" y el ACTUALIZACION. En "Ultima entrega": la lista de ensayos con hardware H0-H13 que debe hacer el usuario, en orden (H0 respaldo del sector de calibracion y H13 osciloscopio antes de mover el yugo).
 
 \## Última entrega
 
-- Parte 2 completada (Codex, 2026-10-22), sin bloqueos de implementacion. Parte 1 OK segun el usuario; revision de Parte 2 pendiente de Claude.
-- Codigo: nuevos `YokeI2C.h` y `AxisAs5600.h`; modificados `LcdTelemetry.h`, `MiYoke_PD.ino`, `LoopSupervisor.h`, `CalibrationControls.h`, `tests/health_checks.h`, `herramientas/compilacion/probar.ps1` y `.gitignore`.
-- Implementado segun diseno: buses compartido/propio, CONF volatil verificada y comprobada cada segundo alternando ejes, lectura de STATUS/RAW y AGC, estado serie, etapa SENSOR_I2C=16, excusa del hueco de flash, fuerza cero si cualquier eje no esta sano y reinicio del estimador de velocidad. Constantes de seguridad sin cambios. `-Todo` incluye AS5600.
-- Documentacion: nuevo `LEEME md/LEEME_AS5600.md`; actualizados `AJUSTE_FUERZAS_Y_MOVIMIENTO.md`, `LEEME_POTENCIOMETROS.md`, `LEEME_SIMCONNECT.md`, `MENU_CALIBRACION.md`, `MOBIFLIGHT_PICO_Y_UNO.md`, `LEEME_PICO2.md`, `LEEME_ENCODERS.md`, `CENTRADO_Y_RODAJE.md` e `INVENTARIO_CODIGO.md` (todos en `LEEME md/`), mas switches de `AGENTS.md`, `CLAUDE.md` y `.claude/skills/verificacion-antes-de-terminar/SKILL.md`.
-- Tesis pendiente de Claude al aprobar: `tesis/capitulos/03_centrado.tex`, `09_damper.tex`, `10_friccion.tex` y `tesis/fundamento_efectos/` segun seccion 8 del diseno. No se abrio ni modifico tesis/; sus cambios previos y archivos sin seguimiento se conservan.
-- Pruebas: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo -As5600`, salida 0:
-  - OK suite simconnect_checks - PASS: 143769 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
-  - OK comparar_ensayo
-  - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
-  - OK Pico 2 (configurado) - Sketch uses 105404 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (encoders) - Sketch uses 106556 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23256 bytes (4%) of dynamic memory, leaving 501032 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (potenciometros) - Sketch uses 106388 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23016 bytes (4%) of dynamic memory, leaving 501272 bytes for local variables. Maximum is 524288 bytes.
-  - OK Pico 2 (AS5600) - Sketch uses 106940 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 23084 bytes (4%) of dynamic memory, leaving 501204 bytes for local variables. Maximum is 524288 bytes.
-  - OK puente SimConnect
-- AS5600 frente a configurado: +1536 bytes de programa y +164 bytes de RAM. Sin advertencias nuevas de compilacion.
-- Renombre: fuera de tesis/ y documentos DISENO_*, solo quedan las dos lineas de compatibilidad de `mis_defines.h` y las menciones literales del Plan para Codex en este HANDOFF (pasos/commit/mensaje historicos); ningun otro archivo conserva la bandera anterior.
-- `git diff --check`: sin errores. `.gitignore` requirio agregar `build-pico2-as5600/` porque enumeraba builds concretos; `git check-ignore` confirmado. Sin cambios fuera del alcance.
-- Grafo: `herramientas/flujo/graphify-sync.cmd` y `graphify update .` ejecutados; copia .ino verificada por SHA256. La copia inicial dio acceso denegado en sandbox; la sincronizacion con permisos ampliados lo resolvio.
-- Commit de implementacion: `1b29d0e` (`Agrega fuente de posicion 3: encoders magneticos AS5600 por I2C`). El cierre de este HANDOFF se commitea aparte, solo documentacion.
-- Version: V2.6 creada por `nueva-version.ps1`, salida "Version V2.6 creada"; verificados etiqueta sobre `1b29d0e` y `../MiYoke_PD_VERSIONES/V2_6/ACTUALIZACION_V2_6.txt` (rama mejora/encoder-as5600). Se ejecuto en un worktree temporal limpio del mismo commit y rama, junto al repositorio, para conservar los cambios previos de tesis sin tocarlos. Worktree temporal retirado tras verificar la version.
-- Ensayo pendiente del usuario cuando tenga sensores: s=OK y g cerca de 64 en ambos ejes; a= suave, sentido/magnitud correctos en todo el recorrido; desconexion SDA corta fuerza, reconexion recupera con centro absoluto o BLQ hasta reiniciar con centro al encender y hueco >40 ms. Comparar loopWorstUs/ciclos lentos con modo 2 sin aumento. Detalle en `LEEME md/LEEME_AS5600.md`. No se cargo firmware ni se hizo ensayo con hardware.
+- (vacio: tarea nueva. La entrega anterior, AS5600 V2.6, esta en el historial de git.)
 
 \## Revisión
 
-- Revisor: Claude con el subagente Code Reviewer (2026-10-22). **`7a14278` + `1b29d0e` (V2.6): APROBADA.**
-  - AxisAs5600.h, MiYoke_PD.ino, YokeI2C.h/LcdTelemetry.h y pruebas coinciden con el diseño; en modo 3 la fuerza queda en cero en ambos ejes sin lectura sana; modos 0-2 solo cambian por el renombre.
-  - Suite del revisor: OK simconnect_checks PASS 143769 checks; OK comparar_ensayo; OK launcher_port_checks.
-  - Tag V2.6 y `ACTUALIZACION_V2_6.txt` coherentes. `.gitignore` necesitaba `build-pico2-as5600/` (no hay comodín): correcto.
-  - Tesis actualizada por Claude (03, 09, 10 y fundamento_efectos): nombre de la bandera y descripción del modo 3.
-  - Pendiente: ensayo con los sensores (LEEME_AS5600.md), en particular `loopWorstUs` frente al modo 2. Sin eso, el modo 3 no se declara validado.
+- (vacio: tarea nueva.)
 
 \## Ensayos del usuario
 
