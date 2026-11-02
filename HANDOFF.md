@@ -66,28 +66,15 @@ Seccion 6 "Parte 5" y seccion 9, sin `tesis/`. Incluye U4 (`CMakeLists.txt|\.cma
 
 \## Última entrega
 
-- Parte 4 completada (2026-11-02), rama `firmware/pico-sdk`. Commit: `2f44614` (`Pico SDK parte 4: main.cpp, variantes CMake y scripts sin Arduino`).
-- Quien la hizo: Codex dejo implementada casi toda la parte en el arbol (dos turnos cortados por el limite de uso de ChatGPT); **Claude la termino a pedido explicito del usuario** ("Terminala vos"): `src/main.cpp:19` `<pico/platform.h>` -> `<pico.h>` (error del diseno) y nuevo `src/hal/rp2350/newlib_locks.cpp` (diseno 4.12): la newlib de pqt-gcc 16.1 usa `_RETARGETABLE_LOCKING` y el enlace fallaba con `undefined reference to __retarget_lock_*` en las 5 variantes.
-- Nota de historial: el `git mv MiYoke_PD.ino src/main.cpp` que Codex habia dejado preparado quedo por error dentro del commit de documentacion `d80d804` (R100, sin cambio de contenido); los marcadores de los scripts entran en `2f44614`. Entre esos dos commits los scripts buscan el `.ino`: no usar `d80d804` como punto de partida.
-- Alcance cubierto: `.ino` -> `src/main.cpp` (HAL, sin `setID/detach/attach`, sin `yield`, `pico.h`); `CMakeLists.txt` con 5 ejecutables y `pico_set_printf_implementation` restaurado; `Build-Pico2.ps1` reescrito (UF2 = `MiYoke_PD.uf2`), `Build-PicoSdk.ps1` borrado; marcador `src/main.cpp` en los scripts de compilacion, ensayos y flujo; `FALLA.ps1` con addr2line de la toolchain; `graphify-ino/` borrada e ignorada; `P3DSdkDir` automatico (v4 si existe, si no v3); restos de la revision de la parte 3 (includes duplicados, textos, `#error` de `YOKE_USB_GUARD` a nivel de archivo, rama `__AVR__` de `SimTelemetry.h`).
-- Pruebas: `probar.ps1 -Todo -PruebaFalla`, codigo 0:
-  - OK suite simconnect_checks - PASS: 143769 checks
-  - OK comparar_ensayo
-  - OK suite hal_checks - PASS hal_checks (694 casos)
-  - OK launcher_port_checks - PASS: 19 launcher discovery checks
-  - OK Pico 2 (configurado) - Flash usada: 65460 bytes; RAM usada: 8608 bytes
-  - OK Pico 2 (encoders) - Flash usada: 66756 bytes; RAM usada: 8924 bytes
-  - OK Pico 2 (potenciometros) - Flash usada: 66316 bytes; RAM usada: 8708 bytes
-  - OK Pico 2 (AS5600) - Flash usada: 67404 bytes; RAM usada: 8772 bytes
-  - OK puente SimConnect
-  - OK Pico 2 (prueba falla) - Flash usada: 66356 bytes; RAM usada: 8708 bytes
-- Verificaciones de la parte 4 (build-pico2):
-  - `.map`: `isr_hardfault` en `.time_critical.isr_hardfault` desde `src/main.cpp.obj` (0x2000015c); `__StackBottom = 0x20081800`, `__StackTop = 0x20082000`, `.stack_dummy` 0x800.
-  - `nm`: `hardfaultCapture` 0x20000110 y `isr_hardfault` 0x2000015c (RAM).
-  - `picotool info -a`: familia `rp2350-arm-s`, SDK 2.2.0. En las 5 variantes el UF2 tiene el bloque absoluto 0x10ffff00 y 0 bloques en 0x103FE000-0x103FEFFF.
-  - `MiYoke_PD.bin` = 61364 bytes < 0x3FE000.
-- `git diff --cached --check` sin errores; `graphify update .` ejecutado. Sin carga de firmware ni ensayos con hardware. Version: en la parte 5.
-- Sigue: revision (Code Reviewer) de la parte 4 y parte 5 (documentacion, reglas y version).
+- Parte 5 completada por Claude a pedido explicito del usuario ("Hacela vos ahora"), 2026-11-02, rama `firmware/pico-sdk`. Commit: `d6d8557`. **Version V2.7** creada por `nueva-version.ps1` ("Version V2.7 creada"; etiqueta V2.7 sobre `d6d8557`; `../MiYoke_PD_VERSIONES/V2_7/ACTUALIZACION_V2_7.txt` verificado).
+- Codigo (revision de la parte 4): `Build-Pico2.ps1` comprueba el `.bin` (< 0x3FE000) antes de copiar a `build-pico2*/` y reconfigura si la cache tiene otro SDK/TinyUSB/compilador (probado: mismas rutas no reconfigura; otra ruta de TinyUSB reconfigura); comentarios de `mis_defines.h` (`hal::irqSave`) y `LcdTelemetry.h` (codificacion). U4: `nueva-version.ps1` cuenta `CMakeLists.txt` y `*.cmake`.
+- Documentacion (seccion 9, via subagente Technical Writer): `LEEME_PICO2.md`, `INVENTARIO_CODIGO.md`, `ENSAYOS.md`, `MENU_CALIBRACION.md`, `LEEME_POTENCIOMETROS.md`, `LEEME_AS5600.md`, `LEEME-LANZADOR.md`, `LEEME_ENCODERS.md`/`LEEME_ETAPAS.md` (linea historica), `AJUSTE_FUERZAS_Y_MOVIMIENTO.md`, `LEEME_SIMCONNECT.md`, `.claude/skills/depuracion-sistematica/SKILL.md`; diseno 5.2. CLAUDE.md/AGENTS.md: estructura de carpetas, limitaciones del grafo, versionado y "no invocar cmake/ninja". HANDOFF: reglas 6 y 8. Excepciones historicas (registros fechados) sin tocar; `MOBIFLIGHT_PICO_Y_UNO.md:35` nombra un UF2 V2.3 historico.
+- Pruebas: `probar.ps1 -Todo -PruebaFalla`, codigo 0: OK simconnect_checks (143769), OK comparar_ensayo, OK hal_checks (694), OK launcher_port_checks (19), OK Pico 2 configurado 65460/8608, encoders 66756/8924, potenciometros 66316/8708, AS5600 67404/8772, prueba falla 66356/8708 (flash/RAM), OK puente SimConnect.
+- Pendiente: tesis (Claude, al aprobar la revision) y ensayos con hardware del usuario.
+- **Ensayos con hardware (usuario), en este orden** (detalle y criterios en `LEEME md/DISENO_migracion_pico_sdk.md` seccion 7):
+  1. H0 con el firmware actual V2.6 (Arduino), antes de cargar nada: anotar valores del menu, PWM en GP6..GP9 para un valor conocido, COM y descriptores USB, `CICLOS.ps1` de referencia; placa en BOOTSEL y `D:/pico/picotool/picotool/picotool.exe save -r 0x103FE000 0x103FF000 D:/pico/calib_V2_6.bin`.
+  2. H13 con `build-pico2/MiYoke_PD.uf2`, fuente del puente H conectada y motor desacoplado: osciloscopio en EN (GP10/GP11) y PWM (GP6..GP9) en encendido, RUN, BOOTSEL, toque a 1200 y watchdog. Ningun pulso PWM con EN alto.
+  3. H8 calibracion conservada; H1 PWM 489,99 Hz; H2 sentido de motores; H7 USB (mismo COM, 30 min con el puente); H6 LCD; H11 toque a 1200; H10 tiempo de ciclo y pila; H9 watchdog/falla (variante prueba-falla, EN y PWM en 0 durante la falla); H3/H4/H5 segun sensor; H12 `ENSAYO.ps1` + `comparar_ensayo`.
 
 \## Revisión
 
