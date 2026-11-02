@@ -23,13 +23,13 @@ Por lo tanto, ``generar un valor de $\pm1$'' significa trabajar en una escala no
 \fbox{\begin{minipage}{0.91\linewidth}
 \textbf{Rama de rigidez:} Prepar3D/SimConnect $\rightarrow$ presión en psf $\rightarrow$ USB SC8 $\rightarrow$ conversión local a Pa $\rightarrow$ división por $q_{\rm ref}$ $\rightarrow$ límite $0\ldots4$ $\rightarrow$ rigidez de reposo y filtro de 100 ms.
 
-\textbf{Rama de posición actual:} potenciómetro roll/pitch $\rightarrow$ ADC de 12 bits $\rightarrow$ promedio e histéresis $\rightarrow$ calibración de extremos y centro $\rightarrow$ posición $-1\ldots1$.
+\textbf{Rama de posición actual (modo 1, desde la simulación):} Prepar3D/SimConnect $\rightarrow$ posición del mando virtual (\code{YOKE X POSITION} / \code{YOKE Y POSITION}) $\rightarrow$ USB SC8 $\rightarrow$ límite $-1\ldots1$. Con un sensor local (modos 0, 2 y 3) esta rama se reemplaza por la lectura del sensor y su calibración.
 
 \textbf{Unión:} $-\text{posición}\times\text{rigidez}\times\text{ganancia del eje}\times\text{ganancia total}$ $\rightarrow$ límite de comando $\rightarrow$ polaridad $\rightarrow$ multiplicación por 255 y redondeo $\rightarrow$ límite PWM 220 $\rightarrow$ puente H.
 \end{minipage}}
 \end{center}
 
-\textbf{Hallazgo importante:} \code{mis_defines.h} define \code{YOKE_POSITION_SOURCE=1}. Por defecto, la fuerza depende de la presión de SimConnect y de la posición del mando virtual (\code{YOKE X POSITION} / \code{YOKE Y POSITION}) que transmite el puente. Los potenciómetros locales no se leen en este modo. Las opciones son:
+\textbf{Modo actual:} \code{mis_defines.h} define \code{YOKE_POSITION_SOURCE=1}, que es también la compilación normal (\code{build-pico2/MiYoke_PD.uf2}). En este modo la posición del yugo se obtiene de la simulación: la fuerza depende de la presión de SimConnect y de la posición del mando virtual (\code{YOKE X POSITION} / \code{YOKE Y POSITION}) que transmite el puente. No se lee ningún sensor montado en el yugo. Hay cuatro opciones:
 \begin{center}
 \begin{tabular}{cll}
 \toprule
@@ -38,17 +38,18 @@ Valor & Posición utilizada & Procedencia\\
 0 & Encoders & Cuentas relativas al centro al arrancar\\
 1 & SimConnect & \code{YOKE X POSITION} / \code{YOKE Y POSITION}; opción predeterminada\\
 2 & Potenciómetros & ADC0/ADC1\\
+3 & Encoders AS5600 & Ángulo magnético de 12 bits por I2C\\
 \bottomrule
 \end{tabular}
 \end{center}
-Una definición de compilación puede cambiar esa opción. \code{Build-Pico2.ps1 -Encoders} fuerza el modo 0 y \code{-Potentiometers} fuerza el modo 2. Analizar el archivo fuente no permite certificar el modo del binario ya cargado. El firmware actual no transmite ejes HID al simulador: el código prevé que otra placa envíe los mandos.
+Una definición de compilación puede cambiar esa opción. \code{Build-Pico2.ps1 -Encoders} fuerza el modo 0, \code{-Potentiometers} el modo 2 y \code{-As5600} el modo 3. Analizar el archivo fuente no permite certificar el modo del binario ya cargado. El firmware actual no transmite ejes HID al simulador: el código prevé que otra placa envíe los mandos.
 
 \subsection{Variables de SimConnect que intervienen}
 \subsubsection{Datos que entran directamente en la fórmula}
 \begin{longtable}{p{0.31\linewidth}p{0.18\linewidth}p{0.43\linewidth}}
 \toprule Variable & Unidad solicitada & Uso concreto\\\midrule
 \endhead
-\code{DYNAMIC PRESSURE} & \code{psf} & Presión dinámica común a roll y pitch. Determina la rigidez en los tres modos.\\
+\code{DYNAMIC PRESSURE} & \code{psf} & Presión dinámica común a roll y pitch. Determina la rigidez en los cuatro modos.\\
 \code{YOKE X POSITION} & \code{Position} & Posición de roll, entre $-1$ y $+1$. Se usa en la fuerza solamente con modo 1.\\
 \code{YOKE Y POSITION} & \code{Position} & Posición de pitch, entre $-1$ y $+1$. Se usa en la fuerza solamente con modo 1.\\
 \bottomrule
@@ -98,10 +99,12 @@ La trama SC8 lleva presión original en psf y posición del yugo como float32. \
 \subsubsection{Compatibilidad y tiempos de corte}
 Las versiones 6 y 7 permiten $Q\le4$; las versiones 1--5 admitidas por el receptor limitan $Q\le1$. El receptor habilita disponibilidad de centrado desde v3 y posiciones de simulador desde v4. En modo 1 no hay reemplazo automático por sensores locales si falta la posición simulada.
 
-El puente exige que la muestra seleccionada tenga menos de 250 ms para enviarla armada. La placa requiere trama válida y armada de menos de 300 ms y \code{Serial.dtr()} activo. Al arrancar el efecto, al perder habilitación o si el intervalo de actualización supera 50 ms, se reinicia la rigidez filtrada a cero. La desconexión o pausa retiran el resorte de reposo también: no existe un centrado autónomo permanente sin telemetría válida. El menú activo y el guardado de ajustes también fuerzan PWM cero.
+El puente exige que la muestra seleccionada tenga menos de 250 ms para enviarla armada. La placa requiere trama válida y armada de menos de 300 ms y \code{hal::usbSerial.dtr()} activo. Al arrancar el efecto, al perder habilitación o si el intervalo de actualización supera 50 ms, se reinicia la rigidez filtrada a cero. La desconexión o pausa retiran el resorte de reposo también: no existe un centrado autónomo permanente sin telemetría válida. El menú activo y el guardado de ajustes también fuerzan PWM cero.
 
 \subsection{Paso 3: obtener la posición normalizada}
-\subsubsection{Modo actual: potenciómetros}
+La compilación actual usa el modo 1 (posición desde la simulación, descripto más abajo). Los modos 2, 0 y 3 corresponden a sensores montados en el yugo.
+
+\subsubsection{Modo 2: potenciómetros}
 Roll se lee en GP26/ADC0 y pitch en GP27/ADC1. \code{AxisPotentiometers.h} descarta la primera conversión al cambiar canal y promedia cuatro lecturas de 12 bits:
 \begin{equation}
 A=\left\lfloor\frac{a_1+a_2+a_3+a_4+2}{4}\right\rfloor.
@@ -144,8 +147,18 @@ c/(-c_{\min}),&c<0.
 \end{equation}
 $c$ son las cuentas con su dirección configurada. Los límites actuales son $\pm1000$ para roll y $\pm2546$ para pitch; los comentarios consideran el de pitch una estimación. Corresponde medirlos. Esta opción no está activa por defecto.
 
-\subsubsection{Modo 1: posición de SimConnect}
+\subsubsection{Modo 1 (actual): posición de SimConnect}
 Se usa directamente $x_{{\rm rx},R}$ o $x_{{\rm rx},P}$, limitada a $[-1,1]$. Una muestra cero anula inmediatamente el aporte de centrado al procesarse, aunque la rigidez tarde en cambiar. En este modo la respuesta de posición depende del simulador y de la comunicación; ejecutar el lazo de placa cada 2 ms no produce nuevas muestras de SimConnect cada 2 ms.
+
+\subsubsection{Modo 3: encoders magnéticos AS5600}
+Cada eje lee por I2C el ángulo de 12 bits de un sensor AS5600 (4096 cuentas por vuelta del eje del sensor). El firmware acumula las vueltas y aplica una histéresis móvil de una cuenta, que da las cuentas retenidas $c$ respecto del centro, ya con la dirección configurada. La normalización tiene la misma forma que la de los encoders:
+\begin{equation}
+x=\sat_{[-1,1]}\begin{cases}
+c/n_{+},&c\ge0,\\
+c/n_{-},&c<0.
+\end{cases}
+\end{equation}
+$n_{+}$ y $n_{-}$ son las cuentas del centro a cada extremo: hoy $1024$ en roll ($\pm90^\circ$) y $2608$ en pitch ($\pm150$~mm con una polea efectiva de 75~mm), ambas estimadas y por reemplazar con valores medidos. El centro se toma al encender, o puede fijarse como absoluto si el eje del sensor gira menos de media vuelta a cada lado. Ante una falla de lectura, la falta del imán o una posible vuelta perdida, el comando de ambos motores pasa a cero. El detalle está en la Sección~\ref{sec:adquisicion_movimiento}. Esta opción no está activa por defecto y falta su ensayo con los sensores.
 
 \subsection{Paso 4: rigidez mínima y suavizado}
 \subsubsection{Rigidez objetivo}

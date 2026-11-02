@@ -45,14 +45,14 @@ Variable & Unidad pedida & Uso\\
 \end{center}
 El puente exige valores finitos dentro de $[-1,1]$. Son posiciones de mando del simulador; no son el ángulo de alabeo, el cabeceo del avión, su velocidad angular ni sus aceleraciones. El sentido físico debe contrastarse con el eje realmente asignado; el proyecto propone roll a la derecha positivo y tirar en pitch positivo.
 
-En modo potenciómetros o encoders, \textbf{ninguna SimVar proporciona la posición ni la velocidad utilizadas por damper y fricción}. Sin embargo, el puente sigue solicitando y validando las posiciones de SimConnect y el resto de la trama. Por eso una entrada inválida de esa trama puede desarmar la salida aunque el sensor local funcione.
+En los modos con sensor local (encoders, potenciómetros o encoders AS5600), \textbf{ninguna SimVar proporciona la posición ni la velocidad utilizadas por damper y fricción}. Sin embargo, el puente sigue solicitando y validando las posiciones de SimConnect y el resto de la trama. Por eso una entrada inválida de esa trama puede desarmar la salida aunque el sensor local funcione.
 
 \subsubsection{Datos que habilitan la salida, pero no multiplican el damper}
-La rama común requiere \code{SIMCONNECT_ADDITIONS_ENABLED}, trama válida y armada con antigüedad menor de 300 ms, y conexión USB CDC comprobada mediante \code{Serial.dtr()}. El puente condiciona el armado a ejecución del simulador, ausencia de pausa, \code{IS SLEW ACTIVE=0}, telemetría reciente y opción de salida habilitada. Los eventos \code{Pause} y \code{Sim} participan en ese estado; no son coeficientes de resistencia.
+La rama común requiere \code{SIMCONNECT_ADDITIONS_ENABLED}, trama válida y armada con antigüedad menor de 300 ms, y conexión USB CDC comprobada mediante \code{hal::usbSerial.dtr()}. El puente condiciona el armado a ejecución del simulador, ausencia de pausa, \code{IS SLEW ACTIVE=0}, telemetría reciente y opción de salida habilitada. Los eventos \code{Pause} y \code{Sim} participan en ese estado; no son coeficientes de resistencia.
 
 \code{DYNAMIC PRESSURE}, \code{AIRSPEED INDICATED}, los vientos, flaps, tren y spoilers \textbf{no aparecen en la fórmula de damper}. La presión sí modifica el resorte que se suma con él. \code{SIM ON GROUND} separa otros efectos, pero no exige estar en vuelo para estas resistencias: pueden actuar en tierra y en aire. El menú de calibración anula ambos comandos de motor mientras está activo. En consecuencia, los efectos locales actuales también necesitan la habilitación de SimConnect; no son un modo autónomo de resistencia con el PC desconectado.
 
-\subsection{Adquisición de posición: los tres modos}
+\subsection{Adquisición de posición: los cuatro modos}
 \label{sec:adquisicion_movimiento}
 \subsubsection{Selector común y configuración predeterminada}
 \code{YOKE_POSITION_SOURCE}, en \code{mis_defines.h}, selecciona una única fuente para ambos ejes y para los efectos que utilizan movimiento:
@@ -68,11 +68,11 @@ Valor & Fuente & Característica principal\\
 \bottomrule
 \end{tabular}
 \end{center}
-El valor predeterminado inspeccionado es \textbf{1}. No es un selector del menú en tiempo de ejecución. El script \code{Build-Pico2.ps1} permite seleccionar encoders, potenciómetros o AS5600 mediante sus opciones correspondientes; el modo 1 depende de la definición de compilación. No hay mezcla automática de un sensor para el resorte y otro para el damper, ni selección independiente de fuente por eje. Tampoco se comprobó qué binario está cargado físicamente.
+\textbf{El modo actual es el 1}: la posición del yugo se obtiene de la simulación, a partir de la posición del mando virtual que Prepar3D informa por SimConnect, y no de un sensor montado en el yugo. Es el valor predeterminado de \code{mis_defines.h} y el de la compilación normal (\code{build-pico2/MiYoke_PD.uf2}). No es un selector del menú en tiempo de ejecución: se elige al compilar. \code{Build-Pico2.ps1} genera los otros modos con \code{-Encoders} (modo 0), \code{-Potentiometers} (modo 2) y \code{-As5600} (modo 3). No hay mezcla automática de un sensor para el resorte y otro para el damper, ni selección independiente de fuente por eje. Tampoco se comprobó qué binario está cargado físicamente.
 
-En el modo 3, cada eje usa un sensor magnético AS5600 montado después de la caja reductora. Como su dirección I2C (0x36) es fija, roll usa un bus I2C1 propio y pitch comparte el I2C0 con el LCD. En cada ciclo de 2~ms se leen el estado del imán y el ángulo crudo de 12 bits, de 4096 cuentas por vuelta del eje del sensor. El firmware acumula las vueltas sumando la diferencia entre lecturas envuelta al intervalo $[-2048,2047]$, aplica una histéresis móvil de una cuenta y normaliza con las cuentas del centro a cada extremo, igual que con los potenciómetros. Si el eje del sensor gira menos de media vuelta a cada lado, el centro puede configurarse como absoluto; en caso contrario se toma al encender. Ante una falla de lectura o la falta del imán, el comando de ambos motores pasa a cero. Si existe riesgo de haber perdido una vuelta (un hueco entre lecturas mayor de 40~ms o un sobrerrecorrido), el comando queda en cero hasta reiniciar. Este modo se verificó solo con pruebas unitarias; falta el ensayo con los sensores.
+Los modos se describen a continuación en este orden: 1, 2, 0 y 3. Como su dirección I2C (0x36) es fija, roll usa un bus I2C1 propio y pitch comparte el I2C0 con el LCD. En cada ciclo de 2~ms se leen el estado del imán y el ángulo crudo de 12 bits, de 4096 cuentas por vuelta del eje del sensor. El firmware acumula las vueltas sumando la diferencia entre lecturas envuelta al intervalo $[-2048,2047]$, aplica una histéresis móvil de una cuenta y normaliza con las cuentas del centro a cada extremo, igual que con los potenciómetros. Si el eje del sensor gira menos de media vuelta a cada lado, el centro puede configurarse como absoluto; en caso contrario se toma al encender. Ante una falla de lectura o la falta del imán, el comando de ambos motores pasa a cero. Si existe riesgo de haber perdido una vuelta (un hueco entre lecturas mayor de 40~ms o un sobrerrecorrido), el comando queda en cero hasta reiniciar. Este modo se verificó solo con pruebas unitarias; falta el ensayo con los sensores.
 
-\subsubsection{Modo 1: SimConnect, paquete y reloj de las muestras}
+\subsubsection{Modo 1 (actual): SimConnect, paquete y reloj de las muestras}
 La solicitud al simulador se realiza por cuadro de simulación. El puente limita el envío activo a intervalos de al menos 20 ms: como máximo unos 50 envíos por segundo en esa ruta, y menos si no hay cuadros/datos suficientes. No equivale a una garantía de muestreo perfectamente periódico.
 
 Para cada eje, el puente transmite la posición normalizada como float32, en bytes 82--85 para roll y 86--89 para pitch. El receptor valida rango $[-1,1]$, CRC, secuencia y marca temporal.
@@ -132,6 +132,9 @@ En Pico, \code{PicoEncoder.h} utiliza los cambios de ambos canales, una tabla de
 
 El signo del encoder, la escala de cuentas y la polaridad del motor son tres configuraciones distintas. Invertir el motor no corrige un centro o una escala de sensor mal calibrados. En potenciómetros, el sentido se obtiene de los extremos calibrados y no de las macros de dirección del encoder.
 
+\subsubsection{Modo 3: encoders magnéticos AS5600}
+Cada eje usa un sensor magnético AS5600 montado después de la caja reductora. Como su dirección I2C (0x36) es fija, roll usa un bus I2C1 propio y pitch comparte el I2C0 con el LCD. En cada ciclo de 2~ms se leen el estado del imán y el ángulo crudo de 12 bits, de 4096 cuentas por vuelta del eje del sensor. El firmware acumula las vueltas sumando la diferencia entre lecturas envuelta al intervalo $[-2048,2047]$, aplica una histéresis móvil de una cuenta y normaliza con las cuentas del centro a cada extremo, igual que con los potenciómetros. Si el eje del sensor gira menos de media vuelta a cada lado, el centro puede configurarse como absoluto; en caso contrario se toma al encender. Ante una falla de lectura o la falta del imán, el comando de ambos motores pasa a cero. Si existe riesgo de haber perdido una vuelta (un hueco entre lecturas mayor de 40~ms o un sobrerrecorrido), el comando queda en cero hasta reiniciar. Este modo se verificó solo con pruebas unitarias; falta el ensayo con los sensores.
+
 \subsubsection{Comparación práctica para damper y fricción}
 \begin{longtable}{p{0.16\linewidth}p{0.36\linewidth}p{0.39\linewidth}}
 \toprule
@@ -140,6 +143,7 @@ Fuente & Ventaja para este cálculo & Limitación que conviene medir\\
 SimConnect & Permite demostrar el algoritmo con el mando virtual; no requiere sensor local en esta rama. & Más etapas y retardo; intervalos variables, posición virtual y posibles curvas; velocidad retenida entre paquetes.\\
 Potenciómetro & Posición local absoluta después de calibrar; no exige centrar al encender. & Ruido ADC, desgaste, rango aprovechado, promedio e histéresis; centro real frente al punto medio.\\
 Encoder & Medición local incremental sin conversión analógica de posición; resolución determinada por cuentas y transmisión. & Centro relativo al arranque, pasos discretos a baja velocidad, posibles cuentas perdidas y escala mecánica.\\
+AS5600 & Medición local digital de 12 bits por vuelta; centro absoluto si el sensor gira menos de media vuelta a cada lado. & Alineación del imán, integridad del bus I2C y del cableado, seguimiento de vueltas; sin ensayo con los sensores todavía.\\
 \bottomrule
 \end{longtable}
 Si se busca resistir el movimiento de la mano, el sensor local mide de forma más directa esa variable. Esto no demuestra automáticamente que cualquier montaje local sea mejor: el ruido, la resolución y la transmisión deben medirse. Cambiar de fuente puede exigir reajustar el filtro y las ganancias aun manteniendo las mismas ecuaciones.
