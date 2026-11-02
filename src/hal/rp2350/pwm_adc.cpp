@@ -24,6 +24,7 @@ void pwmSetup(uint32_t freqHz, uint32_t range) {
     for (bool& initialized : slicesInitialized) initialized = false;
 }
 void pwmWrite(uint8_t pin, int value) {
+    if (pin >= 30) return;
     const uint slice = pwm_gpio_to_slice_num(pin);
     if (!slicesInitialized[slice]) {
         pwm_config config = pwm_get_default_config();

@@ -22,7 +22,7 @@ set(MIYOKE_LIBS pico_stdlib hardware_pwm hardware_adc hardware_i2c hardware_flas
 # Temporary target until the firmware entry point is migrated in part 4.
 add_library(myk_hal STATIC ${MIYOKE_HAL_SOURCES})
 # mis_defines.h remains at the root until part 3.
-target_include_directories(myk_hal PRIVATE include src/hal/rp2350 ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(myk_hal PRIVATE include src/hal/rp2350)
 target_compile_definitions(myk_hal PRIVATE YOKE_TARGET_RP2350=1 PICO_XOSC_STARTUP_DELAY_MULTIPLIER=64)
 target_compile_options(myk_hal PRIVATE -Werror=return-type -Wno-psabi
     $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)

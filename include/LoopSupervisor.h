@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#if defined(ARDUINO_ARCH_RP2040)
+#if defined(YOKE_TARGET_RP2350)
 #include <hardware/structs/watchdog.h>
 #endif
 
@@ -109,7 +109,7 @@ inline int formatBoot(char* out, size_t size, int reason, uint32_t wdReason,
             resetName(reason),(unsigned long)wdReason,(unsigned long)powmanReason);
     return n>=0 && size_t(n)<size ? n : -1;
 }
-#if defined(ARDUINO_ARCH_RP2040)
+#if defined(YOKE_TARGET_RP2350)
 inline void mark(uint8_t s) { watchdog_hw->scratch[0] = encode(s); }
 inline uint32_t readScratch() { return watchdog_hw->scratch[0]; }
 #else

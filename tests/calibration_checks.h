@@ -1,6 +1,6 @@
 #ifndef YOKE_CALIBRATION_CHECKS_H
 #define YOKE_CALIBRATION_CHECKS_H
-#include "../CalibrationMenu.h"
+#include "../include/CalibrationMenu.h"
 #include <cstring>
 #include <string>
 

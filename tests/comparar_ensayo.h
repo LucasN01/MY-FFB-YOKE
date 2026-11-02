@@ -1,11 +1,11 @@
 #ifndef YOKE_COMPARAR_ENSAYO_H
 #define YOKE_COMPARAR_ENSAYO_H
-#include "../mis_defines.h"
+#include "../include/mis_defines.h"
 #include "../SimConnectBridge/Replay.h"
 #include "../SimConnectBridge/PicoCsv.h"
-#include "../SimTelemetry.h"
-#include "../PicoForceModels.h"
-#include "../PicoLog.h"
+#include "../include/SimTelemetry.h"
+#include "../include/PicoForceModels.h"
+#include "../include/PicoLog.h"
 #include <fstream>
 #include <sstream>
 #include <map>

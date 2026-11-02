@@ -15,7 +15,7 @@
 #include "SerialLink.h"
 #include "PicoCsv.h"
 #include "Replay.h"
-#include "../LoopSupervisor.h"
+#include "../include/LoopSupervisor.h"
 
 FILE* logFile=nullptr;
 void Log(const char* format, ...) {

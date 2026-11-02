@@ -1,19 +1,18 @@
 #pragma once
-#include <Arduino.h>
-#include <Wire.h>
+#include "hal/hal.h"
 #include "As5600Position.h"
 #include "YokeI2C.h"
 
 class AxisAs5600 {
 public:
     void begin() {
-        Wire1.setSDA(ROLL_AS5600_SDA_PIN);
-        Wire1.setSCL(ROLL_AS5600_SCL_PIN);
-        Wire1.begin();
-        Wire1.setClock(YOKE_I2C1_HZ);
-        Wire1.setTimeout(1, true);
+        hal::wire1.setSDA(ROLL_AS5600_SDA_PIN);
+        hal::wire1.setSCL(ROLL_AS5600_SCL_PIN);
+        hal::wire1.begin();
+        hal::wire1.setClock(YOKE_I2C1_HZ);
+        hal::wire1.setTimeout(1, true);
         YokeI2C::configureBus0();
-        const uint32_t now=millis();
+        const uint32_t now=hal::millis();
         for(uint8_t axis=0;axis<2;++axis) {
             sensors[axis].start(now);
             confOk[axis]=writeConf(axis) && checkConf(axis);
@@ -61,9 +60,9 @@ public:
     }
     void excuseGap() { sensors[0].excuseGap(); sensors[1].excuseGap(); }
 private:
-    TwoWire& bus(uint8_t axis) { return axis==0 ? Wire1 : Wire; }
+    hal::I2cBus& bus(uint8_t axis) { return axis==0 ? hal::wire1 : hal::wire0; }
     bool readRegisters(uint8_t axis,uint8_t reg,uint8_t* bytes,uint8_t count) {
-        TwoWire& wire=bus(axis);
+        hal::I2cBus& wire=bus(axis);
         wire.beginTransmission(AS5600_I2C_ADDRESS);
         wire.write(reg);
         if(wire.endTransmission(false)!=0) return false;
@@ -72,7 +71,7 @@ private:
         return true;
     }
     bool writeConf(uint8_t axis) {
-        TwoWire& wire=bus(axis);
+        hal::I2cBus& wire=bus(axis);
         wire.beginTransmission(AS5600_I2C_ADDRESS);
         wire.write(0x07);
         wire.write(YOKE_AS5600_CONF >> 8);

@@ -1,8 +1,7 @@
 /*
   AxisEncoders.h
   ------------------------------------------------------------
-  ARCHIVO NUEVO. Envuelve la librería "Encoder.h" (PJRC, la misma
-  que usaba el proyecto original) para roll y pitch.
+  ARCHIVO NUEVO. Envuelve PicoEncoder para roll y pitch.
 
   Pines, signos y limites se configuran en mis_defines.h.
   Solo necesita A/B por eje; no utiliza indice Z.
@@ -12,14 +11,10 @@
 #ifndef AXIS_ENCODERS_H
 #define AXIS_ENCODERS_H
 
-#include <Arduino.h>
-#if defined(ARDUINO_ARCH_RP2040)
+#include "hal/hal.h"
 #include "PicoEncoder.h"
 using YokeEncoder = PicoEncoder;
-#else
-#include <Encoder.h>
-using YokeEncoder = Encoder;
-#endif
+
 #include "mis_defines.h"
 
 class AxisEncoders {
@@ -33,10 +28,9 @@ public:
     {}
 
     void begin() {
-#if defined(ARDUINO_ARCH_RP2040)
         roll.begin();
         pitch.begin();
-#endif
+
         roll.write(0);
         pitch.write(0);
     }

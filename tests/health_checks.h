@@ -1,5 +1,5 @@
 #pragma once
-#include "../LoopSupervisor.h"
+#include "../include/LoopSupervisor.h"
 
 static void healthChecks() {
     using namespace YokeHealth;

@@ -96,6 +96,7 @@ bool I2cBus::setSCL(uint8_t pin) {
     return pin == scl_;
 }
 void I2cBus::begin() {
+    transmitting_ = false; length_ = offset_ = 0;
     if (running_) return;
     i2c_init(controller(index_), clock_);
     i2c_set_slave_mode(controller(index_), false, 0);

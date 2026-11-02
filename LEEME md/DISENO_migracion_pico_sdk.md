@@ -94,6 +94,8 @@ posterior va en un diseno propio.
    devuelve `false` sin cambiar nada. Con el bus en marcha y el **mismo** pin devuelve `true` (lo usa
    `YokeI2C::configureBus0()` en cada sonda del LCD).
 
+10. **`pwmSetup` reinicia los slices aunque frecuencia y rango no cambien.** Inocuo: solo se llama en el arranque.
+
 ---
 
 ## 3. Inventario: API Arduino -> Pico SDK, por archivo

@@ -1,5 +1,5 @@
-#include "../PicoLog.h"
-#include "../LoopSupervisor.h"
+#include "../include/PicoLog.h"
+#include "../include/LoopSupervisor.h"
 #include "../SimConnectBridge/PicoCsv.h"
 #include "comparar_ensayo.h"
 #include <filesystem>

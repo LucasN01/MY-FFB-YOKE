@@ -2,8 +2,7 @@
 #define YOKE_CALIBRATION_CONTROLS_H
 #include "CalibrationMenu.h"
 #if YOKE_CALIBRATION_ENABLED
-#include <Arduino.h>
-#include <EEPROM.h>
+#include "hal/hal.h"
 
 namespace YokeCalibration {
 namespace Pins {
@@ -30,29 +29,29 @@ public:
         :menu(values,&pots,record),settings(values),potSettings(pots),recordSettings(record) {}
     void begin() {
         // LEDs reflect mode, not simulator connection or whether forces are armed.
-        pinMode(YOKE_LED_NORMAL_PIN,OUTPUT); pinMode(YOKE_LED_CALIBRATION_PIN,OUTPUT);
+        hal::pinMode(YOKE_LED_NORMAL_PIN,hal::PinMode::Output); hal::pinMode(YOKE_LED_CALIBRATION_PIN,hal::PinMode::Output);
         leds();
         for(uint8_t i=0;i<5;++i) {
-            pinMode(Pins::all[i+2],INPUT_PULLUP);
-            buttons[i].begin(digitalRead(Pins::all[i+2])==LOW,millis());
+            hal::pinMode(Pins::all[i+2],hal::PinMode::InputPullup);
+            buttons[i].begin(hal::digitalRead(Pins::all[i+2])==false,hal::millis());
         }
-        EEPROM.begin(256);
+        hal::eeprom.begin(256);
         uint8_t record[YokeGains::recordSize];
-        for(uint8_t i=0;i<sizeof(record);++i) record[i]=EEPROM.read(i);
+        for(uint8_t i=0;i<sizeof(record);++i) record[i]=hal::eeprom.read(i);
         YokeGains::decode(record,settings); // erased/old/corrupt record keeps defaults
         uint8_t potRecord[YokePots::recordSize];
-        for(uint8_t i=0;i<sizeof(potRecord);++i) potRecord[i]=EEPROM.read(YokePots::recordOffset+i);
+        for(uint8_t i=0;i<sizeof(potRecord);++i) potRecord[i]=hal::eeprom.read(YokePots::recordOffset+i);
         YokePots::decode(potRecord,potSettings);
         if(recordSettings) {
             uint8_t record[YokeRecord::recordSize];
-            for(uint8_t i=0;i<sizeof(record);++i) record[i]=EEPROM.read(YokeRecord::recordOffset+i);
+            for(uint8_t i=0;i<sizeof(record);++i) record[i]=hal::eeprom.read(YokeRecord::recordOffset+i);
             YokeRecord::decode(record,*recordSettings);
         }
     }
     void update(uint32_t now,bool paused) {
         menu.update(now,paused);
         bool pressed[5], down[5];
-        for(uint8_t i=0;i<5;++i) down[i]=digitalRead(Pins::all[i+2])==LOW;
+        for(uint8_t i=0;i<5;++i) down[i]=hal::digitalRead(Pins::all[i+2])==false;
         const bool conflict=down[3] && down[4];
         const bool repeat=menu.currentScreen()==Screen::Edit && !menu.savePending() && !conflict;
         for(uint8_t i=0;i<5;++i) pressed[i]=buttons[i].update(down[i],now,repeat && i>=3);
@@ -67,7 +66,7 @@ public:
     bool save() {
         if(!menu.savePending()) return true;
         static_assert(YokeGains::recordSize<=YokePots::recordOffset &&
-                      YokePots::recordOffset+YokePots::recordSize<=256,"EEPROM solapada");
+                      YokePots::recordOffset+YokePots::recordSize<=256,"hal::eeprom solapada");
         uint8_t record[64], previous[64];
         const bool recording=menu.savingRecord();
         const bool pots=menu.savingPots();
@@ -77,18 +76,18 @@ public:
         else if(pots) YokePots::encode(menu.potCandidate(),record);
         else YokeGains::encode(menu.candidate(),record);
         for(uint8_t i=0;i<size;++i) {
-            previous[i]=EEPROM.read(offset+i); EEPROM.write(offset+i,record[i]);
+            previous[i]=hal::eeprom.read(offset+i); hal::eeprom.write(offset+i,record[i]);
         }
-        const bool ok=EEPROM.commit();
+        const bool ok=hal::eeprom.commit();
         // Una edicion fallida/cancelada no debe colarse en otro guardado posterior.
-        if(!ok) for(uint8_t i=0;i<size;++i) EEPROM.write(offset+i,previous[i]);
+        if(!ok) for(uint8_t i=0;i<size;++i) hal::eeprom.write(offset+i,previous[i]);
         menu.finishSave(ok); return ok;
     }
     Menu menu;
 private:
     void leds() {
-        digitalWrite(YOKE_LED_NORMAL_PIN,menu.active()?LOW:HIGH);
-        digitalWrite(YOKE_LED_CALIBRATION_PIN,menu.active()?HIGH:LOW);
+        hal::digitalWrite(YOKE_LED_NORMAL_PIN,menu.active()?false:true);
+        hal::digitalWrite(YOKE_LED_CALIBRATION_PIN,menu.active()?true:false);
     }
     YokeGains::Settings& settings;
     YokePots::Settings& potSettings;

@@ -1,5 +1,5 @@
 #pragma once
-#include "../As5600Position.h"
+#include "../include/As5600Position.h"
 
 static void as5600Checks() {
     using namespace YokeAs5600;

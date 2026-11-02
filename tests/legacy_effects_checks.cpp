@@ -5,7 +5,7 @@
 #define YOKE_FRICTION_MODEL 0
 #define SIMCONNECT_BUFFET_NARROWBAND 0
 #define SIMCONNECT_GROUND_NARROWBAND_TEXTURE 0
-#include "../SimEffects.h"
+#include "../include/SimEffects.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

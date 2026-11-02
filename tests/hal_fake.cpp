@@ -1,4 +1,4 @@
-#include "../include/hal/hal.h"
+#include "hal_fake.h"
 #include "../include/hal/pwm_plan.h"
 #include <algorithm>
 #include <array>
@@ -138,7 +138,7 @@ bool I2cBus::setSCL(uint8_t pin) {
     if (running_ || pin >= 30 || pin % 4 != index_*2+1) return false;
     scl_ = pin; return true;
 }
-void I2cBus::begin() { running_ = true; }
+void I2cBus::begin() { running_ = true; transmitting_ = false; length_ = offset_ = 0; }
 void I2cBus::end() {
     running_ = false; transmitting_ = false; length_ = offset_ = 0;
     pinMode(sda_, PinMode::Input); pinMode(scl_, PinMode::Input);
@@ -156,7 +156,7 @@ size_t I2cBus::write(uint8_t b) {
 }
 uint8_t I2cBus::endTransmission(bool stop) {
     if (!running_ || !transmitting_) return 4;
-    hal_fake::event("i2cWrite", index_, address_);
+    hal_fake::event(length_ ? "i2cWrite" : "i2cProbe", index_, address_);
     hal_fake::event("i2cStop", index_, stop);
     hal_fake::i2cTx[index_].assign(buffer_, buffer_+length_);
     auto& results = hal_fake::i2cResults[index_];

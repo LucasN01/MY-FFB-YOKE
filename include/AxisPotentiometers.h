@@ -1,21 +1,20 @@
 #pragma once
-#include <Arduino.h>
+#include "hal/hal.h"
 #include "PotCalibration.h"
 
 class AxisPotentiometers {
 public:
     explicit AxisPotentiometers(const YokePots::Settings& values):settings(values) {}
     void begin() {
-        analogReadResolution(12);
-        pinMode(ROLL_POT_PIN, INPUT);
-        pinMode(PITCH_POT_PIN, INPUT);
+        hal::pinMode(ROLL_POT_PIN, hal::PinMode::Input);
+        hal::pinMode(PITCH_POT_PIN, hal::PinMode::Input);
     }
     void update() {
         const uint8_t pins[2] = {ROLL_POT_PIN, PITCH_POT_PIN};
         for (uint8_t axis = 0; axis < 2; ++axis) {
-            analogRead(pins[axis]); // descartar primera conversion al cambiar canal
+            hal::analogRead12(pins[axis]); // descartar primera conversion al cambiar canal
             uint32_t sum = 0;
-            for (uint8_t n = 0; n < YOKE_POT_SAMPLES; ++n) sum += analogRead(pins[axis]);
+            for (uint8_t n = 0; n < YOKE_POT_SAMPLES; ++n) sum += hal::analogRead12(pins[axis]);
             readings[axis] = (sum + YOKE_POT_SAMPLES / 2) / YOKE_POT_SAMPLES;
             const YokePots::Axis& calibration=settings.axes[axis];
             sensors[axis].configure(calibration.negative,calibration.center,calibration.positive);

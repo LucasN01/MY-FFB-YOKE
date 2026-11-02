@@ -9,11 +9,8 @@
 
 #ifndef MIS_DEFINES_H
 #define MIS_DEFINES_H
-#if defined(ARDUINO)
-#include <Arduino.h>
-#endif
 
-// LCD 16x2 I2C: Pico 2 GP4/GP5; Pro Micro D2/D3.
+// LCD 16x2 I2C: Pico 2 GP4/GP5.
 // Migracion y conexion electrica: LEEME_PICO2.md.
 #define LCD_I2C_ADDRESS 0x27 // tambien prueba 0x3F si 0x27 no responde
 #define LCD_REFRESH_MS 100  // nueva lectura cada 100 ms
@@ -22,11 +19,7 @@
 #define LCD_RESYNC_MS 5000      // recuperar tambien reset del LCD con PCF8574 aun activo
 // Menu de ganancias en Pico 2. GPIO (no numeros fisicos del conector).
 #ifndef YOKE_CALIBRATION_ENABLED
-#if defined(ARDUINO_ARCH_RP2040) || !defined(ARDUINO)
 #define YOKE_CALIBRATION_ENABLED 1
-#else
-#define YOKE_CALIBRATION_ENABLED 0
-#endif
 #endif
 #define YOKE_LED_NORMAL_PIN 12
 #define YOKE_LED_CALIBRATION_PIN 13
@@ -63,9 +56,6 @@ static_assert(LCD_POWER_ON_WAIT_MS >= 50 && LCD_RETRY_MS >= 100 && LCD_RESYNC_MS
 #endif
 static_assert(YOKE_POSITION_SOURCE >= 0 && YOKE_POSITION_SOURCE <= 3,
               "YOKE_POSITION_SOURCE debe ser 0, 1, 2 o 3");
-#if (YOKE_POSITION_SOURCE == 2 || YOKE_POSITION_SOURCE == 3) && defined(ARDUINO) && !defined(ARDUINO_ARCH_RP2040)
-#error "Los modos 2 (potenciometros) y 3 (AS5600) requieren Raspberry Pi Pico/Pico 2 (Arduino-Pico)"
-#endif
 
 // Potenciometros: numeros GPIO, NO numeros fisicos 31/32. Entrada 0..3.3 V.
 #define ROLL_POT_PIN 26  // ADC0, pin fisico 31
@@ -120,23 +110,13 @@ static_assert(YOKE_POT_SAMPLES >= 1 && YOKE_POT_SAMPLES <= 16 &&
 // ============================================================
 // PINES - ENCODERS (cuadratura, uno por eje)
 // ============================================================
-// Solo para el cableado AVR descrito en la rama #else:
-// Roll usa dos interrupciones; Pitch usa interrupcion en A y lectura de B.
-// D2/D3 quedan para el LCD I2C. No utilizar Serial1 en D0/D1.
 // Pico 2 usa entradas a 3.3 V e interrupciones en ambos canales de cada eje.
-#if defined(ARDUINO_ARCH_RP2040)
 // Numeros GPIO, no numeros fisicos del conector. Solo logica de 3.3 V.
 #define ROLL_ENC_A 0
 #define ROLL_ENC_B 1
 #define PITCH_ENC_A 2
 #define PITCH_ENC_B 3
-#else
-#define ROLL_ENC_A   0     // A del encoder Roll -> D0 (RX)
-#define ROLL_ENC_B   1     // B del encoder Roll -> D1 (TX)
-#define PITCH_ENC_A  7     // A del encoder Pitch -> D7
-#define PITCH_ENC_B  4     // B del encoder Pitch -> D4
 
-#endif
 
 // Etapas 1 y 2: +1 conserva el cableado/comportamiento anterior; -1 invierte.
 // Convencion propuesta: roll derecha positivo; pitch tirar positivo.
@@ -167,8 +147,6 @@ static_assert(YOKE_POT_SAMPLES >= 1 && YOKE_POT_SAMPLES <= 16 &&
 // PINES - PUENTE H (2 PWM por eje, igual que el proyecto original)
 // ============================================================
 // TODO-USUARIO: confirmá que sean pines con salida PWM en tu placa
-// (en Leonardo/Micro: 3,5,6,9,10,11,13)
-#if defined(ARDUINO_ARCH_RP2040)
 #define ROLL_PWM_LEFT 6
 #define ROLL_PWM_RIGHT 7
 #define PITCH_PWM_LEFT 8
@@ -179,20 +157,7 @@ static_assert(YOKE_POT_SAMPLES >= 1 && YOKE_POT_SAMPLES <= 16 &&
 #define LCD_SCL_PIN 5
 // Frecuencia aproximada del analogWrite AVR original, rango conservado 0..255.
 #define MOTOR_PWM_HZ 490
-#else
-#define ROLL_PWM_LEFT    9    // TODO-USUARIO
-#define ROLL_PWM_RIGHT   10   // TODO-USUARIO
-#define PITCH_PWM_LEFT   5    // TODO-USUARIO
-#define PITCH_PWM_RIGHT  6    // TODO-USUARIO
 
-// Habilitación del driver, si tu puente H la usa (ej. BTS7960 R_EN/L_EN
-// unidos a un solo pin, o un EN general). Si no la usás, dejalo en -1.
-#define ROLL_EN_PIN   A2   // LCD I2C: mover habilitacion de roll de D7 a A2
-#define PITCH_EN_PIN  8    // TODO-USUARIO (-1 si no aplica)
-
-#define LCD_SDA_PIN SDA
-#define LCD_SCL_PIN SCL
-#endif
 
 // Límite de PWM real que le mandás al driver (0-255 típico en Arduino).
 // Podés limitarlo por debajo de 255 si tu driver/motor lo requiere.
@@ -203,8 +168,8 @@ static_assert(MOTOR_PWM_HARD_LIMIT >= 0 && MOTOR_PWM_HARD_LIMIT <= 220, "Techo P
 // Tiempo de ciclo de control, en milisegundos.
 #define CONTROL_LOOP_MS  2   // 2ms = 500Hz, igual orden que el proyecto original
 #define YOKE_WDT_MS        250   // reinicio por hardware si loop() no corre en 250 ms
-#define YOKE_WDT_FLASH_MS  3000  // durante EEPROM.commit (borrado de sector, max ~400 ms)
-#define YOKE_USB_GUARD     1     // serializar CDC con __usb_mutex (correccion H5)
+#define YOKE_WDT_FLASH_MS  3000  // durante hal::eeprom.commit (borrado de sector, max ~400 ms)
+#define YOKE_USB_GUARD     1     // serializar CDC con mutex de la HAL (correccion H5)
 #ifndef YOKE_TEST_HANG
 #define YOKE_TEST_HANG     0     // SOLO ENSAYO: 0=no, 1=for(;;), 2=noInterrupts+for(;;), 3=__builtin_trap
 #endif

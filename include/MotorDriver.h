@@ -14,7 +14,7 @@
 #ifndef MOTOR_DRIVER_H
 #define MOTOR_DRIVER_H
 
-#include <Arduino.h>
+#include "hal/hal.h"
 #include "mis_defines.h"
 
 class MotorDriver {
@@ -23,12 +23,12 @@ public:
         : _pinLeft(pinLeft), _pinRight(pinRight), _enablePin(enablePin) {}
 
     void begin() {
-        pinMode(_pinLeft, OUTPUT);
-        pinMode(_pinRight, OUTPUT);
+        hal::pinMode(_pinLeft, hal::PinMode::Output);
+        hal::pinMode(_pinRight, hal::PinMode::Output);
         stop(); // PWM a cero ANTES de habilitar el puente.
         if (_enablePin >= 0) {
-            pinMode(_enablePin, OUTPUT);
-            digitalWrite(_enablePin, HIGH);
+            hal::pinMode(_enablePin, hal::PinMode::Output);
+            hal::digitalWrite(_enablePin, true);
         }
         stop();
     }
@@ -36,8 +36,8 @@ public:
     // Frontera entre referencia normalizada y salida electrica.
     // Redondeo simetrico: command=0 produce exactamente PWM=0.
     void setCommand(float command, int16_t pwmLimit = 255) {
-        command = constrain(command, -1.0f, 1.0f);
-        pwmLimit = constrain(pwmLimit, 0, 255);
+        command = hal::constrain(command, -1.0f, 1.0f);
+        pwmLimit = hal::constrain(pwmLimit, 0, 255);
         const float scaled = command * pwmLimit;
         const int16_t pwm = (int16_t)(scaled >= 0.0f ? scaled + 0.5f : scaled - 0.5f);
         setPWM(pwm);
@@ -45,21 +45,21 @@ public:
 
     // Salida PWM firmada; conserva la asignacion de pines existente.
     void setPWM(int16_t pwmSigned) {
-        pwmSigned = constrain(pwmSigned, -MOTOR_PWM_HARD_LIMIT, MOTOR_PWM_HARD_LIMIT);
+        pwmSigned = hal::constrain(pwmSigned, -MOTOR_PWM_HARD_LIMIT, MOTOR_PWM_HARD_LIMIT);
         _lastAppliedPWM = pwmSigned; // guardado para el TorqueMonitor
 
         if (pwmSigned >= 0) {
-            analogWrite(_pinLeft, 0);
-            analogWrite(_pinRight, pwmSigned);
+            hal::pwmWrite(_pinLeft, 0);
+            hal::pwmWrite(_pinRight, pwmSigned);
         } else {
-            analogWrite(_pinRight, 0);
-            analogWrite(_pinLeft, -pwmSigned);
+            hal::pwmWrite(_pinRight, 0);
+            hal::pwmWrite(_pinLeft, -pwmSigned);
         }
     }
 
     void stop() {
-        analogWrite(_pinLeft, 0);
-        analogWrite(_pinRight, 0);
+        hal::pwmWrite(_pinLeft, 0);
+        hal::pwmWrite(_pinRight, 0);
         _lastAppliedPWM = 0;
     }
 

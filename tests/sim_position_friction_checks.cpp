@@ -3,7 +3,7 @@
 #define YokeSC YokeSimPositionSC
 #define YOKE_POSITION_SOURCE 1
 #define YOKE_FRICTION_MODEL 1
-#include "../SimEffects.h"
+#include "../include/SimEffects.h"
 #include <cstdio>
 #include <cstdlib>
 int simPositionFrictionChecks() {

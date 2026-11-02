@@ -31,6 +31,9 @@ void init() {
 void background() {
     if (mutex_try_enter(&usbMutex, nullptr)) {
         tud_task();
+#ifndef YOKE_USB_GUARD
+#error "YOKE_USB_GUARD must be defined"
+#endif
 #if YOKE_USB_GUARD
         tud_cdc_write_flush();
 #endif

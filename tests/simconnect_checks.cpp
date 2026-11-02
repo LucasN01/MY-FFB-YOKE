@@ -1,9 +1,9 @@
-#include "../SimTelemetry.h"
+#include "../include/SimTelemetry.h"
 #include "../SimConnectBridge/GustGain.h"
 #include "../SimConnectBridge/GustModel.h"
 #include "../SimConnectBridge/BuffetModel.h"
-#include "../SimEffects.h"
-#include "../PotentiometerPosition.h"
+#include "../include/SimEffects.h"
+#include "../include/PotentiometerPosition.h"
 #include "../SimConnectBridge/GroundModel.h"
 #include <cstdio>
 #include <cstdlib>

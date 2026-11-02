@@ -11,26 +11,15 @@
 #include <limits>
 #include <type_traits>
 
-namespace hal_fake {
-extern uint64_t timeUs;
-extern std::array<hal::PinMode, 30> modes;
-extern std::array<uint32_t, 30> pwm;
-extern std::array<std::deque<uint16_t>, 30> adc;
-extern std::vector<std::string> events;
-extern std::array<std::deque<uint8_t>, 2> i2cRx, i2cResults;
-extern std::array<std::vector<uint8_t>, 2> i2cTx;
-extern std::deque<uint8_t> usbRx, usbTx;
-extern bool usbDtr, usbInitialized;
-extern size_t usbCapacity;
-extern unsigned usbLocks, usbBackgroundCalls;
-extern uint32_t watchdogMs, watchdogFeeds;
-extern hal::ResetReason reset;
-extern std::array<uint8_t, 4096> flash;
-extern size_t readBytes, erasedBytes, programmedBytes;
-extern unsigned erases, programs;
-extern bool flashFail;
-void setInput(uint8_t pin, bool high);
-}
+#include "hal_fake.h"
+#include "../include/MotorDriver.h"
+#include "../include/AxisEncoders.h"
+#include "../include/AxisPotentiometers.h"
+#include "../include/CalibrationControls.h"
+#include "../include/LcdTelemetry.h"
+#include "../include/AxisAs5600.h"
+#include "../include/UsbGuard.h"
+
 static unsigned checks = 0, failures = 0;
 #define CHECK(expr) do { ++checks; if (!(expr)) { ++failures; \
     std::printf("FAIL line %d: %s\n", __LINE__, #expr); } } while (0)
@@ -172,8 +161,110 @@ static void checkFake() {
     hal::watchdogBegin(250); hal::watchdogFeed(); CHECK(watchdogMs == 250); CHECK(watchdogFeeds == 1);
     reset = hal::ResetReason::RunPin; CHECK(hal::resetReason() == hal::ResetReason::RunPin);
 }
+
+static void checkHardwareModules() {
+    using namespace hal_fake;
+    hal::pwmSetup(490,255); events.clear();
+    MotorDriver motor(6,7,10); motor.begin();
+    CHECK(events.size()==8);
+    CHECK(events[2]=="pwmWrite:6:0" && events[3]=="pwmWrite:7:0");
+    CHECK(events[5]=="digitalWrite:10:1");
+    motor.setCommand(0.5f,255);
+    CHECK(motor.getLastAppliedPWM()==128); CHECK(pwm[7]==1024 && pwm[6]==0);
+    motor.setCommand(-1,255);
+    CHECK(motor.getLastAppliedPWM()==-220); CHECK(pwm[6]==1760 && pwm[7]==0);
+    const auto before=pwm; hal::pwmWrite(30,255); hal::pwmWrite(255,255);
+    CHECK(pwm==before);
+
+    PicoEncoder encoder(0,1); encoder.begin();
+    setInput(0,false); setInput(1,false); encoder.write(0);
+    setInput(1,true); setInput(0,true); setInput(1,false); setInput(0,false);
+    CHECK(encoder.read()==4);
+    encoder.write(0);
+    setInput(0,true); setInput(1,true); setInput(0,false); setInput(1,false);
+    CHECK(encoder.read()==-4);
+    hal::attachChangeInterrupt(0,nullptr,nullptr); hal::attachChangeInterrupt(1,nullptr,nullptr);
+    { UsbLock lock; CHECK(usbLocks==1); } CHECK(usbLocks==0);
+
+    auto& bus=hal::wire0; bus.begin(); bus.beginTransmission(0x27); bus.write(7);
+    bus.begin(); CHECK(bus.write(8)==0); CHECK(bus.endTransmission()==4);
+    i2cRx[0]={1,2}; CHECK(bus.requestFrom(0x27,2)==2);
+    bus.begin(); CHECK(bus.available()==0); CHECK(bus.read()==-1);
+    events.clear(); bus.beginTransmission(0x27); CHECK(bus.endTransmission()==0);
+    CHECK(events[0]=="i2cProbe:0:39");
+}
+static void checkControls() {
+    using namespace hal_fake;
+    using namespace YokeCalibration;
+    flash.fill(0xFF); flashFail=false;
+    YokeGains::Settings gains, defaults; YokePots::Settings pots; YokeRecord::Settings record;
+    Controls controls(gains,pots,&record); controls.begin();
+    for(uint8_t i=0;i<YokeGains::Count;++i)
+        CHECK(gains.raw(YokeGains::Id(i))==defaults.raw(YokeGains::Id(i)));
+    CHECK(YokeGains::recordSize<=YokePots::recordOffset);
+    CHECK(YokePots::recordOffset+YokePots::recordSize<=YokeRecord::recordOffset);
+    CHECK(YokeRecord::recordOffset+YokeRecord::recordSize<=256);
+    controls.menu.update(0,true); controls.menu.press(Button::Mode);
+    controls.menu.press(Button::Ok); controls.menu.press(Button::Minus);
+    controls.menu.press(Button::Ok); const auto wanted=controls.menu.candidate();
+    CHECK(controls.menu.savePending()); CHECK(controls.save());
+    CHECK(gains.raw(YokeGains::Total)!=defaults.raw(YokeGains::Total));
+    YokeGains::Settings loaded; YokePots::Settings loadedPots; YokeRecord::Settings loadedRecord;
+    Controls reread(loaded,loadedPots,&loadedRecord); reread.begin();
+    for(uint8_t i=0;i<YokeGains::Count;++i)
+        CHECK(loaded.raw(YokeGains::Id(i))==wanted.raw(YokeGains::Id(i)));
+    for(size_t i=YokePots::recordOffset;i<256;++i) CHECK(flash[i]==0xFF);
+}
+static void checkLcd() {
+    using namespace hal_fake;
+    timeUs=0; i2cResults[0].clear(); events.clear();
+    setInput(LCD_SDA_PIN,true); setInput(LCD_SCL_PIN,true);
+    LcdTelemetry lcd; lcd.begin();
+    auto update=[&]() { lcd.update(hal::millis(),0.5f,0,128,0); };
+    timeUs=100000; i2cResults[0].push_back(2); update();
+    CHECK(events[0]=="i2cProbe:0:39");
+    events.clear(); timeUs+=499000; update(); CHECK(events.empty());
+    timeUs+=1000; update(); CHECK(events[0]=="i2cProbe:0:63");
+    const unsigned waits[]={100,5,5,1,1,1,1,1,1,3};
+    const std::vector<std::vector<uint8_t>> writes={
+        {8},{0x38,0x3C,0x38},{0x38,0x3C,0x38},{0x38,0x3C,0x38},
+        {0x28,0x2C,0x28},{0x28,0x2C,0x28,0x88,0x8C,0x88},
+        {8,12,8,0xC8,0xCC,0xC8},{8,12,8,0x68,0x6C,0x68},
+        {8,12,8,0x28,0x2C,0x28}};
+    for(size_t i=0;i<10;++i) {
+        events.clear(); timeUs+=(waits[i]-1)*1000; update(); CHECK(events.empty());
+        timeUs+=1000; update();
+        if(i<9) { CHECK(events[0]=="i2cWrite:0:63"); CHECK(i2cTx[0]==writes[i]); }
+        else CHECK(events.empty());
+    }
+    update(); CHECK(i2cTx[0]==std::vector<uint8_t>({0x88,0x8C,0x88,8,12,8}));
+    std::string row;
+    for(unsigned i=0;i<16;++i) {
+        update(); CHECK(i2cTx[0].size()==6);
+        row+=char((i2cTx[0][0]&0xF0)|(i2cTx[0][3]>>4));
+    }
+    CHECK(row=="RF+.5000 PW+128 ");
+}
+static void checkAs5600Hardware() {
+    using namespace hal_fake;
+    timeUs=0; hal::wire0.end(); hal::wire1.end();
+    for(unsigned i=0;i<2;++i) { i2cResults[i].clear(); i2cRx[i]={0x05,0}; }
+    AxisAs5600 axes; axes.begin();
+    i2cRx[1]={0x20,0x01,0x23}; i2cRx[0]={0x20,0x04,0x56};
+    events.clear(); axes.update(1);
+    CHECK(axes.raw(0)==0x123); CHECK(axes.raw(1)==0x456);
+    CHECK(i2cTx[1]==std::vector<uint8_t>{0x0B}); CHECK(i2cTx[0]==std::vector<uint8_t>{0x0B});
+    CHECK(events[0]=="i2cWrite:1:54" && events[2]=="i2cRead:1:54");
+    CHECK(events[4]=="i2cWrite:0:54" && events[6]=="i2cRead:0:54");
+    CHECK(i2cRx[0].empty() && i2cRx[1].empty());
+    i2cResults[0]={2}; i2cResults[1]={2}; axes.update(2);
+    CHECK(std::strcmp(axes.statusText(0),"I2C")==0);
+    CHECK(std::strcmp(axes.statusText(1),"I2C")==0);
+}
+
 int main() {
     checkPwm(); checkReset(); checkEeprom(); checkDescriptors(); checkConstrain(); checkFake();
+    checkHardwareModules(); checkControls(); checkLcd(); checkAs5600Hardware();
     std::printf("%s hal_checks (%u casos)\n", failures ? "FAIL" : "PASS", checks);
     return failures ? 1 : 0;
 }
