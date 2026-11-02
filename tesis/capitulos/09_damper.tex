@@ -9,7 +9,7 @@ Su diferencia fundamental con el resorte es la entrada utilizada. El resorte mir
 La idea viscosa básica es $F_d=-b\,\dot{x}$. El signo menos significa oposición al movimiento, y $b$ determina cuánto cuesta moverlo rápidamente. En este firmware se implementa una versión normalizada, con filtrado, zona muerta y límites. \textbf{No se calcula directamente una fuerza en newtons ni un torque en N\,m.} Tampoco se usa la velocidad de rotación del avión: se deriva la posición del yugo seleccionado.
 
 \subsubsection{Alcance y versión analizada}
-Las fórmulas siguientes corresponden a \code{SimEffects.h::motionAdjustedForce}, \code{YokeMotion.h} y el sketch actual. Roll y pitch tienen estados de movimiento independientes, pero comparten los parámetros de filtrado, la ganancia de damper y la de fricción. La intensidad de roll se reduce a la mitad mediante un factor fijo en el código. Los valores indicados son defaults; el menú puede cargar otros desde memoria.
+Las fórmulas siguientes corresponden a \code{SimEffects.h::motionAdjustedForce}, \code{YokeMotion.h} y el firmware actual (\code{src/main.cpp}). Roll y pitch tienen estados de movimiento independientes, pero comparten los parámetros de filtrado, la ganancia de damper y la de fricción. La intensidad de roll se reduce a la mitad mediante un factor fijo en el código. Los valores indicados son defaults; el menú puede cargar otros desde memoria.
 
 \subsection{Recorrido completo desde la entrada hasta el motor}
 \begin{center}
@@ -114,7 +114,7 @@ Por ejemplo, con $N=0$, $C=2048$ y $P=4095$, una lectura filtrada $H=2457$ da $x
 
 El menú de extremos calcula el centro como el punto medio entero entre los extremos capturados; \textbf{no realiza una tercera captura independiente del centro mecánico}. Por eso un mecanismo asimétrico puede requerir mejorar ese procedimiento. Los defaults son 0/2048/4095, mientras que el punto medio entero de 0 y 4095 es 2047: no hay que confundir default con valor recalculado. La calibración persistida valida un rango de al menos 64 cuentas, pero pasar esa validación no garantiza buena resolución. Un recorrido ADC pequeño amplifica tanto el movimiento como el ruido al normalizarlo.
 
-Al guardar, el sketch detiene las salidas y reinicia los estimadores locales y los efectos. Se evita así interpretar el cambio de calibración o la pausa de escritura como un movimiento físico. La calibración de potenciómetros y las ganancias tienen registros separados.
+Al guardar, el firmware detiene las salidas y reinicia los estimadores locales y los efectos. Se evita así interpretar el cambio de calibración o la pausa de escritura como un movimiento físico. La calibración de potenciómetros y las ganancias tienen registros separados.
 
 \subsubsection{Modo 0: encoders y normalización de cuentas}
 \code{AxisEncoders.h} pone ambos contadores en cero al comenzar. Por tanto, el yugo debe estar en el centro de referencia al arrancar: no hay búsqueda de origen ni uso del índice Z. Si se arranca desplazado, se desplaza la referencia del resorte. El damper sólo necesita diferencias de posición, pero también queda afectado cuando esa referencia errónea hace alcanzar el recorte de posición.

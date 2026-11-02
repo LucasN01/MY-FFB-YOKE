@@ -214,7 +214,7 @@ u_{\rm out,a}=\sat_{[-L,L]}(u_a).
 Con otros efectos activos se limita la \emph{suma}, no el resorte por separado. Por eso el PWM observado en funcionamiento normal puede no coincidir con una tabla de centrado aislado. Aquí no se desarrollan las fórmulas de los otros efectos.
 
 \subsubsection{Polaridad, escala y redondeo}
-En el sketch se aplica $s_R=\code{ROLL_MOTOR_DIRECTION}$ y $s_P=\code{PITCH_MOTOR_DIRECTION}$, ambos inicialmente $+1$. \code{MotorDriver.h::setCommand} hace:
+En el firmware se aplica $s_R=\code{ROLL_MOTOR_DIRECTION}$ y $s_P=\code{PITCH_MOTOR_DIRECTION}$, ambos inicialmente $+1$. \code{MotorDriver.h::setCommand} hace:
 \begin{align}
 z_a&=\sat_{[-1,1]}(s_a u_{\rm out,a}),\\
 M&=\sat_{[0,255]}(\code{PWM_MAX})=255,\\
@@ -229,7 +229,7 @@ Al reducir \code{PWM_MAX}, se reduce además la escala disponible. Por ejemplo, 
 \subsubsection{Pines del puente H y duty cycle}
 Si $p\ge0$, la salida LEFT queda en 0 y RIGHT recibe $p$. Si $p<0$, RIGHT queda en 0 y LEFT recibe $|p|$. En Pico: roll GP6/GP7 y enable GP10; pitch GP8/GP9 y enable GP11. La dirección mecánica debe verificarse porque depende del cableado y de la transmisión.
 
-El setup configura \code{analogWriteRange(255)} y \code{analogWriteFreq(490)}. El duty cycle comandado en la salida activa es
+El arranque configura el PWM con \code{hal::pwmSetup(490, 255)}: 490~Hz y 255 niveles de comando, igual que \code{analogWriteFreq(490)} y \code{analogWriteRange(255)} del firmware anterior basado en Arduino. El duty cycle comandado en la salida activa es
 \begin{equation}
 D=\frac{|p|}{255};\qquad |p|=220\Longrightarrow D\simeq86.27\%.
 \end{equation}
@@ -424,7 +424,7 @@ Las rutas siguientes son relativas a la carpeta MiYoke\_PD\_V2.4, salvo el origi
 \code{CalibrationMenu.h} & Captura de cuatro extremos, edición y confirmación de ajustes.\\
 \code{CalibrationControls.h} & Carga y guardado de configuración.\\
 \code{YokeMotion.h} & Posición limitada sin filtro temporal adicional de posición.\\
-\code{MiYoke_PD_V2.4.ino} & Lazo de 2 ms, fuente de posición, aplicación de ganancias, polaridad, driver y diagnóstico.\\
+\code{src/main.cpp} & Lazo de 2 ms, fuente de posición, aplicación de ganancias, polaridad, driver y diagnóstico.\\
 \code{MotorDriver.h} & Escala, redondeo, techo absoluto y dos salidas PWM.\\
 \bottomrule
 \end{longtable}

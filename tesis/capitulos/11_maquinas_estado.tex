@@ -15,7 +15,7 @@ con conjunto finito de estados $S$, alfabeto de entrada $E$, alfabeto de salida 
 \subsection{Por qué el firmware necesita máquinas de estado}
 \label{sec:fsm_motivo}
 
-La función \code{loop()} de \code{MiYoke_PD.ino} se ejecuta cada \code{CONTROL_LOOP_MS} $= 2$~ms y en cada ciclo calcula la fuerza y actualiza el PWM. Una tarea que espera (por ejemplo, los retardos de inicialización del LCD o la llegada de los bytes de un paquete) no puede bloquear ese ciclo. La solución es dividir la tarea en pasos: el estado se guarda entre ciclos y cada llamada avanza como máximo un paso y retorna. El watchdog por hardware (\code{YOKE_WDT_MS} $=250$~ms) reinicia la placa si alguna tarea rompe esta regla.
+La función \code{loop()} de \code{src/main.cpp} se ejecuta cada \code{CONTROL_LOOP_MS} $= 2$~ms y en cada ciclo calcula la fuerza y actualiza el PWM. Una tarea que espera (por ejemplo, los retardos de inicialización del LCD o la llegada de los bytes de un paquete) no puede bloquear ese ciclo. La solución es dividir la tarea en pasos: el estado se guarda entre ciclos y cada llamada avanza como máximo un paso y retorna. El watchdog por hardware (\code{YOKE_WDT_MS} $=250$~ms) reinicia la placa si alguna tarea rompe esta regla.
 
 \subsection{Máquinas de estado implementadas}
 \label{sec:fsm_implementadas}
