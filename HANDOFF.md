@@ -66,13 +66,29 @@ Seccion 6 "Parte 5" y seccion 9, sin `tesis/`. Incluye U4 (`CMakeLists.txt|\.cma
 
 \## Última entrega
 
-- Parte 4 detenida antes de implementar (Codex, 2026-11-02), rama `firmware/pico-sdk`; base `c2e039c`. Sin cambios de codigo.
-BLOQUEO: instrucciones contradictorias sobre `graphify-ino/`: HANDOFF, "Para todas las partes", prohibe tocar esa carpeta; `LEEME md/DISENO_migracion_pico_sdk.md`, seccion 6, Parte 4, punto 6, ordena borrarla. Se conserva intacta. Claude debe aclarar expresamente si el borrado de la parte 4 es una excepcion a esa prohibicion antes de continuar, segun la regla de detenerse ante especificaciones contradictorias.
-- Verificacion: `git status --short` inicial muestra solo `?? graphify-ino/`; `git ls-files graphify-ino` no lista archivos. Consultado el grafo y leidas las secciones del diseno correspondientes a esta parte.
-- Documentacion modificada: solo esta seccion de HANDOFF. No se abrio ni modifico tesis/.
-- Pruebas/compilacion: no ejecutadas; no hubo cambios de codigo. No se afirma ningun OK/FALLO nuevo.
-- Version: no creada; el plan reserva nueva-version.ps1 para la parte 5.
-- Sigue: Claude unifica las instrucciones; luego ejecutar la parte 4 completa y sus verificaciones. Este bloqueo se registra en un commit separado de HANDOFF.
+- Parte 4 completada (2026-11-02), rama `firmware/pico-sdk`. Commit: `2f44614` (`Pico SDK parte 4: main.cpp, variantes CMake y scripts sin Arduino`).
+- Quien la hizo: Codex dejo implementada casi toda la parte en el arbol (dos turnos cortados por el limite de uso de ChatGPT); **Claude la termino a pedido explicito del usuario** ("Terminala vos"): `src/main.cpp:19` `<pico/platform.h>` -> `<pico.h>` (error del diseno) y nuevo `src/hal/rp2350/newlib_locks.cpp` (diseno 4.12): la newlib de pqt-gcc 16.1 usa `_RETARGETABLE_LOCKING` y el enlace fallaba con `undefined reference to __retarget_lock_*` en las 5 variantes.
+- Nota de historial: el `git mv MiYoke_PD.ino src/main.cpp` que Codex habia dejado preparado quedo por error dentro del commit de documentacion `d80d804` (R100, sin cambio de contenido); los marcadores de los scripts entran en `2f44614`. Entre esos dos commits los scripts buscan el `.ino`: no usar `d80d804` como punto de partida.
+- Alcance cubierto: `.ino` -> `src/main.cpp` (HAL, sin `setID/detach/attach`, sin `yield`, `pico.h`); `CMakeLists.txt` con 5 ejecutables y `pico_set_printf_implementation` restaurado; `Build-Pico2.ps1` reescrito (UF2 = `MiYoke_PD.uf2`), `Build-PicoSdk.ps1` borrado; marcador `src/main.cpp` en los scripts de compilacion, ensayos y flujo; `FALLA.ps1` con addr2line de la toolchain; `graphify-ino/` borrada e ignorada; `P3DSdkDir` automatico (v4 si existe, si no v3); restos de la revision de la parte 3 (includes duplicados, textos, `#error` de `YOKE_USB_GUARD` a nivel de archivo, rama `__AVR__` de `SimTelemetry.h`).
+- Pruebas: `probar.ps1 -Todo -PruebaFalla`, codigo 0:
+  - OK suite simconnect_checks - PASS: 143769 checks
+  - OK comparar_ensayo
+  - OK suite hal_checks - PASS hal_checks (694 casos)
+  - OK launcher_port_checks - PASS: 19 launcher discovery checks
+  - OK Pico 2 (configurado) - Flash usada: 65460 bytes; RAM usada: 8608 bytes
+  - OK Pico 2 (encoders) - Flash usada: 66756 bytes; RAM usada: 8924 bytes
+  - OK Pico 2 (potenciometros) - Flash usada: 66316 bytes; RAM usada: 8708 bytes
+  - OK Pico 2 (AS5600) - Flash usada: 67404 bytes; RAM usada: 8772 bytes
+  - OK puente SimConnect
+  - OK Pico 2 (prueba falla) - Flash usada: 66356 bytes; RAM usada: 8708 bytes
+- Verificaciones de la parte 4 (build-pico2):
+  - `.map`: `isr_hardfault` en `.time_critical.isr_hardfault` desde `src/main.cpp.obj` (0x2000015c); `__StackBottom = 0x20081800`, `__StackTop = 0x20082000`, `.stack_dummy` 0x800.
+  - `nm`: `hardfaultCapture` 0x20000110 y `isr_hardfault` 0x2000015c (RAM).
+  - `picotool info -a`: familia `rp2350-arm-s`, SDK 2.2.0. En las 5 variantes el UF2 tiene el bloque absoluto 0x10ffff00 y 0 bloques en 0x103FE000-0x103FEFFF.
+  - `MiYoke_PD.bin` = 61364 bytes < 0x3FE000.
+- `git diff --cached --check` sin errores; `graphify update .` ejecutado. Sin carga de firmware ni ensayos con hardware. Version: en la parte 5.
+- Sigue: revision (Code Reviewer) de la parte 4 y parte 5 (documentacion, reglas y version).
+
 \## Revisión
 
 - Pendiente: Claude debe revisar la parte 2 (`8688f0a`). La parte 1 estaba aprobada al comenzar (registro anterior en `818c6ba`).
