@@ -58,7 +58,19 @@ Seccion 6 "Parte 5" y seccion 9, sin `tesis/`. Incluye U4 (`CMakeLists.txt|\.cma
 
 \## Última entrega
 
-- (vacio: tarea nueva. La entrega anterior, AS5600 V2.6, esta en el historial de git.)
+- Parte 1 completada (Codex, 2026-11-02), rama `firmware/pico-sdk`. Commit de implementacion: `bc324a5` (`Pico SDK parte 1: logica pura de la HAL y pruebas de host`). Esta entrega se commitea aparte.
+- Archivos: nuevas 14 cabeceras de `include/hal/` (`hal.h`, `hal_time.h`, `hal_gpio.h`, `hal_pwm.h`, `hal_adc.h`, `hal_i2c.h`, `hal_usb.h`, `hal_watchdog.h`, `hal_eeprom.h`, `hal_util.h`, `pwm_plan.h`, `reset_reason.h`, `eeprom_image.h`, `usb_descriptor_data.h`); nuevos `tests/hal_checks.cpp`, `tests/hal_fake.cpp`, `tests/hal_checks.vcxproj`; modificado `herramientas/compilacion/probar.ps1` para ejecutar `suite hal_checks`.
+- Los cinco grupos obligatorios y las comprobaciones del backend simulado pasan (394 casos). HAL falsa con reloj manual, GPIO/IRQ, PWM, colas ADC/I2C/CDC, eventos ordenados, watchdog y flash RAM con fallo programable. Sin dependencias del SDK ni cambios en el firmware Arduino.
+- Documentacion actualizada: comentario de uso en `probar.ps1` y esta entrega. La documentacion de la migracion final sigue en la parte 5; no se abrio ni modifico la tesis.
+- Verificacion: linea base `probar.ps1` y `probar.ps1 -Pico` OK antes de editar. Despues de implementar, `probar.ps1 -Pico` OK; tras el ultimo ajuste exclusivo de `tests/hal_fake.cpp`, `probar.ps1` OK. El firmware compilado no cambio con ese ajuste. Resultados finales:
+  - OK suite simconnect_checks - PASS: 143769 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
+  - OK comparar_ensayo
+  - OK suite hal_checks - PASS hal_checks (394 casos)
+  - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
+  - OK Pico 2 (configurado) - Sketch uses 105404 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
+- `git diff --cached --check` sin errores; `graphify update .` ejecutado. `graphify-ino/` ya estaba sin seguimiento al comenzar y se dejo intacto.
+- Desvios: ninguno. Sin carga de firmware ni ensayos con hardware. Version: no corresponde en esta parte; `nueva-version.ps1` se ejecuta solo en la parte 5, segun el plan.
+- Sigue: revision de Claude y parte 2 (HAL de destino y CMake base).
 
 \## Revisión
 
