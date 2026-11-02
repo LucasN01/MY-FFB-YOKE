@@ -48,7 +48,7 @@ Seguir la seccion 6 "Parte 1" del diseno (alcance, lecturas, 5 grupos de pruebas
 Seccion 6 "Parte 2". `Build-PicoSdk.ps1` con el parametro `-TinyUsbPath` de 10.1. Precondicion: parte 1 commiteada y verde.
 
 \### Parte 3 - cabeceras a `include/` y modulos con hardware sobre la HAL
-Seccion 6 "Parte 3", con U1 = eliminar ramas AVR. Anotar en HANDOFF que entre la parte 3 y la 4 no se puede generar UF2.
+Seccion 6 "Parte 3", con U1 = eliminar ramas AVR. Anotar en HANDOFF que entre la parte 3 y la 4 no se puede generar UF2. Ademas (revision de la parte 1): mover los `extern` de `tests/hal_checks.cpp:14-33` a un `tests/hal_fake.h` comun; en `tests/hal_fake.cpp` registrar `endTransmission` de longitud 0 como `i2cProbe` (no `i2cWrite`); eliminar (no portar) las ramas `WIRE_HAS_TIMEOUT` de `LcdTelemetry.h:135-147` y `YokeI2C.h:17-20`, que son codigo muerto con el Wire de arduino-pico y no tienen equivalente en `I2cBus`.
 
 \### Parte 4 - `src/main.cpp`, 5 variantes y scripts
 Seccion 6 "Parte 4" (puntos 1 y 4 en el mismo commit). `Build-Pico2.ps1` con `-TinyUsbPath`. UF2 = `MiYoke_PD.uf2` (U2). Despues del commit: `graphify update .`.
@@ -74,7 +74,10 @@ Seccion 6 "Parte 5" y seccion 9, sin `tesis/`. Incluye U4 (`CMakeLists.txt|\.cma
 
 \## Revisión
 
-- (vacio: tarea nueva.)
+- Revisor: Claude con el subagente Code Reviewer (2026-11-02). **Parte 1 (`bc324a5`): APROBADA.**
+  - Cabeceras `include/hal/*` coinciden con 4.2-4.10 (nombres, firmas, tipos); `pwm_plan.h` reproduce `wiring_analog.cpp:79-123` (2040, div 150+1/16); mascaras de reset, offset EEPROM 0x3FE000 y descriptores USB (18 y 75 bytes) verificados contra las fuentes.
+  - Pruebas no tautologicas, con casos de borde. Suite del revisor: OK simconnect_checks, OK comparar_ensayo, OK suite hal_checks (394 casos), OK launcher_port_checks.
+  - Sugerencias trasladadas a la parte 3 del plan (hal_fake.h, i2cProbe, eliminar `WIRE_HAS_TIMEOUT`).
 
 \## Ensayos del usuario
 
