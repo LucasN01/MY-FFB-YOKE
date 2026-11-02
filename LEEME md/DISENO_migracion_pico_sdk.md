@@ -570,7 +570,8 @@ entorno que los reemplaza:
 | Parametro | Entorno | Defecto |
 |---|---|---|
 | `-SdkPath` | `PICO_SDK_PATH` | `D:/pico/pico-sdk` |
-| `-ToolchainBin` | `PICO_TOOLCHAIN_PATH` | Segun U3: `C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/12.2 mpacbti-rel1/bin` (opcion A) o `D:/pico/toolchains/pqt-gcc-5.0.0/bin` (opcion B). Codex usa el valor que deje escrito Claude en HANDOFF; no elige |
+| `-TinyUsbPath` | `PICO_TINYUSB_PATH` | `D:/pico/tinyusb` (U6: commit `e954302c1` = 0.20.1) |
+| `-ToolchainBin` | `PICO_TOOLCHAIN_PATH` | `D:/pico/toolchains/pqt-gcc-5.0.0/bin` (U3 opcion B, GCC 16.1; acepta tambien la raiz sin `bin`) |
 | `-CMake` | - | `C:/Program Files/CMake/bin/cmake.exe`, si no `Get-Command cmake` |
 | `-Ninja` | - | `Get-Command ninja`, si no `%LOCALAPPDATA%/Microsoft/WinGet/Packages/Ninja-build.Ninja_Microsoft.Winget.Source_8wekyb3d8bbwe/ninja.exe` |
 | `-PicotoolDir` | - | `D:/pico/picotool/picotool` |
