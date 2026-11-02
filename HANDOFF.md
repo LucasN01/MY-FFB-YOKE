@@ -58,26 +58,26 @@ Seccion 6 "Parte 5" y seccion 9, sin `tesis/`. Incluye U4 (`CMakeLists.txt|\.cma
 
 \## Última entrega
 
-- Parte 1 completada (Codex, 2026-11-02), rama `firmware/pico-sdk`. Commit de implementacion: `bc324a5` (`Pico SDK parte 1: logica pura de la HAL y pruebas de host`). Esta entrega se commitea aparte.
-- Archivos: nuevas 14 cabeceras de `include/hal/` (`hal.h`, `hal_time.h`, `hal_gpio.h`, `hal_pwm.h`, `hal_adc.h`, `hal_i2c.h`, `hal_usb.h`, `hal_watchdog.h`, `hal_eeprom.h`, `hal_util.h`, `pwm_plan.h`, `reset_reason.h`, `eeprom_image.h`, `usb_descriptor_data.h`); nuevos `tests/hal_checks.cpp`, `tests/hal_fake.cpp`, `tests/hal_checks.vcxproj`; modificado `herramientas/compilacion/probar.ps1` para ejecutar `suite hal_checks`.
-- Los cinco grupos obligatorios y las comprobaciones del backend simulado pasan (394 casos). HAL falsa con reloj manual, GPIO/IRQ, PWM, colas ADC/I2C/CDC, eventos ordenados, watchdog y flash RAM con fallo programable. Sin dependencias del SDK ni cambios en el firmware Arduino.
-- Documentacion actualizada: comentario de uso en `probar.ps1` y esta entrega. La documentacion de la migracion final sigue en la parte 5; no se abrio ni modifico la tesis.
-- Verificacion: linea base `probar.ps1` y `probar.ps1 -Pico` OK antes de editar. Despues de implementar, `probar.ps1 -Pico` OK; tras el ultimo ajuste exclusivo de `tests/hal_fake.cpp`, `probar.ps1` OK. El firmware compilado no cambio con ese ajuste. Resultados finales:
+- Parte 2 completada (Codex, 2026-11-02), rama `firmware/pico-sdk`. Commit de implementacion: `8688f0a` (`Pico SDK parte 2: HAL de destino y CMake base`). Esta entrega se commitea aparte.
+- Archivos nuevos: `CMakeLists.txt`, `pico_sdk_import.cmake` (copia identica al SDK, SHA256 verificado), `herramientas/compilacion/Build-PicoSdk.ps1` y `src/hal/rp2350/{time_gpio,pwm_adc,i2c,watchdog,eeprom_flash,usb_cdc,usb_descriptors}.cpp`, `src/hal/rp2350/tusb_config.h`. Modificado: `herramientas/compilacion/probar.ps1` (switch provisorio `-Sdk`).
+- Implementada la HAL de destino: tiempo, GPIO/IRQ y drenaje abierto, PWM/ADC, I2C con sonda y recuperacion, watchdog/reset, EEPROM y USB CDC/descriptores. Los siete `.cpp` tienen D13 como primera/ultima linea; asserts de mascaras del SDK, flash de 4 MiB y offset EEPROM `0x3FE000`. Se conservan las interfaces de la parte 1.
+- CMake compila solo `myk_hal` STATIC para pico2/rp2350-arm-s con C++17, opciones D9 y definicion D14. El script usa las rutas U3/U6, acepta `-TinyUsbPath` y normaliza `-ToolchainBin` tanto desde `bin/` como desde la raiz del compilador. No genera UF2.
+- Detalles de integracion: el include de la raiz es provisorio porque `mis_defines.h` se mueve en la parte 3. `pico_set_printf_implementation` se reserva para los ejecutables de la parte 4: el SDK rechaza aplicarlo a una biblioteca estatica. Se mantienen las opciones, definiciones y bibliotecas especificadas para la parte 2.
+- Documentacion actualizada: uso de `-Sdk` en el comentario de `probar.ps1` y esta entrega. La documentacion del firmware migrado sigue en la parte 5; el firmware Arduino aun no cambio. No se abrio ni modifico la tesis.
+- Verificacion: suites de host ejecutadas con `probar.ps1 -Sdk -Pico`; el primer paso SDK se interrumpio porque Ninja quedo sin actividad en el try_compile dentro del sandbox. Fuera del sandbox se detecto y retiro la llamada de printf sobre el objetivo STATIC; se descarto la cache incompleta de esa configuracion y `probar.ps1 -Sdk` completo con codigo 0. El paso Pico de la primera corrida termino OK (sin cambios de firmware posteriores). Resultados finales:
   - OK suite simconnect_checks - PASS: 143769 checks (SC1-SC8, watchdog, effects, motion sources, passive loads, PWM limit).
   - OK comparar_ensayo
   - OK suite hal_checks - PASS hal_checks (394 casos)
   - OK launcher_port_checks - PASS: 19 launcher discovery checks. No hardware ports opened.
+  - OK SDK myk_hal (RP2350) - HAL RP2350 compilada: myk_hal. No se genero ni cargo firmware.
   - OK Pico 2 (configurado) - Sketch uses 105404 bytes (2%) of program storage space. Maximum is 4186112 bytes. | Global variables use 22920 bytes (4%) of dynamic memory, leaving 501368 bytes for local variables. Maximum is 524288 bytes.
-- `git diff --cached --check` sin errores; `graphify update .` ejecutado. `graphify-ino/` ya estaba sin seguimiento al comenzar y se dejo intacto.
-- Desvios: ninguno. Sin carga de firmware ni ensayos con hardware. Version: no corresponde en esta parte; `nueva-version.ps1` se ejecuta solo en la parte 5, segun el plan.
-- Sigue: revision de Claude y parte 2 (HAL de destino y CMake base).
+- `git diff --cached --check` sin errores; `graphify update .` ejecutado tras los cambios. `graphify-ino/` ya estaba sin seguimiento al comenzar y se dejo intacto. Sin carga de firmware ni ensayos con hardware.
+- Version: no corresponde en esta parte; `nueva-version.ps1` se ejecuta solo en la parte 5, segun el plan. Sin bloqueos pendientes.
+- Sigue: revision de Claude de la parte 2 y, al aprobar, parte 3 (cabeceras a `include/` y modulos sobre la HAL), incluidas las sugerencias de revision de parte 1 ya incorporadas al Plan para Codex.
 
 \## Revisión
 
-- Revisor: Claude con el subagente Code Reviewer (2026-11-02). **Parte 1 (`bc324a5`): APROBADA.**
-  - Cabeceras `include/hal/*` coinciden con 4.2-4.10 (nombres, firmas, tipos); `pwm_plan.h` reproduce `wiring_analog.cpp:79-123` (2040, div 150+1/16); mascaras de reset, offset EEPROM 0x3FE000 y descriptores USB (18 y 75 bytes) verificados contra las fuentes.
-  - Pruebas no tautologicas, con casos de borde. Suite del revisor: OK simconnect_checks, OK comparar_ensayo, OK suite hal_checks (394 casos), OK launcher_port_checks.
-  - Sugerencias trasladadas a la parte 3 del plan (hal_fake.h, i2cProbe, eliminar `WIRE_HAS_TIMEOUT`).
+- Pendiente: Claude debe revisar la parte 2 (`8688f0a`). La parte 1 estaba aprobada al comenzar (registro anterior en `818c6ba`).
 
 \## Ensayos del usuario
 
