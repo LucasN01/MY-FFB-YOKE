@@ -428,7 +428,7 @@ Las rutas siguientes son relativas a la carpeta MiYoke\_PD\_V2.4, salvo el origi
 \toprule Archivo & Elementos a consultar\\\midrule\endhead
 \code{SimConnectBridge/main.cpp} & \code{Receive}: datos crudos; \code{Send}: SC8; \code{main}: argumentos. $Q$ se calcula en \code{PicoForceModels.h}.\\
 \code{SimTelemetry.h} & \code{Receiver::feed}, \code{fresh}: decodificación, rangos y vigencia.\\
-\code{SimEffects.h} & \code{Effects::update}: $r$, rigidez y filtro; \code{commandWithPositionSource}: elección de posición; \code{command}: resorte y saturación.\\
+\code{SimEffects.h} & \code{Effects::update}: $r$, rigidez y filtro; \code{commandWithPositionSource}: elección de posición y limitador de topes (Sección~\ref{sec:limite_topes}); \code{command}: resorte y saturación.\\
 \code{mis_defines.h} & Fuente predeterminada, ganancias, pines, tiempos y límites.\\
 \code{GainSettings.h} & Valores iniciales, ajustes efectivos, pasos, encendido/apagado y persistencia.\\
 \code{AxisPotentiometers.h} & Muestreo y promedio ADC.\\

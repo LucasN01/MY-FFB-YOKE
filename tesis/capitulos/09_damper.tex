@@ -21,7 +21,7 @@ Las fórmulas siguientes corresponden a \code{SimEffects.h::motionAdjustedForce}
 % [V-realismo]
 \textbf{Resistencia:} quitar 0.02 a la magnitud de velocidad $\rightarrow$ damper con ganancia $Bs_B$ y signo opuesto a velocidad. Con sensor local: recortar damper a 0.40, sumar fricción firmada del ancla y recortar nuevamente a 0.40. En modo racional: sumar magnitudes de damper y fricción, recortar a 0.40 y aplicar signo opuesto a velocidad. Luego ganancia general y factor del eje.
 
-\textbf{Salida:} sumar centrado, ráfagas, buffets y suelo $\rightarrow$ limitar a $\pm220/255$ $\rightarrow$ aplicar polaridad de motor $\rightarrow$ multiplicar por 255, redondear y limitar a $\pm220$ $\rightarrow$ puente H.
+\textbf{Salida:} sumar centrado, ráfagas, buffets y suelo $\rightarrow$ limitar a $\pm220/255$ $\rightarrow$ limitador de topes $\rightarrow$ aplicar polaridad de motor $\rightarrow$ multiplicar por 255, redondear y limitar a $\pm220$ $\rightarrow$ puente H.
 \end{minipage}}
 \end{center}
 El puente del PC \textbf{no transmite una fuerza de damper ni una velocidad de yugo}: cuando corresponde, transmite posiciones. La placa calcula la velocidad para damper y fricción racional, y usa posición con ancla para fricción local. El ciclo de control tiene un mínimo configurado de 2 ms; el cálculo emplea el intervalo real, no supone que todas las iteraciones duren exactamente 2 ms.
@@ -81,7 +81,7 @@ En SC8, \code{YokeMotion} recibe \code{rx.raw.timeMs*1000UL}: captura de la mues
 
 Entre paquetes el firmware reutiliza el mismo instante. Entonces $\Delta t=0$ y el estimador no se actualiza. Esto evita interpretar cada iteración local sin paquete nuevo como una muestra de velocidad nula. También implica que, si dejan de llegar paquetes, la velocidad simulada anterior puede mantenerse hasta que una nueva muestra la cambie o la habilitación expire. El contador de reposo no avanza sólo por ejecutar el bucle; necesita nuevos tiempos de muestra. Al perder la habilitación, el estimador de SimConnect se reinicia.
 
-Si falta \code{yokeAvailable}, el modo simulado usa velocidad cero y deshabilita el centrado dependiente de esa posición. \textbf{No cambia automáticamente a un potenciómetro o encoder que pudiera estar conectado.}
+Si falta \code{yokeAvailable}, el modo simulado anula la orden de ambos ejes: sin posición no se puede descartar que un efecto esté empujando contra un tope (Sección~\ref{sec:limite_topes}). \textbf{No cambia automáticamente a un potenciómetro o encoder que pudiera estar conectado.}
 
 La posición virtual puede incorporar curvas, zonas muertas, asignaciones o comportamiento del addon distintos del movimiento físico. No se debe asumir que el movimiento visual producido por trim o piloto automático equivale siempre a movimiento real del eje: hay que comprobar qué publica ese avión. El sketch actual tampoco transmite estos ejes a Prepar3D; la asignación de entrada del simulador es otra parte de la instalación.
 
@@ -287,12 +287,12 @@ u_{d,P}&=-0.90\cdot0.12\cdot0.313333=-0.03384.
 El resultado aislado es PWM $-9$ en pitch y $-4$ en roll. No son los $-27/-13$ del ejemplo anterior porque el filtro todavía está comenzando a responder. Si el movimiento continúa a esa velocidad, el valor filtrado se aproxima a 1. Si se detiene, se atenúa y finalmente se anula por el criterio de reposo.
 
 \subsubsection{Suma final, signo eléctrico y ciclo de trabajo}
-El comando que llega al driver es:
+La suma limitada de los efectos es:
 \begin{equation}
 u_a=\sat_{[-220/255,\,220/255]}
 \left(u_{c,a}+u_{t,a}+u_{b,a}+u_{\rm mov,a}+u_{g,a}\right).
 \end{equation}
-Las letras representan centrado, turbulencia, suma de buffets, resistencia conjunta al movimiento y vibración en suelo. Con $d_a\in\{-1,+1\}$ como dirección de motor y \code{PWM_MAX=255}:
+Las letras representan centrado, turbulencia, suma de buffets, resistencia conjunta al movimiento y vibración en suelo. Esa suma pasa después por el limitador de topes (Sección~\ref{sec:limite_topes}), que no la modifica fuera de la zona de tope; en lo que sigue, $u_a$ es la orden que sale del limitador. Con $d_a\in\{-1,+1\}$ como dirección de motor y \code{PWM_MAX=255}:
 \begin{equation}
 \mathrm{PWM}_a=\sat_{[-220,220]}\!\left(\operatorname{redondeo}_{\rm sim}(255d_au_a)\right).
 \end{equation}
@@ -357,6 +357,48 @@ La fricción local con ancla no garantiza ese signo instantáneo después de inv
 
 % [V-realismo]
 \textit{Actualización (realismo): oposición instantánea por ley de velocidad $\rightarrow$ fricción local capaz de devolver energía al invertir; memoria elástica de presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+
+\subsection{Limitador de fuerza en los topes}
+\label{sec:limite_topes}
+Con el yugo contra un tope mecánico, un efecto que empuje hacia ese tope no produce movimiento: el motor queda frenado y sigue circulando corriente. Para evitarlo, \code{Effects::commandWithPositionSource} (\code{SimEffects.h}) limita la orden total de cada eje antes de aplicar la polaridad del motor. Al actuar sobre la suma, cubre todos los efectos en un solo punto. Las cadenas de salida descritas en los demás capítulos incluyen este paso, aunque no lo nombren, y coinciden con él fuera de la zona de tope.
+
+Para una orden $u$ y una posición normalizada $x$, con $S$ el inicio de la zona y $F$ su final:
+\begin{equation}
+L(u,x)=
+\begin{cases}
+u, & ux\le0,\\
+u\,\sat_{[0,1]}\!\left(\dfrac{F-|x|}{F-S}\right), & ux>0.
+\end{cases}
+\label{eq:limite_topes}
+\end{equation}
+Una orden hacia el centro ($ux\le0$) pasa sin cambios en cualquier posición. Una orden hacia el tope se conserva hasta $|x|=S$, baja linealmente y vale cero desde $|x|=F$. Si $u$ o $x$ no son finitos, la salida es cero. Las constantes son \code{ROLL_ENDSTOP_ZONE_START} y \code{ROLL_ENDSTOP_ZONE_FULL}, y sus equivalentes de pitch, con $S=0.90$ y $F=0.98$ en ambos ejes. Por ejemplo, con $u=0.5$ hacia el tope y $|x|=0.94$, la salida es $0.25$, es decir 64 cuentas de PWM.
+
+Se eligió una rampa porque un corte brusco produciría un escalón de fuerza al cruzar el límite; la ley es continua y no necesita histéresis ni estado. $F$ es menor que 1 porque el ruido y la histéresis del sensor pueden hacer que el tope se lea algo por debajo de 1. Una consecuencia aceptada es que, dentro de la zona, una vibración conserva completo el semiciclo hacia el centro y pierde parte del otro: se percibe más débil y con un sesgo hacia el centro.
+
+\subsubsection{Tratamiento del damper}
+Llamando $u_a$ a la orden completa, $u_a^{0}$ a la orden calculada sin damper y $D=u_a-u_a^{0}$ a su aporte efectivo, ambas ya acotadas por $\pm220/255$, para $|x_a|>S$ la salida es:
+\begin{equation}
+u_{{\rm out},a}=
+\begin{cases}
+L(u_a^{0},x_a)+D, & Dx_a<0,\\
+L(u_a,x_a), & Dx_a\ge0.
+\end{cases}
+\label{eq:limite_topes_damper}
+\end{equation}
+Con $Dx_a<0$ el yugo se mueve hacia el tope y el damper lo frena: el limitador no quita ese frenado, porque de lo contrario la vibración podría anularlo justo en ese momento. En consecuencia, la orden hacia el centro puede resultar mayor que sin limitador, aunque su magnitud no supera $\max(|D|,|u_a|)$. En una prueba de computadora con efectos reales, en $x=+1$ y $v=+2$, una orden de $-0.0059$ pasó a ser $-0.1188$: la parte de los efectos hacia el tope se eliminó y quedó el frenado. Si el yugo se aleja del tope, el damper empuja hacia él y se limita junto con el resto. Si la orden con damper y sin él quedan en el mismo límite de saturación, $D=0$ y no hay frenado que conservar. Con el yugo quieto, $D=0$ y la orden hacia el centro no cambia.
+
+\subsubsection{Los cuatro modos de posición}
+Los cuatro modos de la Sección~\ref{sec:adquisicion_movimiento} usan esta misma función y la misma posición con la que se calculan las fuerzas, pero la protección depende de que $\pm1$ coincida con el tope físico:
+\begin{itemize}
+\item \textbf{Potenciómetros:} requiere la calibración del menú. Con un recorrido corto, la histéresis de 4 cuentas puede impedir que el tope se lea dentro de la zona; se necesitan al menos 200 cuentas por lado.
+\item \textbf{Encoders y AS5600 con centro al encender:} los extremos son constantes de compilación relativas al encendido. Encender fuera del centro desplaza la zona. Una falla del AS5600 ya anula la orden por otra vía.
+\item \textbf{Posición simulada:} usa la posición recibida, por lo que depende de la calibración del eje en el simulador. Sin posición disponible la orden es cero.
+\end{itemize}
+
+\subsubsection{Alcance y validación}
+El limitador no regula corriente: si se sostiene el yugo a mano contra el tope, el centrado mantiene una orden hacia el centro con el motor frenado. Tampoco detecta el tope por sí mismo, ya que depende de la posición informada.
+
+La copia local de TelemFFB no contiene un mecanismo equivalente, de modo que los valores de $S$ y $F$ son una hipótesis a validar con ensayo. Se verificó con pruebas de computadora (\code{tests/endstop_checks.h}) la ley, la continuidad y el comportamiento con efectos reales en los topes, y la compilación de las variantes de firmware. No se dispone todavía de un ensayo con hardware. Una simulación simplificada de un eje sugiere la posibilidad de un ciclo límite con retardos de posición de 20 a 50 ms, como podría ocurrir con posición simulada; es una hipótesis pendiente de comprobar.
 
 \subsection{Procedencia: proyecto actual, original alemán y referencias}
 \label{sec:origen_damper_friccion}
