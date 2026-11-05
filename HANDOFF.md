@@ -34,7 +34,7 @@
 
 - Limitador de topes implementado por Claude en la rama `mejora/limite-topes`, sobre `firmware/pico-sdk`, para los cuatro modos de posicion. Diseno: `LEEME md/DISENO_limite_topes.md`.
 - `probar.ps1 -Todo -PruebaFalla` (Claude y Codex, mismo codigo): OK simconnect_checks (1990580), OK comparar_ensayo, OK hal_checks (694), OK launcher_port_checks (19), OK Pico 2 configurado 65692/8608, encoders 66972/8924, potenciometros 66540/8708, AS5600 67644/8772, prueba falla 66580/8708 (flash/RAM), OK puente SimConnect.
-- Pendiente: ensayo F-tope con hardware (`LEEME md/ENSAYOS.md`) en cada modo de posicion que se use; tiempo de ciclo; decision del usuario sobre la tesis (`tesis/capitulos/09_damper.tex:84` queda desactualizado: sin posicion del simulador la orden ahora es 0).
+- Pendiente: ensayo F-tope con hardware (`LEEME md/ENSAYOS.md`) en cada modo de posicion que se use; tiempo de ciclo. Tesis actualizada por Claude (`09_damper.tex`, seccion `sec:limite_topes`, y `03_centrado.tex`). Version V2.9 creada.
 - Sigue pendiente de la tarea anterior: ensayos H0-H13 de la migracion a Pico SDK (detalle en `LEEME md/DISENO_migracion_pico_sdk.md` seccion 7).
 
 \## Revisión
