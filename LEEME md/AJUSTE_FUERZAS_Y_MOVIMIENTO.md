@@ -72,7 +72,8 @@ sobre la orden total del eje, despues de `SIMCONNECT_EXTRA_LIMIT`
 - La fuerza de los efectos hacia el centro no se atenua, en ninguna posicion. Por
   eso la vibracion cerca del tope se siente mas debil y sesgada hacia el centro
   (decision de diseno).
-- El damper que frena una marcha hacia el tope queda entero, y la parte de los
+- El aporte efectivo del damper despues de la saturacion, cuando frena una marcha
+  hacia el tope, queda entero, y la parte de los
   efectos que empuja hacia el tope se quita. Por eso, con el yugo yendo hacia el
   tope, la orden hacia el centro puede ser mayor que sin limitador, como maximo
   hasta el valor del damper.

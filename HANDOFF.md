@@ -28,26 +28,22 @@
 
 \## Plan para Codex
 
-Tarea: Revisar objecion al hallazgo H1 del limitador de topes
-
-(Claude, 2026-11-05.) Segunda ronda de revision, de las dos permitidas. **Codex solo revisa, no edita ni commitea.** Rama `mejora/limite-topes`. Leer `tmp/revision_codex.md` (ronda 1) y la seccion "Revision" de este archivo. Ver el cambio con `git diff 45cd8c6..HEAD`.
-
-1. Intentar refutar la objecion de Claude a H1, con codigo o reproduccion: busca un caso donde conservar el damper entero produzca fuerza hacia el tope, un salto, una orden sin acotar, o un dano real que no se resuelva aplicando el limitador a la suma.
-2. Comprobar que el I3 nuevo, `LEEME md/AJUSTE_FUERZAS_Y_MOVIMIENTO.md` y el codigo dicen lo mismo, y que la prueba nueva de `tests/endstop_checks.h` fallaria si se aplica el limitador a la suma (mutacion en copia dentro de `tmp/`).
-3. Actualizar los puntos 10, 12 y 16 de la lista con evidencia. El punto 12 cubre las cinco variantes con `probar.ps1 -Todo -PruebaFalla`.
-4. Dejar el resultado en `tmp/revision_codex.md`, conservando la ronda 1: objecion refutada o no, tabla de los puntos revisados y veredicto "aprobado" o "requiere cambios". No tocar `tesis/`, `HANDOFF.md` ni crear versiones.
+(Sin trabajo pendiente para Codex.)
 
 \## Última entrega
 
-- Limitador de topes implementado por Claude en la rama `mejora/limite-topes`, sobre `firmware/pico-sdk`, para los cuatro modos de posicion. Pendiente: revision de Codex, version, tesis (si el usuario acepta) y ensayo F-tope con hardware.
-- `probar.ps1 -Todo`: OK simconnect_checks (1916541), OK comparar_ensayo, OK hal_checks (694), OK launcher_port_checks (19), OK Pico 2 configurado 65692/8608, encoders 66972/8924, potenciometros 66540/8708, AS5600 67644/8772 (flash/RAM), OK puente SimConnect.
+- Limitador de topes implementado por Claude en la rama `mejora/limite-topes`, sobre `firmware/pico-sdk`, para los cuatro modos de posicion. Diseno: `LEEME md/DISENO_limite_topes.md`.
+- `probar.ps1 -Todo -PruebaFalla` (Claude y Codex, mismo codigo): OK simconnect_checks (1990580), OK comparar_ensayo, OK hal_checks (694), OK launcher_port_checks (19), OK Pico 2 configurado 65692/8608, encoders 66972/8924, potenciometros 66540/8708, AS5600 67644/8772, prueba falla 66580/8708 (flash/RAM), OK puente SimConnect.
+- Pendiente: ensayo F-tope con hardware (`LEEME md/ENSAYOS.md`) en cada modo de posicion que se use; tiempo de ciclo; decision del usuario sobre la tesis (`tesis/capitulos/09_damper.tex:84` queda desactualizado: sin posicion del simulador la orden ahora es 0).
 - Sigue pendiente de la tarea anterior: ensayos H0-H13 de la migracion a Pico SDK (detalle en `LEEME md/DISENO_migracion_pico_sdk.md` seccion 7).
 
 \## Revisión
 
-Ronda 1 de Codex: requiere cambios, un hallazgo (`tmp/revision_codex.md`).
+Dos rondas de Codex con lista de control (`tmp/revision_codex.md`, no versionado).
 
-- H1, objetado en parte por Claude. Verificado: con efectos hacia el tope y damper frenando, la orden hacia el centro crece (-0,006 a -0,119), lo que contradecia I3. Se conserva la ley: la fuerza es de frenado, esta acotada por el techo del damper, se anula con el yugo quieto, y aplicar el limitador a la suma dejaria que la vibracion se coma el frenado mientras el yugo va hacia el tope. Aplicado: I3 y `AJUSTE_FUERZAS_Y_MOVIMIENTO.md` corregidos, prueba de regresion agregada. Pendiente: intento de refutacion de Codex.
+- H1 (el damper puede aumentar una orden hacia el centro): objetado por Claude; Codex intento refutar la objecion y no pudo. Se conserva la ley; I3 y documentacion corregidos, prueba de regresion agregada.
+- H2 (la frase sobre saturacion de I3 era falsa con saturacion parcial): aplicado con el texto exacto de Codex, solo documentacion y un comentario de prueba, sin tercera ronda.
+- Veredicto formal de la ronda 2: "requiere cambios" solo por H2, sin cambios pedidos al firmware. Puntos 10 y 12 cumplen; punto 9 parcial hasta tener un ensayo real; punto 16 parcial por H2, ya aplicado. Tiempo de ejecucion y sensacion mecanica sin medir.
 
 \## Ensayos del usuario
 

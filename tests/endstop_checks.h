@@ -106,7 +106,7 @@ static void endstopChecks() {
                     const float total=fx.command(rx,axis,1,damped,x,into);
                     const float undamped=fx.command(rx,axis,1,effects,x,into);
                     const float brake=total-undamped;
-                    CHECK(brake*sign<=0); // 0 when the effects alone saturate EXTRA_LIMIT
+                    CHECK(brake*sign<=0); // 0 when both commands saturate at the same limit
                     const float out=fx.commandWithPositionSource(rx,axis,1,x,damped,false,into);
                     CHECK(std::fabs(out-(endstopLimited(undamped,x,begin,end)+brake))<.00001f);
                     if(std::fabs(x)>=end) CHECK(out*sign<=0); // at the stop: nothing pushes into it
