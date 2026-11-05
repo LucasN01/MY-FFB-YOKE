@@ -28,22 +28,26 @@
 
 \## Plan para Codex
 
-(Sin trabajo pendiente para Codex.)
+Tarea: Revisar calibracion de topes con finales de carrera
+
+(Claude, 2026-11-05.) Tarea critica: Claude diseno e implemento; **Codex solo revisa, no edita ni commitea** (se permite crear copias y salida en `tmp/`). Rama `mejora/limite-topes`, ya commiteada, sin version: la crea Claude despues del aprobado.
+
+1. Leer `LEEME md/DISENO_calibracion_topes.md` y `tmp/lista_control_calibracion_topes.md`. Ver el cambio con `git diff V2.9..HEAD`. Orientarse con `graphify query`/`explain`; en archivos grandes leer solo lo ubicado por busqueda.
+2. Buscar defectos con libertad primero, sin seguir la lista. Despues marcar cada punto como cumple, parcial o no, con evidencia (archivo:linea o prueba ejecutada). Sin evidencia por punto no vale el aprobado.
+3. Punto 19: probar las mutaciones en una copia dentro de `tmp/`, sin tocar los archivos del repo. El bloqueo de `src/main.cpp` no tiene prueba en PC: justificarlo por lectura y decirlo.
+4. Pruebas: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo -PruebaFalla`. Si Ninja se queda sin actividad dentro del sandbox, indicarlo en vez de esperar.
+5. Dejar el resultado en `tmp/revision_codex.md`, reemplazando su contenido: hallazgos libres, tabla por punto y veredicto "aprobado" o "requiere cambios". No tocar `tesis/`, `HANDOFF.md` ni crear versiones.
 
 \## Última entrega
 
-- Limitador de topes implementado por Claude en la rama `mejora/limite-topes`, sobre `firmware/pico-sdk`, para los cuatro modos de posicion. Diseno: `LEEME md/DISENO_limite_topes.md`.
-- `probar.ps1 -Todo -PruebaFalla` (Claude y Codex, mismo codigo): OK simconnect_checks (1990580), OK comparar_ensayo, OK hal_checks (694), OK launcher_port_checks (19), OK Pico 2 configurado 65692/8608, encoders 66972/8924, potenciometros 66540/8708, AS5600 67644/8772, prueba falla 66580/8708 (flash/RAM), OK puente SimConnect.
-- Pendiente: ensayo F-tope con hardware (`LEEME md/ENSAYOS.md`) en cada modo de posicion que se use; tiempo de ciclo. Tesis actualizada por Claude (`09_damper.tex`, seccion `sec:limite_topes`, y `03_centrado.tex`). Version V2.9 creada.
+- Calibracion de topes con 4 finales de carrera implementada por Claude en `mejora/limite-topes`, sobre V2.9. Bandera `YOKE_ENDSTOP_CALIBRATION`, 0 por defecto; modo de posicion sin cambios (1, simulacion). Diseno: `LEEME md/DISENO_calibracion_topes.md`.
+- Limitador de topes (V2.9): diseno `LEEME md/DISENO_limite_topes.md`, revision de Codex de dos rondas, tesis actualizada.
+- Pendiente: revision de Codex, version, tesis y PDF (el usuario pidio generarlo al final), ensayos F-calibracion y F-tope con hardware (`LEEME md/ENSAYOS.md`) y tiempo de ciclo.
 - Sigue pendiente de la tarea anterior: ensayos H0-H13 de la migracion a Pico SDK (detalle en `LEEME md/DISENO_migracion_pico_sdk.md` seccion 7).
 
 \## Revisión
 
-Dos rondas de Codex con lista de control (`tmp/revision_codex.md`, no versionado).
-
-- H1 (el damper puede aumentar una orden hacia el centro): objetado por Claude; Codex intento refutar la objecion y no pudo. Se conserva la ley; I3 y documentacion corregidos, prueba de regresion agregada.
-- H2 (la frase sobre saturacion de I3 era falsa con saturacion parcial): aplicado con el texto exacto de Codex, solo documentacion y un comentario de prueba, sin tercera ronda.
-- Veredicto formal de la ronda 2: "requiere cambios" solo por H2, sin cambios pedidos al firmware. Puntos 10 y 12 cumplen; punto 9 parcial hasta tener un ensayo real; punto 16 parcial por H2, ya aplicado. Tiempo de ejecucion y sensacion mecanica sin medir.
+(Sin revision de esta entrega todavia.)
 
 \## Ensayos del usuario
 
