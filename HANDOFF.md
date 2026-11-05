@@ -28,15 +28,14 @@
 
 \## Plan para Codex
 
-Tarea: Revisar limitador de fuerza en topes
+Tarea: Revisar objecion al hallazgo H1 del limitador de topes
 
-(Claude, 2026-11-05.) Tarea critica: Claude diseno e implemento; **Codex solo revisa, no edita ni commitea** (se permite crear copias y salida en `tmp/`). Rama `mejora/limite-topes`, ya commiteada, sin version: la crea Claude despues del aprobado.
+(Claude, 2026-11-05.) Segunda ronda de revision, de las dos permitidas. **Codex solo revisa, no edita ni commitea.** Rama `mejora/limite-topes`. Leer `tmp/revision_codex.md` (ronda 1) y la seccion "Revision" de este archivo. Ver el cambio con `git diff 45cd8c6..HEAD`.
 
-1. Leer `LEEME md/DISENO_limite_topes.md` y `tmp/lista_control_limite_topes.md`. Ver el cambio con `git diff firmware/pico-sdk...HEAD`. Orientarse con `graphify query`/`explain`; en archivos grandes leer solo lo ubicado por busqueda.
-2. Buscar defectos con libertad primero, sin seguir la lista. Despues marcar cada punto de la lista como cumple, parcial o no, con evidencia (archivo:linea o prueba ejecutada). Sin evidencia por punto no vale el aprobado.
-3. Punto 14: probar las mutaciones en una copia dentro de `tmp/`, sin tocar los archivos del repo. Si la copia no puede compilarse, justificar por lectura y decirlo. Las constantes de roll y pitch valen lo mismo, asi que cruzarlas no se detecta por prueba: comprobarlo por lectura.
-4. Pruebas: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo`. Si Ninja se queda sin actividad dentro del sandbox, indicarlo en vez de esperar.
-5. Dejar el resultado en `tmp/revision_codex.md`: hallazgos libres, tabla por punto y veredicto "aprobado" o "requiere cambios". No tocar `tesis/`, `HANDOFF.md` ni crear versiones.
+1. Intentar refutar la objecion de Claude a H1, con codigo o reproduccion: busca un caso donde conservar el damper entero produzca fuerza hacia el tope, un salto, una orden sin acotar, o un dano real que no se resuelva aplicando el limitador a la suma.
+2. Comprobar que el I3 nuevo, `LEEME md/AJUSTE_FUERZAS_Y_MOVIMIENTO.md` y el codigo dicen lo mismo, y que la prueba nueva de `tests/endstop_checks.h` fallaria si se aplica el limitador a la suma (mutacion en copia dentro de `tmp/`).
+3. Actualizar los puntos 10, 12 y 16 de la lista con evidencia. El punto 12 cubre las cinco variantes con `probar.ps1 -Todo -PruebaFalla`.
+4. Dejar el resultado en `tmp/revision_codex.md`, conservando la ronda 1: objecion refutada o no, tabla de los puntos revisados y veredicto "aprobado" o "requiere cambios". No tocar `tesis/`, `HANDOFF.md` ni crear versiones.
 
 \## Última entrega
 
@@ -46,7 +45,9 @@ Tarea: Revisar limitador de fuerza en topes
 
 \## Revisión
 
-(Sin revision de esta tarea todavia.)
+Ronda 1 de Codex: requiere cambios, un hallazgo (`tmp/revision_codex.md`).
+
+- H1, objetado en parte por Claude. Verificado: con efectos hacia el tope y damper frenando, la orden hacia el centro crece (-0,006 a -0,119), lo que contradecia I3. Se conserva la ley: la fuerza es de frenado, esta acotada por el techo del damper, se anula con el yugo quieto, y aplicar el limitador a la suma dejaria que la vibracion se coma el frenado mientras el yugo va hacia el tope. Aplicado: I3 y `AJUSTE_FUERZAS_Y_MOVIMIENTO.md` corregidos, prueba de regresion agregada. Pendiente: intento de refutacion de Codex.
 
 \## Ensayos del usuario
 
