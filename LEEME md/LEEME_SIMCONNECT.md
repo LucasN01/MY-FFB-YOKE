@@ -61,7 +61,8 @@ En `mis_defines.h`:
 - `SIMCONNECT_ADDITIONS_ENABLED`: interruptor general conservado por compatibilidad de configuracion; en 0 todos los motores quedan sin comando.
 - `SIMCONNECT_TURBULENCE_ENABLED`, `SIMCONNECT_STALL_BUFFET_ENABLED`, `SIMCONNECT_GEAR_BUFFET_ENABLED`, `SIMCONNECT_SPOILER_BUFFET_ENABLED`: interruptores independientes.
 - `SIMCONNECT_GUST_ROLL/PITCH` y `SIMCONNECT_*_BUFFET_GAIN`: intensidades individuales.
-- `SIMCONNECT_EXTRA_LIMIT`: limite conjunto conservado, 220/255 = 0,862745 del comando normalizado.
+- `SIMCONNECT_EXTRA_LIMIT`: limite conjunto conservado, 220/255 = 0,862745 del comando normalizado. Despues se aplica el limitador de topes (`*_ENDSTOP_ZONE_*`, ver `AJUSTE_FUERZAS_Y_MOVIMIENTO.md`).
+- En modo simulador (`YOKE_POSITION_SOURCE 1`), sin posicion recibida la orden es 0 en ambos ejes.
 
 No existen ya `FFB_CONSTANT_GAIN`, `FFB_PERIODIC_GAIN` ni ajustes activos de amortiguacion. La telemetria de diagnostico `f` muestra el comando SimConnect en unidades de 1/10000; `p` indica PWM con polaridad.
 

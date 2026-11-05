@@ -58,6 +58,33 @@ Las ganancias individuales aceptan 0..1, la global 0..100.
 La relacion pitch/roll 2:1 vale con estados comparables antes de saturar, excepto rodaje: roll/pitch 10:1.
 La fuerza fisica depende del motor y de la mecanica; el comando no mide newtons.
 
+## Limitador de topes
+
+Protege el motor contra los cuatro topes, en los cuatro modos de posicion. Actua
+sobre la orden total del eje, despues de `SIMCONNECT_EXTRA_LIMIT`
+(`YokeSC::Effects::commandWithPositionSource`):
+
+| Constante | Valor | Efecto |
+| --- | --- | --- |
+| `ROLL_ENDSTOP_ZONE_START`, `PITCH_ENDSTOP_ZONE_START` | 0,90 | Posicion normalizada donde empieza a bajar la fuerza hacia el tope |
+| `ROLL_ENDSTOP_ZONE_FULL`, `PITCH_ENDSTOP_ZONE_FULL` | 0,98 | Desde aca la fuerza hacia el tope es 0 |
+
+- La fuerza hacia el centro no cambia, en ninguna posicion. Por eso la vibracion
+  cerca del tope se siente mas debil y sesgada hacia el centro (decision de diseno).
+- El damper que frena una marcha hacia el tope queda entero.
+- Los valores son hipotesis a validar con el ensayo F-tope de `ENSAYOS.md`.
+
+La proteccion depende de la posicion que recibe:
+
+- **Potes:** calibrar desde el menu. Hacen falta al menos 200 cuentas ADC por lado;
+  con menos, el tope podria leerse por debajo de la zona.
+- **Encoders y AS5600 con centro al encender:** los extremos son fijos y relativos al
+  encendido. Encender fuera del centro corre la zona.
+- **Simulador:** +-1 debe coincidir con el tope fisico (placa de ejes calibrada). Sin
+  posicion recibida la orden es 0.
+- **No limita la corriente:** si se sostiene el yugo a mano contra el tope, el
+  centrado sigue circulando corriente con el motor frenado.
+
 ## Compensacion segun el movimiento del piloto
 
 Se aplica UNA vez a la suma de efectos excepto rodaje, antes del limite final. Sigue el ejemplo

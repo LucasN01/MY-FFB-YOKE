@@ -42,6 +42,15 @@ inline float motionAdjustedForce(float base, float velocity, float gain,
     resistance=clip(resistance,0,YOKE_MOTION_CORRECTION_LIMIT)*clip(gain,0,1);
     return base-(velocity<0 ? -resistance : resistance);
 }
+// Removes force pushing into the nearest mechanical stop; force toward center is untouched.
+inline float endstopLimited(float command, float position, float zoneStart, float zoneFull) {
+    if(!isfinite(command) || !isfinite(position)) return 0;
+    if(command*position<=0) return command;
+    const float distance=fabsf(position);
+    if(distance<=zoneStart) return command;
+    if(distance>=zoneFull) return 0;
+    return command*(zoneFull-distance)/(zoneFull-zoneStart);
+}
 class Effects {
 public:
     explicit Effects(const YokeGains::Settings& values=YokeGains::defaults()):settings(values) {}
@@ -129,10 +138,20 @@ public:
                   float localPosition, uint8_t mask=configuredEffects,
                   bool useSimPosition=(YOKE_POSITION_SOURCE == 1), float localVelocity=0) const {
         if(axis>1) return 0;
-        if(useSimPosition && !rx.yokeAvailable) mask &= ~Centering;
+        // Unknown position: pushing into a stop cannot be ruled out, so no force at all.
+        if(useSimPosition && !rx.yokeAvailable) return 0;
         // No position filtering: a received zero cancels centering immediately.
-        return command(rx,axis,gain,mask,useSimPosition ? rx.yoke[axis] : localPosition,
-            useSimPosition ? (rx.yokeAvailable ? simMotion[axis].velocity : 0) : localVelocity);
+        const float position=useSimPosition ? rx.yoke[axis] : localPosition;
+        const float velocity=useSimPosition ? simMotion[axis].velocity : localVelocity;
+        const float total=command(rx,axis,gain,mask,position,velocity);
+        const float start=axis==0 ? ROLL_ENDSTOP_ZONE_START : PITCH_ENDSTOP_ZONE_START;
+        const float full=axis==0 ? ROLL_ENDSTOP_ZONE_FULL : PITCH_ENDSTOP_ZONE_FULL;
+        if(fabsf(position)<=start) return total;
+        // Damping that brakes motion into the stop stays whole; the limiter must not remove it.
+        const float undamped=command(rx,axis,gain,mask & ~Damper,position,velocity);
+        const float damping=total-undamped;
+        if(damping*position<0) return endstopLimited(undamped,position,start,full)+damping;
+        return endstopLimited(total,position,start,full);
     }
     float simulationVelocity(uint8_t axis) const { return axis<2 ? simMotion[axis].velocity : 0; }
     const PicoForceModels& calculated() const { return models; }

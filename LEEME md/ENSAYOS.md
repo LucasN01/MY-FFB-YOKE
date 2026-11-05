@@ -35,6 +35,13 @@ El script crea `ensayos/AAAAMMDD-HHMMSS_<Nombre>/`, `rutina.txt` y `marcas.csv`.
 | F13 Turbulencia (opcional) | 60 s | Clima con turbulencia moderada. | `gust` ≠ 0 (`--gusts` ya lo pasa el lanzador, `Iniciar-Simulador.ps1:255`). |
 | F14 Aterrizaje | libre | Aterrizar y rodar hasta parar. | Suelo vuelve al tocar; 0 al detenerse. |
 
+**F-tope (limitador de topes, aparte de la rutina y sin verificacion de `comparar_ensayo`).** Repetir en cada modo de posicion que se use, con motor sin acoplar o limite de PWM bajo al principio:
+
+1. Con buffet o rodaje activos, llevar el yugo contra cada uno de los 4 topes y soltarlo o sostenerlo suave. Con `|x|` >= 0,98 no debe haber `pwm` hacia ese tope; hacia el centro si. En el registro, comprobar que `cmd` nunca tenga el mismo signo que `x`.
+2. Alejarlo despacio: la vibracion debe volver a ser completa por debajo de `|x|` = 0,90, sin golpe al cruzar la zona.
+3. Confirmar que `x` llega a 0,98 o mas contra cada tope. Si no llega, el limitador no corta del todo: revisar calibracion o ajustar `*_ENDSTOP_ZONE_*`.
+4. Modo simulador: sostener el yugo con mano suave cerca del tope para ver si aparece oscilacion. Una simulacion simple sugiere un posible ciclo limite con retardos de 20 a 50 ms (hipotesis). Si oscila, la proteccion en ese modo se considera insuficiente.
+
 ## Banco sin simulador
 
 Cerrar Prepar3D y el puente, conectar la Pico y ejecutar:

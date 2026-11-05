@@ -56,12 +56,14 @@ static void feed4(YokeSC::Receiver& rx, const uint8_t* f, uint32_t time) {
 #include "link_checks.h"
 #include "health_checks.h"
 #include "as5600_checks.h"
+#include "endstop_checks.h"
 int legacyEffectsChecks();
 int simPositionFrictionChecks();
 int main(int argc,char** argv) {
     linkChecks();
     healthChecks();
     as5600Checks();
+    endstopChecks();
     rawChecks(); if(argc>1) replayRaw(argv[1]);
     picoLogChecks();
     groundChecks();

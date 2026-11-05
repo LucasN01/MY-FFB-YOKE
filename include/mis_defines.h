@@ -143,6 +143,18 @@ static_assert(YOKE_POT_SAMPLES >= 1 && YOKE_POT_SAMPLES <= 16 &&
 #define PITCH_POS_MIN  PITCH_ENCODER_MIN
 #define PITCH_POS_MAX  PITCH_ENCODER_MAX
 
+// Limitador de topes, en posicion normalizada, para los 4 modos de posicion.
+// Hasta START no actua; de START a FULL la fuerza hacia el tope baja en rampa;
+// desde FULL es 0. La fuerza hacia el centro no cambia. Hipotesis a validar con ensayo.
+#define ROLL_ENDSTOP_ZONE_START  0.90f
+#define ROLL_ENDSTOP_ZONE_FULL   0.98f
+#define PITCH_ENDSTOP_ZONE_START 0.90f
+#define PITCH_ENDSTOP_ZONE_FULL  0.98f
+static_assert(ROLL_ENDSTOP_ZONE_START > 0 && ROLL_ENDSTOP_ZONE_START < ROLL_ENDSTOP_ZONE_FULL &&
+              ROLL_ENDSTOP_ZONE_FULL <= 1, "Zona de tope ROLL invalida");
+static_assert(PITCH_ENDSTOP_ZONE_START > 0 && PITCH_ENDSTOP_ZONE_START < PITCH_ENDSTOP_ZONE_FULL &&
+              PITCH_ENDSTOP_ZONE_FULL <= 1, "Zona de tope PITCH invalida");
+
 // ============================================================
 // PINES - PUENTE H (2 PWM por eje, igual que el proyecto original)
 // ============================================================

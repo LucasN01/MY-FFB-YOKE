@@ -70,6 +70,8 @@ secuencia y vuelve a ganancias. No se modifica la calibracion anterior.
 Se rechazan pares de extremos separados por menos de 64 cuentas ADC:
 POCO RECORRIDO mantiene el paso actual para corregir el extremo y pulsar OK,
 o cancelar con ATRAS y reiniciar. Se admiten ADC crecientes o decrecientes.
+El limitador de topes necesita al menos 200 cuentas por lado: ver
+[AJUSTE_FUERZAS_Y_MOVIMIENTO.md](AJUSTE_FUERZAS_Y_MOVIMIENTO.md).
 Un error de escritura muestra ERROR GUARDADO; OK reintenta las mismas
 capturas, y ATRAS cancela conservando los valores activos anteriores.
 
