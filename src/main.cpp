@@ -10,6 +10,9 @@
 #include "MotorDriver.h"
 #include "GainSettings.h"
 #include "CalibrationControls.h"
+#if YOKE_ENDSTOP_CALIBRATION
+#include "EndstopCalibration.h"
+#endif
 #if SIMCONNECT_ADDITIONS_ENABLED
 #include "SimEffects.h"
 #include "PicoLog.h"
@@ -86,6 +89,9 @@ AxisAs5600 positionInput;
 YokeMotion localMotion[2];
 #endif
 float yokePosition[2]={0,0}, yokeVelocity[2]={0,0};
+#if YOKE_ENDSTOP_CALIBRATION
+YokeEndstop::Calibration endstopCalibration;
+#endif
 LcdTelemetry lcd;
 
 MotorDriver rollMotor(ROLL_PWM_LEFT, ROLL_PWM_RIGHT, ROLL_EN_PIN);
@@ -215,6 +221,9 @@ void setup() {
     lcd.begin(); // programar inicio; LCD se inicializa por etapas desde update()
 #if YOKE_POSITION_SOURCE != 1
     positionInput.begin(); // encoders: centrar al iniciar; potes: centro calibrado; AS5600: centro configurado o al encender
+#endif
+#if YOKE_ENDSTOP_CALIBRATION
+    for(uint8_t i=0;i<YokeEndstop::StopCount;++i) hal::pinMode(YokeEndstop::pins[i],hal::PinMode::InputPullup);
 #endif
     lastControlLoopUs = hal::micros();
 #if YOKE_CALIBRATION_ENABLED
@@ -366,18 +375,46 @@ void loop() {
         yokeVelocity[axis]=localMotion[axis].velocity;
     }
 #endif
+#if YOKE_ENDSTOP_CALIBRATION
+    // Entrada sin recortar: un encoder encendido fuera del centro puede pasar de +-1.
+#if YOKE_POSITION_SOURCE == 1
+    const float* stopInput=yokePosition;
+    const bool stopInputValid=simTelemetry.yokeAvailable && simTelemetry.fresh(now);
+#else
+    const float* stopInput=positions;
+#if YOKE_POSITION_SOURCE == 3
+    const bool stopInputValid=positionInput.healthy();
+#else
+    const bool stopInputValid=true;
+#endif
+#endif
+    bool endstopPressed[YokeEndstop::StopCount];
+    for(uint8_t i=0;i<YokeEndstop::StopCount;++i)
+        endstopPressed[i]=hal::digitalRead(YokeEndstop::pins[i])==bool(ENDSTOP_SWITCH_ACTIVE_LEVEL);
+    endstopCalibration.update(endstopPressed,stopInput,stopInputValid);
+#endif
     // 2) Unica fuente de fuerza: telemetria SimConnect valida y armada.
     markStage(YokeHealth::Force);
     float motorCommands[2] = {0.0f, 0.0f};
 #if SIMCONNECT_ADDITIONS_ENABLED
     for (uint8_t axis = 0; axis < 2; ++axis) {
+#if YOKE_ENDSTOP_CALIBRATION
+        motorCommands[axis] = simEffects.commandWithStopPosition(simTelemetry, axis,
+            gainSettings.get(YokeGains::Total),
+            yokePosition[axis], endstopCalibration.normalized(axis,stopInput[axis]),
+            YokeSC::configuredEffects, YOKE_POSITION_SOURCE == 1, yokeVelocity[axis]);
+#else
         motorCommands[axis] = simEffects.commandWithPositionSource(simTelemetry, axis,
             gainSettings.get(YokeGains::Total),
             yokePosition[axis], YokeSC::configuredEffects, YOKE_POSITION_SOURCE == 1, yokeVelocity[axis]);
+#endif
     }
 #endif
 #if YOKE_CALIBRATION_ENABLED
     if(calibration.menu.active()) motorCommands[0]=motorCommands[1]=0;
+#endif
+#if YOKE_ENDSTOP_CALIBRATION
+    if(!endstopCalibration.ready()) motorCommands[0]=motorCommands[1]=0;
 #endif
 #if YOKE_POSITION_SOURCE == 3
     if(!positionInput.healthy()) motorCommands[0]=motorCommands[1]=0;
@@ -481,6 +518,9 @@ void loop() {
 #if YOKE_CALIBRATION_ENABLED
             if(calibration.menu.active()) f.flags|=YokeLog::Menu;
 #endif
+#if YOKE_ENDSTOP_CALIBRATION
+            if(!endstopCalibration.ready()) f.flags|=YokeLog::Menu; // misma condicion: orden anulada
+#endif
             const auto& model=simEffects.calculated();
             f.q=model.pressure; f.env=model.groundEnvelope; f.kc=simEffects.centering();
             for(uint8_t i=0;i<3;++i) f.buffet[i]=model.buffet[i];
@@ -551,7 +591,17 @@ void loop() {
 #if YOKE_CALIBRATION_ENABLED
     char menuTop[17], menuBottom[17];
     calibration.menu.rows(menuTop,menuBottom);
+#if YOKE_ENDSTOP_CALIBRATION
+    if(!calibration.menu.displayActive() && !endstopCalibration.ready()) {
+        endstopCalibration.rows(menuTop,menuBottom);
+        lcd.showMenu(true,menuTop,menuBottom);
+    } else
+#endif
     lcd.showMenu(calibration.menu.displayActive(),menuTop,menuBottom);
+#elif YOKE_ENDSTOP_CALIBRATION
+    char endstopTop[17], endstopBottom[17];
+    endstopCalibration.rows(endstopTop,endstopBottom);
+    lcd.showMenu(!endstopCalibration.ready(),endstopTop,endstopBottom);
 #endif
     lcd.update(now, motorCommandRoll, motorCommandPitch, pwmRoll, pwmPitch);
 #if YOKE_USB_STRESS > 0

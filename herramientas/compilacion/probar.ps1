@@ -2,14 +2,15 @@
 # Compila y ejecuta las verificaciones con salida minima (ahorro de tokens para agentes).
 # Imprime una linea por paso: "OK ..." o "FALLO ..." con hasta -MaxLineas lineas de error.
 # Por defecto: suites C++ (simconnect_checks, comparar_ensayo, hal_checks) y pruebas del lanzador.
-# Uso: powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 [-Pico] [-Encoders] [-Potentiometers] [-As5600] [-Bridge] [-PruebaFalla] [-Todo]
+# Uso: powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 [-Pico] [-Encoders] [-Potentiometers] [-As5600] [-Topes] [-Bridge] [-PruebaFalla] [-Todo]
 #   -Pico            compila firmware Pico 2 con la configuracion del codigo (Build-Pico2.ps1)
 #   -Encoders        compila tambien la variante encoders
 #   -Potentiometers  compila tambien la variante potenciometros
 #   -As5600          compila tambien la variante AS5600 (incluida en -Todo)
+#   -Topes           compila la calibracion de topes con simulacion y con AS5600 (incluida en -Todo)
 #   -Bridge          compila el puente SimConnect (Build-Bridge.ps1)
 #   -PruebaFalla     compila potenciometros con HardFault a los 20 s (no entra en -Todo)
-#   -Todo            suite, lanzador, Pico configurado, encoders, potenciometros, AS5600 y puente
+#   -Todo            suite, lanzador, Pico configurado, encoders, potenciometros, AS5600, topes y puente
 # No carga firmware ni ejecuta el simulador.
 
 param(
@@ -17,6 +18,7 @@ param(
     [switch]$Encoders,
     [switch]$Potentiometers,
     [switch]$As5600,
+    [switch]$Topes,
     [switch]$Bridge,
     [switch]$PruebaFalla,
     [switch]$Todo,
@@ -27,7 +29,7 @@ $ErrorActionPreference = 'Stop'
 $Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'src/main.cpp'))) { throw "No se encontro src/main.cpp en $Raiz (raiz del repositorio)." }
 Set-Location $Raiz
-if ($Todo) { $Pico = $true; $Encoders = $true; $Potentiometers = $true; $As5600 = $true; $Bridge = $true }
+if ($Todo) { $Pico = $true; $Encoders = $true; $Potentiometers = $true; $As5600 = $true; $Topes = $true; $Bridge = $true }
 $fallos = 0
 
 function Resumir([string]$nombre, [int]$codigo, [string[]]$salida, [string]$patronOk, [string]$patronError) {
@@ -103,6 +105,12 @@ if ($Potentiometers) {
 if ($As5600) {
     $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Pico2.ps1' -As5600 }
     $fallos += Resumir 'Pico 2 (AS5600)' $r.Codigo $r.Salida $patronTam $patronErr
+}
+if ($Topes) {
+    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Pico2.ps1' -Topes }
+    $fallos += Resumir 'Pico 2 (topes, simulacion)' $r.Codigo $r.Salida $patronTam $patronErr
+    $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Pico2.ps1' -TopesAs5600 }
+    $fallos += Resumir 'Pico 2 (topes, AS5600)' $r.Codigo $r.Salida $patronTam $patronErr
 }
 if ($Bridge) {
     $r = Ejecutar { & powershell -NoProfile -ExecutionPolicy Bypass -File 'herramientas\compilacion\Build-Bridge.ps1' }

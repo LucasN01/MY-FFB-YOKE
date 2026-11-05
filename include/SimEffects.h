@@ -138,6 +138,14 @@ public:
                   float localPosition, uint8_t mask=configuredEffects,
                   bool useSimPosition=(YOKE_POSITION_SOURCE == 1), float localVelocity=0) const {
         if(axis>1) return 0;
+        return commandWithStopPosition(rx,axis,gain,localPosition,
+            useSimPosition ? rx.yoke[axis] : localPosition,mask,useSimPosition,localVelocity);
+    }
+    // stopPosition only drives the limiter (+-1 at the stops); forces keep the mode's position.
+    float commandWithStopPosition(const Receiver& rx, uint8_t axis, float gain,
+                  float localPosition, float stopPosition, uint8_t mask=configuredEffects,
+                  bool useSimPosition=(YOKE_POSITION_SOURCE == 1), float localVelocity=0) const {
+        if(axis>1) return 0;
         // Unknown position: pushing into a stop cannot be ruled out, so no force at all.
         if(useSimPosition && !rx.yokeAvailable) return 0;
         // No position filtering: a received zero cancels centering immediately.
@@ -146,12 +154,12 @@ public:
         const float total=command(rx,axis,gain,mask,position,velocity);
         const float start=axis==0 ? ROLL_ENDSTOP_ZONE_START : PITCH_ENDSTOP_ZONE_START;
         const float full=axis==0 ? ROLL_ENDSTOP_ZONE_FULL : PITCH_ENDSTOP_ZONE_FULL;
-        if(fabsf(position)<=start) return total;
+        if(fabsf(stopPosition)<=start) return total;
         // Damping that brakes motion into the stop stays whole; the limiter must not remove it.
         const float undamped=command(rx,axis,gain,mask & ~Damper,position,velocity);
         const float damping=total-undamped;
-        if(damping*position<0) return endstopLimited(undamped,position,start,full)+damping;
-        return endstopLimited(total,position,start,full);
+        if(damping*stopPosition<0) return endstopLimited(undamped,stopPosition,start,full)+damping;
+        return endstopLimited(total,stopPosition,start,full);
     }
     float simulationVelocity(uint8_t axis) const { return axis<2 ? simMotion[axis].velocity : 0; }
     const PicoForceModels& calculated() const { return models; }

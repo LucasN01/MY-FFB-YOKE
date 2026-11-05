@@ -90,6 +90,36 @@ La proteccion depende de la posicion que recibe:
 - **No limita la corriente:** si se sostiene el yugo a mano contra el tope, el
   centrado sigue circulando corriente con el motor frenado.
 
+### Calibracion de topes con finales de carrera
+
+Con `#define YOKE_ENDSTOP_CALIBRATION 1` en `mis_defines.h` (por defecto 0, sin
+finales de carrera), los motores arrancan **sin fuerza** en cada encendido:
+
+1. En modo simulador, abrir un vuelo sin pausa con el puente conectado. El LCD muestra
+   `SIN POSICION` mientras no haya posicion valida.
+2. Llevar el yugo a los 4 topes, en cualquier orden. La segunda fila del LCD muestra
+   los pendientes (`R- R+ P- P+`).
+3. Soltar el ultimo tope (`SOLTAR TOPE`). Recien ahi vuelve la fuerza.
+
+El centro es el punto medio de los dos topes de cada eje. Lo registrado vive en RAM,
+se pierde al reiniciar y **solo lo usa el limitador**: centrado, damper y friccion
+siguen con la posicion del modo.
+
+`REPETIR TOPES` significa que se descarto todo y hay que empezar de nuevo. Pasa si:
+
+- Los dos sensores de un eje estan accionados a la vez.
+- El recorrido de un eje es menor que `YOKE_ENDSTOP_MIN_SPAN` (0,5).
+- Un tope queda a mas de `YOKE_ENDSTOP_CAPTURE_TOLERANCE` (0,10) del extremo alcanzado
+  o de la ultima muestra con el sensor accionado.
+
+Antes de usarla, confirmar con los sensores reales `ENDSTOP_SWITCH_ACTIVE_LEVEL` (nivel
+leido con el tope accionado; por defecto 0). Los pines son `*_ENDSTOP_PIN` (GP0..GP3).
+Chocan con los encoders incrementales: en modo 0 no compila salvo que se cambien.
+
+En modo simulador, si el eje satura antes del tope fisico, el registro queda en ese
+valor y la zona se adelanta. Sin vuelo corriendo no se puede terminar y los motores
+siguen sin fuerza.
+
 ## Compensacion segun el movimiento del piloto
 
 Se aplica UNA vez a la suma de efectos excepto rodaje, antes del limite final. Sigue el ejemplo

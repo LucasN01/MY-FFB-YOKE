@@ -42,6 +42,15 @@ El script crea `ensayos/AAAAMMDD-HHMMSS_<Nombre>/`, `rutina.txt` y `marcas.csv`.
 3. Confirmar que `x` llega a 0,98 o mas contra cada tope. Si no llega, el limitador no corta del todo: revisar calibracion o ajustar `*_ENDSTOP_ZONE_*`.
 4. Modo simulador: sostener el yugo con mano suave cerca del tope para ver si aparece oscilacion. Una simulacion simple sugiere un posible ciclo limite con retardos de 20 a 50 ms (hipotesis). Si oscila, la proteccion en ese modo se considera insuficiente.
 
+**F-calibracion (`YOKE_ENDSTOP_CALIBRATION 1`, antes de F-tope y aparte de la rutina).** Con motor sin acoplar o limite de PWM bajo al principio:
+
+1. Sensores, sin vuelo: medir el nivel en GP0..GP3 suelto y accionado, con el pull-up interno activo, y ajustar `ENDSTOP_SWITCH_ACTIVE_LEVEL`. Con la polaridad equivocada, el LCD muestra `REPETIR TOPES` en reposo.
+2. Antes de terminar: `cmd` y `pwm` en 0 con efectos activos (el registro marca `flags&Menu`).
+3. Visitar los 4 topes en otro orden en cada repeticion; comprobar la lista del LCD y que la fuerza vuelva solo al soltar el ultimo.
+4. Cruzar a proposito dos sensores del mismo eje y luego de ejes distintos: debe pedir `REPETIR TOPES` y seguir sin fuerza.
+5. Reiniciar la placa: debe pedir de nuevo la calibracion.
+6. Repetir F-tope. Si la lista no se completa o rechaza siempre, revisar la zona activa del sensor contra `YOKE_ENDSTOP_CAPTURE_TOLERANCE`.
+
 ## Banco sin simulador
 
 Cerrar Prepar3D y el puente, conectar la Pico y ejecutar:

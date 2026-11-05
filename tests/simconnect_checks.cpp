@@ -64,6 +64,7 @@ int main(int argc,char** argv) {
     healthChecks();
     as5600Checks();
     endstopChecks();
+    endstopCalibrationChecks();
     rawChecks(); if(argc>1) replayRaw(argv[1]);
     picoLogChecks();
     groundChecks();

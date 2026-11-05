@@ -3,6 +3,8 @@ param(
     [switch]$Potentiometers,
     [switch]$As5600,
     [switch]$PruebaFalla,
+    [switch]$Topes,
+    [switch]$TopesAs5600,
     [string]$SdkPath = $(if ($env:PICO_SDK_PATH) { $env:PICO_SDK_PATH } else { 'D:/pico/pico-sdk' }),
     [string]$TinyUsbPath = $(if ($env:PICO_TINYUSB_PATH) { $env:PICO_TINYUSB_PATH } else { 'D:/pico/tinyusb' }),
     [string]$ToolchainBin = $(if ($env:PICO_TOOLCHAIN_PATH) { $env:PICO_TOOLCHAIN_PATH } else { 'D:/pico/toolchains/pqt-gcc-5.0.0/bin' }),
@@ -15,6 +17,7 @@ param(
 $ErrorActionPreference = 'Stop'
 try {
     if ($As5600 -and ($Encoders -or $Potentiometers -or $PruebaFalla)) { throw '-As5600 no se combina con -Encoders, -Potentiometers ni -PruebaFalla.' }
+    if (($Topes -or $TopesAs5600) -and ($Encoders -or $Potentiometers -or $As5600 -or $PruebaFalla -or ($Topes -and $TopesAs5600))) { throw '-Topes y -TopesAs5600 no se combinan con otras variantes.' }
     if ($Encoders -and $Potentiometers) { throw 'Elegir solo -Encoders o -Potentiometers.' }
     if ($PruebaFalla -and $Encoders) { throw '-PruebaFalla usa potenciometros; no combinar con -Encoders.' }
     $Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
@@ -58,8 +61,8 @@ try {
             "-Dpioasm_DIR=$PioasmDir" '-DCMAKE_BUILD_TYPE=MinSizeRel'
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
-    $target = if ($PruebaFalla) { 'myk_falla' } elseif ($As5600) { 'myk_as' } elseif ($Encoders) { 'myk_enc' } elseif ($Potentiometers) { 'myk_pot' } else { 'myk_cfg' }
-    $outputFolder = if ($PruebaFalla) { 'build-pico2-prueba-falla' } elseif ($As5600) { 'build-pico2-as5600' } elseif ($Encoders) { 'build-pico2-encoders' } elseif ($Potentiometers) { 'build-pico2-potentiometers' } else { 'build-pico2' }
+    $target = if ($Topes) { 'myk_topes' } elseif ($TopesAs5600) { 'myk_topes_as' } elseif ($PruebaFalla) { 'myk_falla' } elseif ($As5600) { 'myk_as' } elseif ($Encoders) { 'myk_enc' } elseif ($Potentiometers) { 'myk_pot' } else { 'myk_cfg' }
+    $outputFolder = if ($Topes) { 'build-pico2-topes' } elseif ($TopesAs5600) { 'build-pico2-topes-as5600' } elseif ($PruebaFalla) { 'build-pico2-prueba-falla' } elseif ($As5600) { 'build-pico2-as5600' } elseif ($Encoders) { 'build-pico2-encoders' } elseif ($Potentiometers) { 'build-pico2-potentiometers' } else { 'build-pico2' }
     & $CMake --build $BuildRoot --target $target
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     # Antes de copiar: un UF2 que alcance el sector de calibracion no debe quedar listo para cargar.

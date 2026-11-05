@@ -155,6 +155,31 @@ static_assert(ROLL_ENDSTOP_ZONE_START > 0 && ROLL_ENDSTOP_ZONE_START < ROLL_ENDS
 static_assert(PITCH_ENDSTOP_ZONE_START > 0 && PITCH_ENDSTOP_ZONE_START < PITCH_ENDSTOP_ZONE_FULL &&
               PITCH_ENDSTOP_ZONE_FULL <= 1, "Zona de tope PITCH invalida");
 
+// Calibracion de topes con 4 finales de carrera, repetida en cada encendido.
+// 0 = el limitador usa la posicion del modo, sin finales de carrera.
+// 1 = motores sin fuerza hasta llevar el yugo a los 4 topes; el limitador usa lo registrado.
+#ifndef YOKE_ENDSTOP_CALIBRATION
+#define YOKE_ENDSTOP_CALIBRATION 0
+#endif
+static_assert(YOKE_ENDSTOP_CALIBRATION == 0 || YOKE_ENDSTOP_CALIBRATION == 1,
+              "Bandera de calibracion de topes debe ser 0 o 1");
+// GP0..GP3 segun la placa; chocan con los encoders incrementales (modo 0).
+#define ROLL_NEG_ENDSTOP_PIN  0
+#define ROLL_POS_ENDSTOP_PIN  1
+#define PITCH_NEG_ENDSTOP_PIN 2
+#define PITCH_POS_ENDSTOP_PIN 3
+// TODO-USUARIO: confirmar con los sensores reales. Nivel leido con el tope accionado.
+#define ENDSTOP_SWITCH_ACTIVE_LEVEL 0
+#define YOKE_ENDSTOP_SWITCH_DEBOUNCE_CYCLES 5 // ciclos de lazo seguidos (10 ms)
+// Unidades de posicion del modo. Hipotesis a validar con ensayo.
+#define YOKE_ENDSTOP_MIN_SPAN 0.50f          // recorrido minimo entre los dos topes de un eje
+#define YOKE_ENDSTOP_CAPTURE_TOLERANCE 0.10f // distancia admitida entre el tope y el extremo alcanzado
+static_assert(ENDSTOP_SWITCH_ACTIVE_LEVEL == 0 || ENDSTOP_SWITCH_ACTIVE_LEVEL == 1,
+              "Nivel de final de carrera debe ser 0 o 1");
+static_assert(YOKE_ENDSTOP_SWITCH_DEBOUNCE_CYCLES >= 1 && YOKE_ENDSTOP_SWITCH_DEBOUNCE_CYCLES <= 100 &&
+              YOKE_ENDSTOP_MIN_SPAN > 0 && YOKE_ENDSTOP_CAPTURE_TOLERANCE > 0,
+              "Revisar antirrebote y tolerancias de topes");
+
 // ============================================================
 // PINES - PUENTE H (2 PWM por eje, igual que el proyecto original)
 // ============================================================

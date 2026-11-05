@@ -29,9 +29,10 @@ Lo normal es compilar con `probar.ps1`, desde la raiz del repositorio:
 powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Pico
 ```
 
-Opciones de variante: `-Encoders`, `-Potentiometers`, `-As5600`, `-PruebaFalla`;
-`-Todo` incluye todo y `-Bridge` el puente. `probar.ps1` llama a
-`herramientas/compilacion/Build-Pico2.ps1`, que admite los mismos interruptores
+Opciones de variante: `-Encoders`, `-Potentiometers`, `-As5600`, `-Topes`, `-PruebaFalla`;
+`-Todo` incluye todo menos `-PruebaFalla`, y `-Bridge` el puente. `Build-Pico2.ps1`
+separa `-Topes` en `-Topes` y `-TopesAs5600`. `probar.ps1` llama a
+`herramientas/compilacion/Build-Pico2.ps1`, que admite los demas interruptores
 de variante y estos parametros: `-SdkPath`, `-TinyUsbPath`, `-ToolchainBin`,
 `-CMake`, `-Ninja`, `-PicotoolDir`, `-PioasmDir` y `-BuildRoot`.
 
@@ -48,6 +49,8 @@ Binarios generados:
 - `build-pico2-encoders/MiYoke_PD.uf2`: fuerza encoders (modo 0).
 - `build-pico2-potentiometers/MiYoke_PD.uf2`: fuerza potenciometros (modo 2).
 - `build-pico2-as5600/MiYoke_PD.uf2`: fuerza AS5600 (modo 3).
+- `build-pico2-topes/MiYoke_PD.uf2`: simulacion (modo 1) con calibracion de topes por finales de carrera.
+- `build-pico2-topes-as5600/MiYoke_PD.uf2`: AS5600 (modo 3) con calibracion de topes.
 - `build-pico2-prueba-falla/MiYoke_PD.uf2`: HardFault provocado a los 20 s, solo para validar el diagnostico; no usar para volar.
 
 Los binarios reflejan la configuracion del momento de compilacion. Si se cambian
@@ -72,6 +75,7 @@ de la pata del conector. Este pinout corresponde a Raspberry Pi Pico 2.
 | Encoder Roll B (modo alternativo) | GP1 | 2 |
 | Encoder Pitch A (modo alternativo) | GP2 | 4 |
 | Encoder Pitch B (modo alternativo) | GP3 | 5 |
+| Finales de carrera (`YOKE_ENDSTOP_CALIBRATION 1`): Roll NEG, Roll POS, Pitch NEG, Pitch POS | GP0, GP1, GP2, GP3 | 1, 2, 4, 5 |
 | LCD SDA | GP4 | 6 |
 | LCD SCL | GP5 | 7 |
 | Roll PWM LEFT | GP6 | 9 |

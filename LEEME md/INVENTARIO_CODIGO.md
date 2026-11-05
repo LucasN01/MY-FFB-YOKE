@@ -44,6 +44,7 @@ Estados:
 | `PicoEncoder.h` | USO (condicional) | Cuadratura x4 por interrupción para la Pico. Lo usa `AxisEncoders.h`. |
 | `AxisPotentiometers.h` | USO (condicional) | Lectura de los potenciómetros por ADC0/ADC1. Se compila solo con `YOKE_POSITION_SOURCE 2`. |
 | `As5600Position.h` | USO (condicional) | Logica pura AS5600: centro, acumulacion de vueltas, histeresis, fallas y bloqueo; pruebas en `tests/as5600_checks.h`. |
+| `EndstopCalibration.h` | USO (condicional) | Logica pura de la calibracion de topes con finales de carrera (`YOKE_ENDSTOP_CALIBRATION`); pruebas en `tests/endstop_checks.h`. |
 | `AxisAs5600.h` | USO (condicional) | Driver I2C de los dos AS5600 en modo 3: lecturas, CONF, estado e informe AGC. |
 | `YokeI2C.h` | USO | Configuracion de I2C0 compartida por LCD y AS5600 de pitch. |
 | `PotentiometerPosition.h` | USO | Convierte la lectura ADC en posición y valida la calibración en tiempo de compilación. |
