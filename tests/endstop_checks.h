@@ -90,6 +90,45 @@ static void endstopChecks() {
         CHECK(inside*sign>0 && near(inside,dampFx.command(dampRx,axis,1,YokeSC::Damper,.5f*sign,-2*sign)));
     }
 
+    // Effects plus damper: into the stop the effects are limited and the brake stays whole.
+    const uint8_t damped=effects|YokeSC::Damper;
+    for(int sign=-1;sign<=1;sign+=2) {
+        YokeSC::Receiver rx; YokeSC::Effects fx;
+        int brakeOutweighs=0;
+        for(uint32_t t=0;t<=4000;t+=2) {
+            if(t%20==0) { endstopFrame(f,uint16_t(t/20+1),0,0); feed4(rx,f,t); }
+            fx.update(rx,t,true);
+            for(uint8_t axis=0;axis<2;++axis) {
+                const float begin=axis==0 ? ROLL_ENDSTOP_ZONE_START : PITCH_ENDSTOP_ZONE_START;
+                const float end=axis==0 ? ROLL_ENDSTOP_ZONE_FULL : PITCH_ENDSTOP_ZONE_FULL;
+                for(float x : {(begin+end)*.5f*sign,float(sign)}) {
+                    const float into=2.f*sign;
+                    const float total=fx.command(rx,axis,1,damped,x,into);
+                    const float undamped=fx.command(rx,axis,1,effects,x,into);
+                    const float brake=total-undamped;
+                    CHECK(brake*sign<=0); // 0 when the effects alone saturate EXTRA_LIMIT
+                    const float out=fx.commandWithPositionSource(rx,axis,1,x,damped,false,into);
+                    CHECK(std::fabs(out-(endstopLimited(undamped,x,begin,end)+brake))<.00001f);
+                    if(std::fabs(x)>=end) CHECK(out*sign<=0); // at the stop: nothing pushes into it
+                    CHECK(std::fabs(out)<=std::fmax(std::fabs(total),std::fabs(brake))+.00001f);
+                    if(undamped*sign>0 && total*sign<0) ++brakeOutweighs;
+                    // Moving away, the damper pushes into the stop: limited with everything else.
+                    const float away=fx.command(rx,axis,1,damped,x,-into);
+                    CHECK(near(fx.commandWithPositionSource(rx,axis,1,x,damped,false,-into),
+                        endstopLimited(away,x,begin,end)));
+                }
+            }
+        }
+        CHECK(brakeOutweighs>0); // the case found by review really ran
+    }
+
+    // Continuity when the sum crosses zero while braking.
+    for(int i=-1000;i<=1000;++i) {
+        const float x=.94f, brake=-.1f, step=.001f;
+        const float a=endstopLimited(i*step,x,start,full)+brake, b=endstopLimited((i+1)*step,x,start,full)+brake;
+        CHECK(std::fabs(a-b)<=step+.00001f);
+    }
+
     // Simulator mode without position (frame version 3): no force at all.
     YokeSC::Receiver oldRx; YokeSC::Effects oldFx;
     for(uint32_t t=0;t<=1000;t+=2) {
