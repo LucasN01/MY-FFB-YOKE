@@ -56,10 +56,12 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 - Diseno (Claude, modo Flujo): el documento de diseno incluye la seccion "Documentacion afectada" con archivo, seccion/ecuacion y que debe decir; o indica explicitamente "No afecta documentacion".
 - La tesis (.tex) la redacta, edita y compila Claude al final, cuando su revision da "aprobado". En "Documentacion afectada" del diseno figura como "la actualiza Claude al aprobar"; Codex no la toca.
 - Implementacion (Codex): actualiza los demas documentos afectados (LEEME y otros .md/.txt) y los incluye por nombre en el mismo commit que el codigo, antes de ejecutar nueva-version.ps1, para que la copia de la version quede coherente.
-- Revision (Claude): verifica que la documentacion coincida con el codigo nuevo (formulas, constantes, unidades, nombres) y que no haya cambios innecesarios. Documentacion faltante o desactualizada = "requiere cambios".
+- Revision (quien revisa, Claude o Codex): verifica que la documentacion coincida con el codigo nuevo (formulas, constantes, unidades, nombres) y que no haya cambios innecesarios. Documentacion faltante o desactualizada = "requiere cambios".
 
 ## ROL DE CODEX EN EL FLUJO (regla del usuario)
-- Codex implementa especificaciones disenadas por Claude. No re-analiza ni redisena.
+- REPARTO POR RIESGO (regla del usuario, 2026-11-05): las tareas mecanicas las implementa Codex; el codigo critico de firmware lo implementa Claude y Codex lo revisa. El mensaje de lanzamiento indica el rol.
+- Rol revisor: no editar codigo ni hacer commits, ni ejecutar nueva-version.ps1. Primero buscar defectos con libertad; despues marcar cada punto de la lista de control indicada como cumple, parcial o no, con evidencia. Escribir el resultado en el archivo indicado por el mensaje: "aprobado" o "requiere cambios", y hallazgos con severidad, archivo:linea, efecto y correccion exacta. Lo que solo se puede comprobar con hardware va como hipotesis, no como bloqueante. Sin evidencia por punto no se aprueba. Si Claude objeta un hallazgo, intentar refutar la objecion con el codigo.
+- Rol implementador: Codex implementa especificaciones disenadas por Claude. No re-analiza ni redisena.
 - Si la especificacion es ambigua, incompleta o contradice el codigo existente, se detiene y lo informa en HANDOFF en lugar de suponer.
 - Al terminar, el HANDOFF indica: archivos modificados, documentacion actualizada, si compila y la version creada.
 - Instrucciones: las escribe Claude en HANDOFF.md, seccion "Plan para Codex"; el mensaje (del usuario o de Claude) solo indica leerlo (y que parte hacer, si esta dividido).
@@ -72,7 +74,7 @@ Cuando un cambio de codigo modifica algo que esta descripto en documentacion (.m
 
 ## AGENTES (Agency Agents) – aplicacion obligatoria
 - Toda implementacion → Minimal Change Engineer: cambiar solo lo especificado. Sin refactorizaciones, renombres, reformateos ni "mejoras" adicionales. Lo que parezca mejorable se anota en HANDOFF como sugerencia, sin aplicarlo.
-- Sin subagentes de revision: Codex no lanza revisores (Code Reviewer, Embedded Firmware Engineer u otros) ni repite revisiones; la revision la hace Claude despues. Los perfiles de esta lista se aplican como criterios propios al escribir el codigo.
+- Sin subagentes de revision: Codex no lanza revisores (Code Reviewer, Embedded Firmware Engineer u otros) ni repite revisiones. Lo que Codex implementa lo revisa Claude despues; cuando Codex es el revisor, revisa el mismo con la lista de control. Los perfiles de esta lista se aplican como criterios propios al escribir el codigo.
 - Codigo de firmware → Embedded Firmware Engineer: respetar el lazo de control de 2 ms, nada bloqueante dentro del lazo (delay, Serial bloqueante, String), sin memoria dinamica en el lazo, saturar la fuerza antes de convertirla a PWM, mantener tipos y unidades de la especificacion.
 - Commits y versionado → Git Workflow Master, limitado a la regla VERSIONADO OBLIGATORIO Y AUTOMATICO: commit por nombre de archivo y nueva-version.ps1. Prohibido: git add . / git add -A, rebase, reescritura de historial, force push, crear o borrar tags a mano y cambiar la estrategia de ramas sin pedido del usuario.
 
