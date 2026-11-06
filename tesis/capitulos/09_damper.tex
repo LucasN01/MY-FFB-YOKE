@@ -388,17 +388,34 @@ L(u_a,x_a), & Dx_a\ge0.
 Con $Dx_a<0$ el yugo se mueve hacia el tope y el damper lo frena: el limitador no quita ese frenado, porque de lo contrario la vibración podría anularlo justo en ese momento. En consecuencia, la orden hacia el centro puede resultar mayor que sin limitador, aunque su magnitud no supera $\max(|D|,|u_a|)$. En una prueba de computadora con efectos reales, en $x=+1$ y $v=+2$, una orden de $-0.0059$ pasó a ser $-0.1188$: la parte de los efectos hacia el tope se eliminó y quedó el frenado. Si el yugo se aleja del tope, el damper empuja hacia él y se limita junto con el resto. Si la orden con damper y sin él quedan en el mismo límite de saturación, $D=0$ y no hay frenado que conservar. Con el yugo quieto, $D=0$ y la orden hacia el centro no cambia.
 
 \subsubsection{Los cuatro modos de posición}
-Los cuatro modos de la Sección~\ref{sec:adquisicion_movimiento} usan esta misma función y la misma posición con la que se calculan las fuerzas, pero la protección depende de que $\pm1$ coincida con el tope físico:
+Los cuatro modos de la Sección~\ref{sec:adquisicion_movimiento} usan esta misma función y, sin la calibración de la Sección~\ref{sec:calibracion_topes}, la misma posición con la que se calculan las fuerzas, pero la protección depende de que $\pm1$ coincida con el tope físico:
 \begin{itemize}
 \item \textbf{Potenciómetros:} requiere la calibración del menú. Con un recorrido corto, la histéresis de 4 cuentas puede impedir que el tope se lea dentro de la zona; se necesitan al menos 200 cuentas por lado.
 \item \textbf{Encoders y AS5600 con centro al encender:} los extremos son constantes de compilación relativas al encendido. Encender fuera del centro desplaza la zona. Una falla del AS5600 ya anula la orden por otra vía.
 \item \textbf{Posición simulada:} usa la posición recibida, por lo que depende de la calibración del eje en el simulador. Sin posición disponible la orden es cero.
 \end{itemize}
 
+\subsubsection{Calibración de topes con finales de carrera}
+\label{sec:calibracion_topes}
+Con \code{YOKE_ENDSTOP_CALIBRATION} en 1 (\code{mis_defines.h}; por defecto 0, porque los sensores todavía no están instalados), el firmware aprende en cada encendido dónde están los topes, a partir de cuatro finales de carrera, uno por tope (GP0 a GP3). Con la bandera en 0, el código de la calibración no se compila y las fuerzas no cambian. Lo registrado vive solo en RAM, de modo que el procedimiento se repite en cada encendido, también tras un reinicio por \emph{watchdog}.
+
+Hasta terminar, la orden y el PWM son cero en ambos ejes. El usuario lleva el yugo a los cuatro topes, en cualquier orden. Un sensor accionado, confirmado por un antirrebote de 5 ciclos, registra la posición del eje mientras dure accionado, siempre que la muestra sea válida y finita, y conserva el valor más extremo; así se absorbe el retardo de la posición simulada. La muestra es válida, según el modo, con telemetría vigente y posición disponible (posición simulada, lo que exige un vuelo corriendo y sin pausa), con un AS5600 sano, o siempre en potenciómetros y encoders. El procedimiento termina cuando los cuatro topes están registrados y ningún sensor sigue accionado, ni siquiera dentro del antirrebote, para no devolver la fuerza con el yugo contra un tope.
+
+Con $p_a^{-}$ y $p_a^{+}$ los topes registrados del eje $a$, el centro es su punto medio y la coordenada de tope es:
+\begin{equation}
+x_{t,a}=\frac{p_a-c_a}{\left(p_a^{+}-p_a^{-}\right)/2},\qquad c_a=\frac{p_a^{+}+p_a^{-}}{2}.
+\label{eq:coordenada_tope}
+\end{equation}
+Esta coordenada vale $\pm1$ en los topes, puede superar ese valor, y reemplaza a $x_a$ en las Ecuaciones~\eqref{eq:limite_topes} y \eqref{eq:limite_topes_damper}. Es lo único que cambia: centrado, damper y fricción conservan la posición del modo, por lo que el centro registrado no recentra el resorte. En los modos locales se calibra con la posición sin recortar, porque un encoder encendido fuera del centro puede pasar de $\pm1$.
+
+La calibración se descarta y se pide repetir, siempre sin fuerza, si los dos sensores de un eje quedan accionados a la vez (sensor invertido o polaridad equivocada), si el recorrido $p_a^{+}-p_a^{-}$ es menor que $0.50$ (sensores del mismo eje cruzados o mal ubicados), si un tope registrado queda a más de $0.10$ del extremo alcanzado por el yugo durante la calibración (sensores de ejes distintos cruzados) o si queda a más de $0.10$ de la última muestra con el sensor accionado (muestra suelta hacia afuera). Estas tolerancias son hipótesis a validar con ensayo.
+
+Los sensores de ejes distintos cruzados solo se detectan moviendo un eje por vez: con los dos ejes movidos juntos, las señales no distinguen el eje. Se aceptó este límite porque todo valor registrado es una muestra del recorrido observado de su propio eje, de modo que el tope aprendido no queda más afuera que lo recorrido y, en el peor caso, el limitador actúa antes. Rechazar los movimientos diagonales invalidaría calibraciones correctas sin una ganancia de seguridad. Los sensores no se usan fuera de la calibración.
+
 \subsubsection{Alcance y validación}
 El limitador no regula corriente: si se sostiene el yugo a mano contra el tope, el centrado mantiene una orden hacia el centro con el motor frenado. Tampoco detecta el tope por sí mismo, ya que depende de la posición informada.
 
-La copia local de TelemFFB no contiene un mecanismo equivalente, de modo que los valores de $S$ y $F$ son una hipótesis a validar con ensayo. Se verificó con pruebas de computadora (\code{tests/endstop_checks.h}) la ley, la continuidad y el comportamiento con efectos reales en los topes, y la compilación de las variantes de firmware. No se dispone todavía de un ensayo con hardware. Una simulación simplificada de un eje sugiere la posibilidad de un ciclo límite con retardos de posición de 20 a 50 ms, como podría ocurrir con posición simulada; es una hipótesis pendiente de comprobar.
+La copia local de TelemFFB no contiene un mecanismo equivalente, de modo que los valores de $S$ y $F$ son una hipótesis a validar con ensayo. Se verificó con pruebas de computadora (\code{tests/endstop_checks.h}) la ley, la continuidad y el comportamiento con efectos reales en los topes, la lógica de la calibración (sus 24 órdenes de visita, el antirrebote y los rechazos), y la compilación de las variantes de firmware. No se dispone todavía de un ensayo con hardware; tampoco se confirmó la polaridad de los sensores reales. Una simulación simplificada de un eje sugiere la posibilidad de un ciclo límite con retardos de posición de 20 a 50 ms, como podría ocurrir con posición simulada; es una hipótesis pendiente de comprobar.
 
 \subsection{Procedencia: proyecto actual, original alemán y referencias}
 \label{sec:origen_damper_friccion}
