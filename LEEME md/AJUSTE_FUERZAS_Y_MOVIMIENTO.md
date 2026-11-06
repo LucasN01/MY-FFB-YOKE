@@ -97,8 +97,9 @@ finales de carrera), los motores arrancan **sin fuerza** en cada encendido:
 
 1. En modo simulador, abrir un vuelo sin pausa con el puente conectado. El LCD muestra
    `SIN POSICION` mientras no haya posicion valida.
-2. Llevar el yugo a los 4 topes, en cualquier orden. La segunda fila del LCD muestra
-   los pendientes (`R- R+ P- P+`).
+2. Llevar el yugo a los 4 topes, en cualquier orden y moviendo un eje por vez (con los
+   dos ejes juntos no se detectan sensores de ejes distintos cruzados). La segunda fila
+   del LCD muestra los pendientes (`R- R+ P- P+`).
 3. Soltar el ultimo tope (`SOLTAR TOPE`). Recien ahi vuelve la fuerza.
 
 El centro es el punto medio de los dos topes de cada eje. Lo registrado vive en RAM,

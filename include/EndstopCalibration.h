@@ -59,7 +59,8 @@ public:
             if(!taken[i] || ((i&1) ? p>value[i] : p<value[i])) value[i]=p;
             last[i]=p; taken[i]=true; rejected=false;
         }
-        for(uint8_t i=0;i<StopCount;++i) if(!taken[i] || stable[i]) return;
+        // pressed too: a switch still in its debounce must not hand the force back.
+        for(uint8_t i=0;i<StopCount;++i) if(!taken[i] || stable[i] || pressed[i]) return;
         finish();
     }
     // Position in stop coordinates: +-1 at the learned stops, 0 at their midpoint.

@@ -79,6 +79,23 @@ static void endstopCalibrationChecks() {
         CHECK(c.ready());
     }
 
+    // A switch pressed again during the last release keeps the motors blocked, even in its debounce.
+    for(int stop=0;stop<StopCount;++stop) {
+        Calibration c;
+        const float roll=stop==RollNeg ? -1.f : 1.f, pitch=stop==PitchNeg ? -1.f : 1.f;
+        calibrationVisit(c,RollNeg,-1); calibrationVisit(c,RollPos,1); calibrationVisit(c,PitchNeg,-1);
+        calibrationStep(c,{PitchPos},1,1);
+        calibrationStep(c,{},1,1,true,YOKE_ENDSTOP_SWITCH_DEBOUNCE_CYCLES-1);
+        calibrationStep(c,{stop},roll,pitch,true,1); // the release ends here
+        CHECK(!c.ready());
+        calibrationStep(c,{stop},roll,pitch);
+        CHECK(!c.ready());
+        calibrationStep(c,{},roll,pitch,true,YOKE_ENDSTOP_SWITCH_DEBOUNCE_CYCLES-1);
+        CHECK(!c.ready());
+        calibrationStep(c,{},roll,pitch);
+        CHECK(c.ready());
+    }
+
     // Invalid or non-finite samples record nothing; valid ones while held do.
     {
         Calibration c;
@@ -140,6 +157,20 @@ static void endstopCalibrationChecks() {
         calibrationVisit(c,RollPos,1); calibrationVisit(c,PitchPos,1);
         CHECK(!c.ready());
         good(c); CHECK(c.ready());
+    }
+    {   // Known limit: axes moved together cannot tell crossed sensors apart. Values stay correct.
+        Calibration c;
+        calibrationStep(c,{RollNeg,PitchNeg},-1,-1); calibrationStep(c,{},-1,-1); calibrationStep(c,{},0,0);
+        calibrationStep(c,{RollPos,PitchPos},1,1); calibrationStep(c,{},1,1);
+        CHECK(c.ready());
+        CHECK(std::fabs(c.normalized(0,-1)+1)<.00001f && std::fabs(c.normalized(1,1)-1)<.00001f);
+    }
+    {   // Same limit, axis short of its stop: the stop is learned early, never beyond the travel seen.
+        Calibration c;
+        calibrationStep(c,{RollNeg,PitchNeg},-.7f,-1); calibrationStep(c,{},-.7f,-1); calibrationStep(c,{},0,0);
+        calibrationStep(c,{RollPos,PitchPos},1,1); calibrationStep(c,{},1,1);
+        CHECK(c.ready());
+        CHECK(std::fabs(c.normalized(0,-.7f)+1)<.00001f);
     }
     {   // One sensor inverted: pressed everywhere except at its stop.
         Calibration c;

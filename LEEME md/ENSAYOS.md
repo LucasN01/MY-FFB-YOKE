@@ -47,7 +47,7 @@ El script crea `ensayos/AAAAMMDD-HHMMSS_<Nombre>/`, `rutina.txt` y `marcas.csv`.
 1. Sensores, sin vuelo: medir el nivel en GP0..GP3 suelto y accionado, con el pull-up interno activo, y ajustar `ENDSTOP_SWITCH_ACTIVE_LEVEL`. Con la polaridad equivocada, el LCD muestra `REPETIR TOPES` en reposo.
 2. Antes de terminar: `cmd` y `pwm` en 0 con efectos activos (el registro marca `flags&Menu`).
 3. Visitar los 4 topes en otro orden en cada repeticion; comprobar la lista del LCD y que la fuerza vuelva solo al soltar el ultimo.
-4. Cruzar a proposito dos sensores del mismo eje y luego de ejes distintos: debe pedir `REPETIR TOPES` y seguir sin fuerza.
+4. Cruzar a proposito dos sensores del mismo eje y luego de ejes distintos, moviendo **un eje por vez** (con los dos ejes juntos, los cruces entre ejes no se detectan): debe pedir `REPETIR TOPES` y seguir sin fuerza.
 5. Reiniciar la placa: debe pedir de nuevo la calibracion.
 6. Repetir F-tope. Si la lista no se completa o rechaza siempre, revisar la zona activa del sensor contra `YOKE_ENDSTOP_CAPTURE_TOLERANCE`.
 
