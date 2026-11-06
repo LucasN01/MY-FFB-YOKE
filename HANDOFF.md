@@ -28,27 +28,23 @@
 
 \## Plan para Codex
 
-Tarea: Revisar calibracion de topes con finales de carrera - ronda 2
+Tarea: sin trabajo pendiente para Codex
 
-(Claude, 2026-11-06.) Segunda y ultima ronda de revision. **Codex solo revisa, no edita ni commitea** (se permite crear copias y salida en `tmp/`). Rama `mejora/limite-topes`, sin version: la crea Claude despues del aprobado.
-
-1. Leer `tmp/respuesta_claude_ronda1.md`, `tmp/revision_codex.md` (tu ronda 1) y `tmp/lista_control_calibracion_topes.md`. Ver el cambio con `git diff c03caaf..HEAD`.
-2. H1: comprobar la correccion con tu reproduccion y en una copia en `tmp/` quitar `|| pressed[i]` para ver que la regresion falla.
-3. H2: intentar refutar la decision con el criterio escrito en `tmp/respuesta_claude_ronda1.md`. Si no se puede refutar, marcarlo como limite aceptado y no como defecto.
-4. Puntos 11, 12 y 13: verificar la evidencia y mirar el desensamblado del modo 1 (`tmp/comparador_v29/`, `tmp/v29_fuente`). No hace falta repetir todo si la evidencia alcanza.
-5. Buscar defectos nuevos que hayan entrado con este cambio. Volver a marcar cada punto de la lista como cumple, parcial o no, con evidencia; lo fisico de ensayo queda como pendiente del usuario, no bloqueante. Pruebas: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1` (agregar `-Todo -PruebaFalla` solo si hace falta).
-6. Escribir temprano y dejar el resultado en `tmp/revision_codex.md`, reemplazando su contenido: hallazgos, tabla por punto y veredicto "aprobado" o "requiere cambios". No tocar `tesis/`, `HANDOFF.md` ni crear versiones.
+(Claude, 2026-11-06.) La revision de la calibracion de topes termino aprobada en la ronda 2.
 
 \## Última entrega
 
 - Calibracion de topes con 4 finales de carrera implementada por Claude en `mejora/limite-topes`, sobre V2.9. Bandera `YOKE_ENDSTOP_CALIBRATION`, 0 por defecto; modo de posicion sin cambios (1, simulacion). Diseno: `LEEME md/DISENO_calibracion_topes.md`.
 - Limitador de topes (V2.9): diseno `LEEME md/DISENO_limite_topes.md`, revision de Codex de dos rondas, tesis actualizada.
-- Pendiente: revision de Codex, version, tesis y PDF (el usuario pidio generarlo al final), ensayos F-calibracion y F-tope con hardware (`LEEME md/ENSAYOS.md`) y tiempo de ciclo.
+- Tesis actualizada (`tesis/capitulos/09_damper.tex`, seccion `sec:calibracion_topes`) y PDF generado en `tesis/main.pdf`.
+- Pendiente: crear la version. `nueva-version.ps1` se detiene por la carpeta sin rastrear `modelizacion motor 775/` (`tacometro_lm393.ino`, del usuario); el usuario decide si se commitea o se ignora.
+- Pendiente del usuario: ensayos F-calibracion y F-tope con hardware (`LEEME md/ENSAYOS.md`), polaridad de los sensores y tiempo de ciclo.
 - Sigue pendiente de la tarea anterior: ensayos H0-H13 de la migracion a Pico SDK (detalle en `LEEME md/DISENO_migracion_pico_sdk.md` seccion 7).
 
 \## Revisión
 
-Ronda 1 de Codex (2026-11-06): requiere cambios. H1 (sensor reaccionado durante el antirrebote habilitaba la fuerza): aplicado. H2 (cruce entre ejes con movimientos combinados): decision de diseno, limite aceptado y documentado, a refutar por Codex. Puntos parciales 11, 12 y 13: evidencia en `tmp/respuesta_claude_ronda1.md`. Ronda 2 pendiente.
+Ronda 1 de Codex (2026-11-06): requiere cambios. H1 (sensor reaccionado durante el antirrebote habilitaba la fuerza): aplicado. H2 (cruce entre ejes con movimientos combinados): limite aceptado y documentado.
+Ronda 2 de Codex (2026-11-06): **aprobado**, con evidencia en los 21 puntos de la lista. H2 no se pudo refutar. El punto 16 queda parcial solo por la medicion fisica, pendiente del usuario.
 
 \## Ensayos del usuario
 
