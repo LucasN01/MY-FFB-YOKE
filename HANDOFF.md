@@ -37,6 +37,7 @@ Tarea: sin trabajo pendiente para Codex
 - Calibracion de topes con 4 finales de carrera implementada por Claude en `mejora/limite-topes`, sobre V2.9. Bandera `YOKE_ENDSTOP_CALIBRATION`, 0 por defecto; modo de posicion sin cambios (1, simulacion). Diseno: `LEEME md/DISENO_calibracion_topes.md`.
 - Limitador de topes (V2.9): diseno `LEEME md/DISENO_limite_topes.md`, revision de Codex de dos rondas, tesis actualizada.
 - Tesis actualizada (`tesis/capitulos/09_damper.tex`, seccion `sec:calibracion_topes`) y PDF generado en `tesis/main.pdf`.
+- Las salidas de firmware pasan a `build/build-pico2*/` (el usuario movio las carpetas; `Build-Pico2.ps1`, `ARRANQUE.ps1`, `.gitignore` y documentos vigentes actualizados). Guia de los UF2: `tesis/guia_firmware.tex`.
 - Version V3.0 creada. La carpeta del usuario `modelizacion motor 775/` (`tacometro_lm393.ino`) queda fuera de git solo en este equipo, por `.git/info/exclude`, a pedido del usuario: `git status` no la muestra y no entra en las versiones.
 - Pendiente del usuario: ensayos F-calibracion y F-tope con hardware (`LEEME md/ENSAYOS.md`), polaridad de los sensores y tiempo de ciclo.
 - Sigue pendiente de la tarea anterior: ensayos H0-H13 de la migracion a Pico SDK (detalle en `LEEME md/DISENO_migracion_pico_sdk.md` seccion 7).
