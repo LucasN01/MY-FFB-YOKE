@@ -28,15 +28,16 @@
 
 \## Plan para Codex
 
-Tarea: Revisar calibracion de topes con finales de carrera
+Tarea: Revisar calibracion de topes con finales de carrera - ronda 2
 
-(Claude, 2026-11-05.) Tarea critica: Claude diseno e implemento; **Codex solo revisa, no edita ni commitea** (se permite crear copias y salida en `tmp/`). Rama `mejora/limite-topes`, ya commiteada, sin version: la crea Claude despues del aprobado.
+(Claude, 2026-11-06.) Segunda y ultima ronda de revision. **Codex solo revisa, no edita ni commitea** (se permite crear copias y salida en `tmp/`). Rama `mejora/limite-topes`, sin version: la crea Claude despues del aprobado.
 
-1. Leer `LEEME md/DISENO_calibracion_topes.md` y `tmp/lista_control_calibracion_topes.md`. Ver el cambio con `git diff V2.9..HEAD`. Orientarse con `graphify query`/`explain`; en archivos grandes leer solo lo ubicado por busqueda.
-2. Buscar defectos con libertad primero, sin seguir la lista. Despues marcar cada punto como cumple, parcial o no, con evidencia (archivo:linea o prueba ejecutada). Sin evidencia por punto no vale el aprobado.
-3. Punto 19: probar las mutaciones en una copia dentro de `tmp/`, sin tocar los archivos del repo. El bloqueo de `src/main.cpp` no tiene prueba en PC: justificarlo por lectura y decirlo.
-4. Pruebas: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1 -Todo -PruebaFalla`. Si Ninja se queda sin actividad dentro del sandbox, indicarlo en vez de esperar.
-5. Dejar el resultado en `tmp/revision_codex.md`, reemplazando su contenido: hallazgos libres, tabla por punto y veredicto "aprobado" o "requiere cambios". No tocar `tesis/`, `HANDOFF.md` ni crear versiones.
+1. Leer `tmp/respuesta_claude_ronda1.md`, `tmp/revision_codex.md` (tu ronda 1) y `tmp/lista_control_calibracion_topes.md`. Ver el cambio con `git diff c03caaf..HEAD`.
+2. H1: comprobar la correccion con tu reproduccion y en una copia en `tmp/` quitar `|| pressed[i]` para ver que la regresion falla.
+3. H2: intentar refutar la decision con el criterio escrito en `tmp/respuesta_claude_ronda1.md`. Si no se puede refutar, marcarlo como limite aceptado y no como defecto.
+4. Puntos 11, 12 y 13: verificar la evidencia y mirar el desensamblado del modo 1 (`tmp/comparador_v29/`, `tmp/v29_fuente`). No hace falta repetir todo si la evidencia alcanza.
+5. Buscar defectos nuevos que hayan entrado con este cambio. Volver a marcar cada punto de la lista como cumple, parcial o no, con evidencia; lo fisico de ensayo queda como pendiente del usuario, no bloqueante. Pruebas: `powershell -ExecutionPolicy Bypass -File herramientas/compilacion/probar.ps1` (agregar `-Todo -PruebaFalla` solo si hace falta).
+6. Escribir temprano y dejar el resultado en `tmp/revision_codex.md`, reemplazando su contenido: hallazgos, tabla por punto y veredicto "aprobado" o "requiere cambios". No tocar `tesis/`, `HANDOFF.md` ni crear versiones.
 
 \## Última entrega
 
@@ -47,7 +48,7 @@ Tarea: Revisar calibracion de topes con finales de carrera
 
 \## Revisión
 
-(Sin revision de esta entrega todavia.)
+Ronda 1 de Codex (2026-11-06): requiere cambios. H1 (sensor reaccionado durante el antirrebote habilitaba la fuerza): aplicado. H2 (cruce entre ejes con movimientos combinados): decision de diseno, limite aceptado y documentado, a refutar por Codex. Puntos parciales 11, 12 y 13: evidencia en `tmp/respuesta_claude_ronda1.md`. Ronda 2 pendiente.
 
 \## Ensayos del usuario
 
