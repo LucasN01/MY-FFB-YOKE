@@ -69,7 +69,7 @@ try {
     if ((Get-Item -LiteralPath (Join-Path $BuildRoot "$target.bin")).Length -ge 0x3FE000) {
         throw 'El firmware alcanza el sector EEPROM (0x3FE000); no se copio a la carpeta de salida.'
     }
-    $outputPath = Join-Path $Raiz $outputFolder
+    $outputPath = Join-Path (Join-Path $Raiz 'build') $outputFolder
     New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
     foreach ($ext in @('uf2', 'elf', 'bin', 'map')) {
         $sourceExt = if ($ext -eq 'map') { 'elf.map' } else { $ext }
@@ -83,7 +83,7 @@ try {
     $flashUsed = [long]$sizes[0] + [long]$sizes[1]
     $ramUsed = [long]$sizes[1] + [long]$sizes[2]
     Write-Host "Flash usada: $flashUsed bytes; RAM usada: $ramUsed bytes"
-    Write-Host "Firmware generado en $outputFolder. No se cargo en la placa."
+    Write-Host "Firmware generado en build/$outputFolder. No se cargo en la placa."
     exit 0
 } catch {
     Write-Error $_ -ErrorAction Continue

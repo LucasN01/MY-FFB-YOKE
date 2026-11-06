@@ -18,7 +18,7 @@
    durante la carga del simulador. Si cambio, pide reiniciar el lanzador.
 
 Segui usando **INICIAR SIMULADOR.cmd** o **INICIAR SIMULADOR V3.cmd**.
-La version SC8 requiere cargar el nuevo firmware `build-pico2/MiYoke_PD.uf2` y usar el puente SC8.
+La version SC8 requiere cargar el nuevo firmware `build/build-pico2/MiYoke_PD.uf2` y usar el puente SC8.
 La deteccion del COM sigue siendo automatica. Ver [calculo en Pico](LEEME%20md/CALCULO_PICO_SC8.md).
 El ejecutable actual esta en `SimConnectBridge/bin/Win32/RealismoSC8`.
 

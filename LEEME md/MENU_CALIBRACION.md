@@ -126,12 +126,12 @@ conserva al migrar del firmware Arduino-Pico al Pico SDK.
 ## Compilacion
 
 Se compila con el Pico SDK y CMake mediante `Build-Pico2.ps1` (lo llama
-`probar.ps1 -Pico`; ver LEEME_PICO2.md). El UF2 es `MiYoke_PD.uf2` en cada carpeta `build-pico2*`.
+`probar.ps1 -Pico`; ver LEEME_PICO2.md). El UF2 es `MiYoke_PD.uf2` en cada carpeta `build/build-pico2*`.
 
 - `Build-Pico2.ps1`: usa la fuente de mis_defines.h (actualmente 1).
 - `Build-Pico2.ps1 -Encoders`: fuerza modo 0.
 - `Build-Pico2.ps1 -Potentiometers`: fuerza modo 2, genera el UF2 en
-  `build-pico2-potentiometers`.
+  `build/build-pico2-potentiometers`.
 
 Son firmwares para **Pico 2**, no para Pico original. No se cargan automaticamente.
 La verificacion fisica de LCD, pulsadores, sentido, ruido y persistencia al

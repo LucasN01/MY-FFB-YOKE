@@ -7,7 +7,7 @@ $Raiz = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 if (-not (Test-Path -LiteralPath (Join-Path $Raiz 'src/main.cpp'))) { throw "No se encontro src/main.cpp en $Raiz (raiz del repositorio)." }
 function Select-Elf([string]$boot) {
     $build = if ($boot -match '\betapa=15:PRUEBA\b') { 'build-pico2-prueba-falla' } else { 'build-pico2' }
-    Join-Path $Raiz ($build + '\MiYoke_PD.elf')
+    Join-Path $Raiz ('build\' + $build + '\MiYoke_PD.elf')
 }
 $ErrorActionPreference = 'Stop'
 try {

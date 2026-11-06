@@ -1,12 +1,5 @@
 # Compilación y artefactos generados
-build-pico2/
-build-pico2-encoders/
-build-pico2-potentiometers/
-build-pico2-as5600/
-build-pico2-prueba-falla/
-build-pico2-prueba-pila-*/
-build-pico2-topes/
-build-pico2-topes-as5600/
+/build/
 SimConnectBridge/bin/
 SimConnectBridge/obj/
 *.uf2

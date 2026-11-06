@@ -45,13 +45,13 @@ de variante y estos parametros: `-SdkPath`, `-TinyUsbPath`, `-ToolchainBin`,
 
 Binarios generados:
 
-- `build-pico2/MiYoke_PD.uf2`: configuracion de `mis_defines.h` (hoy YOKE_POSITION_SOURCE=1, posicion desde SimConnect).
-- `build-pico2-encoders/MiYoke_PD.uf2`: fuerza encoders (modo 0).
-- `build-pico2-potentiometers/MiYoke_PD.uf2`: fuerza potenciometros (modo 2).
-- `build-pico2-as5600/MiYoke_PD.uf2`: fuerza AS5600 (modo 3).
-- `build-pico2-topes/MiYoke_PD.uf2`: simulacion (modo 1) con calibracion de topes por finales de carrera.
-- `build-pico2-topes-as5600/MiYoke_PD.uf2`: AS5600 (modo 3) con calibracion de topes.
-- `build-pico2-prueba-falla/MiYoke_PD.uf2`: HardFault provocado a los 20 s, solo para validar el diagnostico; no usar para volar.
+- `build/build-pico2/MiYoke_PD.uf2`: configuracion de `mis_defines.h` (hoy YOKE_POSITION_SOURCE=1, posicion desde SimConnect).
+- `build/build-pico2-encoders/MiYoke_PD.uf2`: fuerza encoders (modo 0).
+- `build/build-pico2-potentiometers/MiYoke_PD.uf2`: fuerza potenciometros (modo 2).
+- `build/build-pico2-as5600/MiYoke_PD.uf2`: fuerza AS5600 (modo 3).
+- `build/build-pico2-topes/MiYoke_PD.uf2`: simulacion (modo 1) con calibracion de topes por finales de carrera.
+- `build/build-pico2-topes-as5600/MiYoke_PD.uf2`: AS5600 (modo 3) con calibracion de topes.
+- `build/build-pico2-prueba-falla/MiYoke_PD.uf2`: HardFault provocado a los 20 s, solo para validar el diagnostico; no usar para volar.
 
 Los binarios reflejan la configuracion del momento de compilacion. Si se cambian
 pines, ganancias o calibracion, hay que volver a compilar. Ningun comando carga

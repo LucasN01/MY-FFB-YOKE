@@ -23,10 +23,10 @@ el EXE SC4 que ya funciona.
 - **3:** posicion desde encoders magneticos AS5600 por I2C; velocidad local con el mismo estimador. Ver [cableado, montaje y configuracion](LEEME_AS5600.md).
 
 La bandera gobierna centrado y toda la compensacion por movimiento.
-`Build-Pico2.ps1` respeta la bandera y escribe en `build-pico2`.
-`-Encoders` fuerza 0 y escribe en `build-pico2-encoders`.
-`-Potentiometers` fuerza 2 y escribe en `build-pico2-potentiometers`.
-`-As5600` fuerza 3 y escribe en `build-pico2-as5600`.
+`Build-Pico2.ps1` respeta la bandera y escribe en `build/build-pico2`.
+`-Encoders` fuerza 0 y escribe en `build/build-pico2-encoders`.
+`-Potentiometers` fuerza 2 y escribe en `build/build-pico2-potentiometers`.
+`-As5600` fuerza 3 y escribe en `build/build-pico2-as5600`.
 Los cuatro generan `MiYoke_PD.uf2` para Pico 2 (Pico SDK con CMake; ver LEEME_PICO2.md).
 
 ## Rango y ganancias

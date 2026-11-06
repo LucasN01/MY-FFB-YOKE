@@ -19,7 +19,7 @@ Rules:
 - herramientas/flujo/: lanzar-codex.py, nueva-version.ps1, compilar-tesis.ps1, graphify-sync.cmd (no generan version).
 - Los scripts de herramientas/ calculan la raiz como dos niveles arriba de su carpeta y funcionan desde cualquier directorio. Los comandos de estas reglas se escriben desde la raiz y con / (sirven en PowerShell y en Git Bash).
 - Firmware: src/main.cpp y src/hal/rp2350/ (implementacion de la HAL para el RP2350); include/ (cabeceras del firmware, que tambien usan el puente y tests/ como ../include/X.h) e include/hal/ (interfaces de la HAL). Herramientas externas fuera del repo en D:/pico/ (pico-sdk, tinyusb, toolchains/pqt-gcc-5.0.0, picotool, sdk-tools).
-- Generadas e ignoradas, en la raiz: build-pico2*/ (MiYoke_PD.uf2/.elf/.bin/.map de cada variante), ensayos/, logs/, tmp/, graphify-out/. El build de CMake va en %TEMP%\myk (o MIYOKE_BUILD_ROOT): ruta corta por el limite MAX_PATH de Windows. Fuera de git: Prepar3D-v3/ (la configuracion de Prepar3D V3 apunta ahi: no mover) y VPforce-TelemFFB-refactor/ (referencia).
+- Generadas e ignoradas, en la raiz: build/build-pico2*/ (MiYoke_PD.uf2/.elf/.bin/.map de cada variante), ensayos/, logs/, tmp/, graphify-out/. El build de CMake va en %TEMP%\myk (o MIYOKE_BUILD_ROOT): ruta corta por el limite MAX_PATH de Windows. Fuera de git: Prepar3D-v3/ (la configuracion de Prepar3D V3 apunta ahi: no mover) y VPforce-TelemFFB-refactor/ (referencia).
 
 ## AHORRO DE TOKENS: graphify, PDF y LaTeX (regla del usuario)
 - Codigo: antes de buscar o abrir archivos, orientarse con `graphify query`/`explain`/`path`. Leer directamente solo las lineas puntuales de un archivo ya identificado.
