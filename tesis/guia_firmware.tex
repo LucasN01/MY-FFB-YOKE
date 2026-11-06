@@ -1,0 +1,123 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{array,booktabs,tabularx,enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!45!black,urlcolor=blue!55!black}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlength{\emergencystretch}{3em}
+\setlist{nosep,leftmargin=1.5em}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\etiqueta}[1]{\par\vspace{2pt}\textbf{#1}}
+\newcommand{\variante}[2]{\subsection*{#1}\vspace{-4pt}\code{#2}\par}
+\title{Guía de firmware: qué archivo UF2 cargar}
+\author{Proyecto MiYoke\_PD, versión V3.0}
+\date{6 de noviembre de 2026}
+\begin{document}
+\maketitle
+\raggedright
+
+Cada carpeta \code{build-pico2*} de la raíz del repositorio contiene un \code{MiYoke_PD.uf2}. Esta guía indica para qué sirve cada uno, qué hay que hacer antes de cargarlo y qué instructivo lo acompaña. Los instructivos están en \code{LEEME md/}.
+
+\section*{Cuál cargar}
+\begin{center}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{5.6cm}>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Carpeta} & \textbf{Cuándo se usa} \\
+\midrule
+\code{build-pico2} & \textbf{Uso actual:} posición desde el simulador, sin finales de carrera. \\
+\code{build-pico2-topes} & Posición desde el simulador, con los 4 finales de carrera instalados. \\
+\code{build-pico2-potentiometers} & Posición desde potenciómetros. \\
+\code{build-pico2-encoders} & Posición desde encoders rotativos AB. \\
+\code{build-pico2-as5600} & Posición desde encoders magnéticos AS5600. \\
+\code{build-pico2-topes-as5600} & AS5600 con los 4 finales de carrera instalados. \\
+\code{build-pico2-prueba-falla} & Solo ensayo del diagnóstico de fallas. No sirve para volar. \\
+\code{build-pico2-prueba-pila-*} & No cargar: restos de una comparación anterior. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section*{Válido para todos}
+\begin{itemize}
+\item \textbf{Placa:} solo Raspberry Pi Pico 2 (RP2350); no cargarlos en una Pico original.
+\item \textbf{Carga:} conectar por USB con BOOTSEL apretado, soltarlo y copiar el \code{.uf2} a la unidad \code{RP2350}. La placa se reinicia sola.
+\item \textbf{Primera carga:} con la potencia de los motores desconectada. V3.0 todavía no se probó en la placa.
+\item \textbf{Fuerzas:} siempre vienen del simulador, también en los modos con sensores locales. Hay que abrirlo con \code{INICIAR SIMULADOR.cmd}; sin telemetría válida no hay fuerza.
+\item \textbf{Cambios de configuración:} cada binario refleja \code{include/mis_defines.h} al momento de compilar. Si se cambia una constante, hay que recompilar con \code{herramientas/compilacion/probar.ps1} y la opción indicada en cada variante.
+\item \textbf{Instructivos generales:} \code{LEEME_PICO2.md} (cableado y compilación), \code{AJUSTE_FUERZAS_Y_MOVIMIENTO.md} (modos y ajustes), \code{LEEME-LANZADOR.md} (inicio) y \code{ENSAYOS.md} (ensayos).
+\end{itemize}
+
+\newpage
+\section*{Variantes de uso normal}
+
+\variante{Configurada: simulación (modo 1)}{build-pico2/MiYoke_PD.uf2}
+Toma la posición y la velocidad del yugo desde el simulador (SimConnect), sin sensores de posición en la Pico. Es la configuración actual de \code{mis_defines.h}, con el limitador de topes activo y sin calibración.
+\etiqueta{Antes de usarla:}
+\begin{itemize}
+\item Calibrar los ejes en el simulador: el limitador supone que $\pm1$ coincide con el tope físico.
+\item Sin posición recibida, la orden es cero: hace falta un vuelo corriendo y sin pausa.
+\end{itemize}
+\etiqueta{Instructivos:} \code{LEEME_SIMCONNECT.md}, \code{AJUSTE_FUERZAS_Y_MOVIMIENTO.md}. \textbf{Recompilar:} \code{-Pico}.
+
+\variante{Simulación con calibración de topes}{build-pico2-topes/MiYoke_PD.uf2}
+Igual que la anterior, pero en cada encendido aprende los topes con 4 finales de carrera y el limitador usa esos valores. Los motores quedan sin fuerza hasta completar la calibración, que se repite en cada encendido.
+\etiqueta{Antes de usarla:}
+\begin{enumerate}
+\item Instalar los sensores: Roll$-$ GP0, Roll$+$ GP1, Pitch$-$ GP2, Pitch$+$ GP3.
+\item \textbf{Medir la polaridad} en GP0 a GP3, suelto y accionado. El binario asume que se activan en nivel bajo; si es al revés, el LCD muestra \code{REPETIR TOPES} en reposo. En ese caso, cambiar \code{ENDSTOP_SWITCH_ACTIVE_LEVEL} y recompilar.
+\item En cada encendido: abrir un vuelo sin pausa (el LCD muestra \code{SIN POSICION} hasta tener datos), llevar el yugo a los 4 topes moviendo un eje por vez y soltar el último.
+\item Hacer los ensayos F-calibracion y luego F-tope.
+\end{enumerate}
+\etiqueta{Instructivos:} \code{AJUSTE_FUERZAS_Y_MOVIMIENTO.md} (``Calibracion de topes''), \code{ENSAYOS.md}, \code{DISENO_calibracion_topes.md}. \textbf{Recompilar:} \code{-Topes}.
+
+\variante{Potenciómetros (modo 2)}{build-pico2-potentiometers/MiYoke_PD.uf2}
+Lee la posición de dos potenciómetros por ADC: Roll en GP26 y Pitch en GP27. La velocidad se estima en la Pico.
+\etiqueta{Antes de usarla:}
+\begin{itemize}
+\item Adaptar la señal con un divisor: el ADC admite 0 a 3,3~V; nunca aplicarle 5~V.
+\item Calibrar desde el LCD: CALIBRACION tres veces, \code{CALIBRAR POTES} y confirmar los cuatro extremos con OK. Se guarda en flash, sin recompilar.
+\item Revisar el sentido de cada extremo: confirmarlo al revés invierte el eje. Se necesitan al menos 200 cuentas por lado para que el limitador actúe.
+\end{itemize}
+\etiqueta{Instructivos:} \code{LEEME_POTENCIOMETROS.md}, \code{MENU_CALIBRACION.md}. \textbf{Recompilar:} \code{-Potentiometers}.
+
+\variante{Encoders rotativos AB (modo 0)}{build-pico2-encoders/MiYoke_PD.uf2}
+Lee dos encoders incrementales en cuadratura: Roll en GP0 y GP1, Pitch en GP2 y GP3. La posición es relativa al encendido, y esos pines son los mismos que los finales de carrera.
+\etiqueta{Antes de usarla:}
+\begin{itemize}
+\item Adaptar las salidas A y B a 3,3~V.
+\item Centrar físicamente el yugo \textbf{antes de cada encendido}.
+\item Medir los extremos por el monitor serie y cargar \code{ROLL_ENCODER_MIN/MAX}, \code{PITCH_ENCODER_MIN/MAX} y los signos en \code{mis_defines.h}; luego recompilar. Los valores actuales son estimaciones.
+\end{itemize}
+\etiqueta{Instructivos:} \code{LEEME_PICO2.md}, \code{AJUSTE_FUERZAS_Y_MOVIMIENTO.md}; \code{LEEME_ENCODERS.md} para el método de calibración (su cableado es histórico, de Arduino). \textbf{Recompilar:} \code{-Encoders}.
+
+\variante{Encoders magnéticos AS5600 (modo 3)}{build-pico2-as5600/MiYoke_PD.uf2}
+Lee dos sensores magnéticos por I2C: Roll en GP14 y GP15, Pitch en GP4 y GP5, compartido con el LCD. Ante una falla de lectura anula la fuerza en ambos motores.
+\etiqueta{Antes de usarla:}
+\begin{itemize}
+\item Montar el imán diametral y ajustar hasta lograr \code{s=OK} y \code{g} cerca de 64 en todo el recorrido. El bus debe estar a 3,3~V.
+\item Por defecto el centro se toma al encender: \textbf{encender con el yugo centrado}.
+\item Medir las cuentas hasta cada tope con \code{a=} y cargar \code{*_AS5600_COUNTS_NEG/POS} y el sentido; luego recompilar. Los valores actuales son iniciales.
+\end{itemize}
+\etiqueta{Instructivo:} \code{LEEME_AS5600.md}, incluido su ensayo con sensores. \textbf{Recompilar:} \code{-As5600}.
+
+\variante{AS5600 con calibración de topes}{build-pico2-topes-as5600/MiYoke_PD.uf2}
+Combina los AS5600 con los 4 finales de carrera. Aprende los topes en cada encendido y deja los motores sin fuerza hasta terminar. El recorrido se puede registrar sin vuelo abierto, siempre que los sensores estén sanos.
+\etiqueta{Antes de usarla:} todo lo de la variante AS5600 y los pasos 1, 2 y 4 de la variante con topes. En cada encendido, encender centrado, llevar el yugo a los 4 topes moviendo un eje por vez y soltar el último.
+\etiqueta{Instructivos:} \code{LEEME_AS5600.md}, \code{AJUSTE_FUERZAS_Y_MOVIMIENTO.md}, \code{ENSAYOS.md}. \textbf{Recompilar:} \code{-Topes}.
+
+\section*{Variantes que no son para volar}
+
+\variante{Prueba de falla}{build-pico2-prueba-falla/MiYoke_PD.uf2}
+Provoca una falla (HardFault) a propósito a los 20~s, para comprobar que el diagnóstico la registra. Usa la configuración de potenciómetros.
+\etiqueta{Cómo usarla:} con los motores apagados, cargarla, esperar 30~s y ejecutar \code{ARRANQUE.cmd}. Debe aparecer \code{etapa=15:PRUEBA falla=1}; \code{FALLA.ps1} con el \code{.elf} de esta carpeta ubica la falla. Al terminar, volver a cargar el firmware normal.
+\etiqueta{Instructivos:} \code{ENSAYOS.md} (``Arranque y fallas''), \code{DISENO_diagnostico_hardfault.md}. \textbf{Recompilar:} \code{-PruebaFalla}.
+
+\variante{Prueba de pila (apilado, hilo e IRQ)}{build-pico2-prueba-pila-*/MiYoke_PD.uf2}
+\textbf{No cargar.} Quedaron de la comparación de la guarda de pila \code{MSPLIM} del 5 de noviembre. V3.0 no incluye esa guarda ni tiene opción para compilarlas, y no hay un procedimiento de ensayo vigente.
+\etiqueta{Referencia:} \code{REQUISITOS_guarda_pila_msplim.md}.
+
+\end{document}
