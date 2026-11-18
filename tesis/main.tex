@@ -22,6 +22,7 @@
 Este documento explica el centrado dinámico, las turbulencias, las vibraciones en suelo, los buffets de tren de aterrizaje, pérdida y spoiler, el damper y la fricción, para roll y pitch. Cada efecto tiene su sección: datos de entrada, fórmulas, procesamiento y salida PWM. Se analizan también la adquisición de posición por SimConnect, potenciómetros y encoders, y la relación entre las resistencias al movimiento y los demás efectos. Se distingue el código implementado de los fundamentos físicos, los antecedentes y las mejoras propuestas. Los valores numéricos son los predeterminados del código inspeccionado; una configuración guardada en la placa puede reemplazarlos. No se ha verificado qué firmware está cargado ni se han realizado mediciones de fuerza en el mecanismo.
 % [V-realismo]
 La actualización de realismo y su fundamentación teórica se desarrollan en la Sección~\ref{sec:realismo}.
+La caracterización del motor DC 775 (modelo, ensayos y parámetros medidos, base del futuro control de corriente) se desarrolla en la Sección~\ref{sec:motor775}.
 \end{abstract}
 \tableofcontents
 \newpage
@@ -37,4 +38,5 @@ La actualización de realismo y su fundamentación teórica se desarrollan en la
 \input{capitulos/09_damper}
 \input{capitulos/10_friccion}
 \input{capitulos/11_maquinas_estado}
+\input{capitulos/12_modelo_motor_775}
 \end{document}

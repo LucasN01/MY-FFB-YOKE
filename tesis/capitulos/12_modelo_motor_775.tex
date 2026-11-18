@@ -1,0 +1,178 @@
+\section{MODELO DEL MOTOR DC 775}
+\label{sec:motor775}
+
+\subsection{Objetivo y estado}
+\label{sec:motor775_objetivo}
+Los efectos descriptos en las secciones anteriores terminan en un ciclo de trabajo de PWM aplicado al driver BTS7960. Sin un lazo de corriente, ese ciclo de trabajo no fija el torque: la corriente, y con ella el torque, depende de la resistencia del bobinado, de la fuerza contraelectromotriz que impone la mano al mover el mando y de la temperatura. Para diseñar un control de corriente hace falta primero un modelo del motor con parámetros medidos.
+
+Esta sección documenta la caracterización del motor DC 775 del eje roll: el modelo matemático, los ensayos realizados, los resultados y el ajuste fino previsto en MATLAB. El motor de pitch es del mismo modelo y se medirá con el mismo procedimiento. Los datos y cálculos están en la planilla \code{modelizacion motor 775/Mediciones MOTOR ROLL.xlsx}, una hoja por ensayo.
+
+\textbf{Estado.} Los valores de esta sección son provisorios. Faltan el tiempo de estabilización mecánica $t_{mss}$ y la corriente de arranque $i_{arr}$ (Ensayo 5), sin los cuales no se obtienen la inercia $J$ ni el coeficiente viscoso $B$ por el método adoptado, y falta el ajuste en MATLAB contra la respuesta medida (Subsección~\ref{sec:motor775_ajuste}). Cuando cambie un valor medido, se actualiza esta sección.
+
+\subsection{Modelo matemático}
+\label{sec:motor775_modelo}
+Se usa el modelo clásico de motor de corriente continua de imán permanente, tal como lo plantea \href{https://controlautomaticoeducacion.com/analisis-de-sistemas/modelo-de-motor-dc/}{Castaño Giraldo, Control Automático Educación, ``Modelo de Motor DC''}. El circuito de armadura y el eje cumplen
+\begin{equation}
+v = R\,i + L\frac{di}{dt} + e_a,\qquad e_a = K_e\,\omega,
+\label{eq:motor775_electrica}
+\end{equation}
+\begin{equation}
+J\frac{d\omega}{dt} = \tau_m - B\,\omega - \tau_c\,\operatorname{sgn}(\omega) - \tau_L,\qquad \tau_m = K_t\,i,
+\label{eq:motor775_mecanica}
+\end{equation}
+donde $v$ es la tensión en bornes [V], $i$ la corriente [A], $\omega$ la velocidad angular del eje del motor [rad/s], $R$ la resistencia entre bornes [$\Omega$], $L$ la inductancia [H], $K_e$ la constante de fuerza contraelectromotriz [V$\cdot$s/rad], $K_t$ la constante de torque [N$\cdot$m/A], $J$ la inercia del rotor [kg$\cdot$m$^2$], $B$ el coeficiente de rozamiento viscoso [N$\cdot$m$\cdot$s/rad], $\tau_c$ el rozamiento seco (Coulomb) [N$\cdot$m] y $\tau_L$ el torque de carga (reductora, mecanismo y mano). En unidades SI, $K_t = K_e$; las mediciones lo confirman (Subsección~\ref{sec:motor775_ke}).
+
+La referencia citada omite $\tau_c$ y $\tau_L$. Sin ellos y en Laplace, las funciones de transferencia desde la tensión son
+\begin{equation}
+\frac{\omega(s)}{V(s)} = \frac{K_t}{LJs^2 + (RJ + LB)s + RB + K_tK_e},\qquad
+\frac{I(s)}{V(s)} = \frac{Js + B}{LJs^2 + (RJ + LB)s + RB + K_tK_e}.
+\label{eq:motor775_tf}
+\end{equation}
+Para el lazo de corriente interesa la segunda. Como la constante de tiempo eléctrica $\tau_e = L/R$ es del orden de 0.6 ms y la mecánica es mucho mayor, a la escala del lazo de corriente el motor se comporta como $R + Ls$ con la fuerza contraelectromotriz como perturbación lenta.
+
+\subsection{Banco de ensayo e instrumentos}
+\label{sec:motor775_banco}
+Los ensayos se hicieron con el motor fuera del yugo, sin reductora, siguiendo el procedimiento propio \code{modelizacion motor 775/caracterizacion_motor_775.pdf} (Ensayos 1 a 6). Instrumentos y montajes:
+\begin{itemize}
+\item Fuente de laboratorio variable en continua, usada en modo de corriente constante.
+\item Para corrientes mayores, fuente fija de 24 V con el BTS7960 regulando la corriente por PWM y un ACS712 midiéndola (programa \code{ensayo1_rotor_bloqueado.ino} en un Arduino Pro Micro).
+\item Multímetros para tensión directa en bornes del motor y para corriente en serie.
+\item Celda de carga con HX711 y brazo de palanca de 110.55 mm para el torque con rotor bloqueado.
+\item Tacómetro óptico para la velocidad del eje.
+\item Medidor LCR para la inductancia.
+\item Termocupla tipo K (UT89X) para la temperatura de carcasa.
+\item Script \code{registrar_ensayo.py}, que registra en la PC los datos del microcontrolador y de la celda.
+\end{itemize}
+
+\subsection{Ensayo 1: rotor bloqueado ($R$, caída en escobillas y $K_t$)}
+\label{sec:motor775_e1}
+Con el eje trabado ($\omega = 0$) y en régimen estacionario ($di/dt = 0$), la Ecuación~\eqref{eq:motor775_electrica} se reduce a $v = R\,i + V_{esc}$, donde $V_{esc}$ es una caída fija en escobillas, y el torque medido en la celda es $\tau = K_t\,i + \tau_0$. Se tomaron 8 corrientes entre 0.66 y 3.3 A, en 4 mediciones por sentido de giro, con el BTS7960 regulando la corriente. Por cada medición se ajustaron rectas por mínimos cuadrados.
+
+\begin{center}
+\begin{tabular}{lcc}\toprule
+Magnitud & Resultado & Observación\\\midrule
+$R$ (pendiente $v$--$i$) & 0.686 $\Omega$ & mediciones entre 0.667 y 0.714 $\Omega$\\
+$V_{esc}$ (ordenada) & $-0.006$ V & $\approx 0$\\
+$K_t$ (pendiente $\tau$--$i$) & 0.02222 N$\cdot$m/A & horario 0.01996, antihorario 0.02449\\
+$R^2$ de los ajustes de torque & 0.993 & \\\bottomrule
+\end{tabular}
+\end{center}
+
+La asimetría de 20\% en $K_t$ entre sentidos no proviene del motor, porque $K_e$ casi no varía con el sentido (Subsección~\ref{sec:motor775_ke}). Se atribuye al montaje: el brazo apoya sobre la celda en tracción en un sentido y en compresión en el otro. El promedio de ambos sentidos sí es consistente con $K_e$.
+
+La tensión de este ensayo se leyó con el multímetro sobre la tensión conmutada del BTS7960, sin filtro RC. Ensayos posteriores mostraron que esas lecturas no son confiables, por lo que el valor de $R$ de este ensayo se toma solo como comparación (Subsección~\ref{sec:motor775_r}).
+
+\subsection{Medición de $R$ con fuente continua}
+\label{sec:motor775_rdc}
+Para eliminar la conmutación, $R$ se volvió a medir con la fuente variable en continua, corriente constante, rotor trabado, tensión con multímetro directo en bornes y corriente con multímetro en serie. Se tomaron 5 corrientes en orden creciente en una misma posición del eje, y se repitió con el eje girado 90$^\circ$, porque las escobillas apoyan sobre otras delgas y la resistencia de contacto cambia.
+
+\begin{center}
+\begin{tabular}{lccc}\toprule
+& Posición 1 (0$^\circ$) & Posición 2 (90$^\circ$) & Ambas\\\midrule
+Corriente & 0.81--1.34 A & 0.78--1.47 A & \\
+Pendiente $R$ & 0.800 $\Omega$ & 0.579 $\Omega$ & \\
+Ordenada & 0.001 V & 0.198 V & \\
+$R^2$ & 0.978 & 0.978 & \\
+$v/i$ medio & 0.801 $\Omega$ & 0.773 $\Omega$ & 0.787 $\Omega$ ($\pm$5.5\%)\\\bottomrule
+\end{tabular}
+\end{center}
+
+La pendiente cambia mucho entre posiciones mientras que $v/i$ casi no cambia. El rango de corriente es angosto (varía menos de dos veces), y en ese caso pendiente y ordenada se compensan entre sí: con residuos de unos $\pm$30 mV, el intervalo de confianza de 95\% de la pendiente es de $\pm$0.2 $\Omega$ en cada tanda. Lo que esta medición determina bien es la resistencia efectiva entre bornes cerca de 1 A: $v/i = 0.787\ \Omega$. En la posición 2, $v/i$ baja de forma sostenida con la corriente, lo que indica una caída en escobillas de unos 0.2 V en esa posición.
+
+\subsection{Elección de $R$}
+\label{sec:motor775_r}
+\begin{center}
+\begin{tabular}{lcc}\toprule
+Método & $R$ [$\Omega$] & Comentario\\\midrule
+Fuente continua, $v/i$ a $\approx$1 A & 0.787 & sin conmutación; rango angosto\\
+Multímetro como óhmetro & 0.80 & 1.0 $\Omega$ menos 0.2 $\Omega$ de las puntas\\
+Ensayo 6b, con filtro RC & 0.92 & tensión del BTS7960 filtrada\\
+Ensayo 1, sin filtro & 0.686 & tensión conmutada leída sin filtro\\\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Se adopta $R = 0.79\ \Omega$} a temperatura ambiente, de la medición con fuente continua: es la única en la que la tensión medida es continua y se toma directo en bornes, y coincide con la medición con óhmetro. El valor del Ensayo 1 queda descartado por la lectura sin filtro. La diferencia con el Ensayo 6b (0.92 $\Omega$, 17\% más) queda abierta. El ajuste en MATLAB (Subsección~\ref{sec:motor775_ajuste}) admite $R$ como parámetro libre dentro de $\pm$20\%, y por lo tanto cubre todo ese rango. El contacto de escobillas se comporta como resistivo en estos ensayos y queda incluido en $R$; no se modela una caída fija aparte.
+
+$R$ del cobre aumenta con la temperatura según $R(T) = R_0\,[1 + 0.00393\,(T - T_0)]$. Con el bobinado a 60 $^\circ$C, $R$ sube alrededor de 15\%. El control de corriente no depende de conocer $R$ con exactitud, pero sí la prealimentación y la estimación de la fuerza contraelectromotriz.
+
+\subsection{Ensayo 2 y medición en vacío: $K_e$}
+\label{sec:motor775_ke}
+\textbf{Ensayo 2, motor como generador.} El eje del motor se arrastró con un taladro, con los bornes abiertos. Sin corriente, $v = K_e\,\omega$ y no intervienen $R$ ni las escobillas. Se tomaron 5 velocidades entre 345 y 1555 rpm en 4 mediciones por sentido. Resultado: $K_e = 0.02251$ V$\cdot$s/rad, con 0.4\% de diferencia entre sentidos y ordenada $\approx 0$.
+
+\textbf{Medición en vacío, motor como motor.} Con el motor girando libre, alimentado desde la fuente entre 2 y 10 V (794 a 4254 rpm), se midieron $v$, $i$ y $n$. En régimen estacionario, $e_a = v - R\,i$ y $K_e$ es la pendiente de $e_a$ en función de $\omega$. Resultado: $K_e = 0.02178$ V$\cdot$s/rad (horario 0.02169, antihorario 0.02187; 0.8\% de diferencia), con $R^2 = 0.99999$. En vacío la corriente es de 0.25 a 0.35 A y el término $R\,i$ es pequeño frente a $v$: recalculando con $R = 0$, 0.686 o 0.787 $\Omega$, $K_e$ solo varía entre 0.0217 y 0.0220.
+
+\begin{center}
+\begin{tabular}{lcc}\toprule
+Método & $K_e$ o $K_t$ [V$\cdot$s/rad] & Diferencia entre sentidos\\\midrule
+Generador con taladro (Ensayo 2) & 0.02251 & 0.4\%\\
+Vacío como motor & 0.02178 & 0.8\%\\
+Torque con brazo y celda (Ensayo 1) & 0.02222 & 20\% (montaje)\\\midrule
+\textbf{Adoptado} $K_t = K_e$ & \textbf{0.0222} ($\pm$2\%) & \\\bottomrule
+\end{tabular}
+\end{center}
+
+Los dos métodos de $K_e$ difieren en 3.2\%, y la diferencia no la explican ni $R$ ni el rango de velocidad. Quedan dos hipótesis sin verificar: la temperatura de los imanes (en ferrita, $K_e$ baja cerca de 0.2\%/$^\circ$C, de modo que unos 15 $^\circ$C de diferencia explican el 3\%) y la forma en que se midió la velocidad en cada ensayo. El $K_t$ del Ensayo 1 cae entre ambos, a menos de 2\% de cada uno, lo que confirma $K_t = K_e$. Para el control de corriente, una incertidumbre de 3\% en $K_t$ no es relevante. El valor adoptado equivale a 2.32 V/krpm.
+
+\subsection{Ensayo 3: rozamiento en vacío}
+\label{sec:motor775_e3}
+Girando libre en régimen estacionario, todo el torque del motor vence el rozamiento: $K_t\,I_0 = \tau_c + B\,\omega$, con $I_0$ la corriente de vacío. Se midió entre 6 y 24 V (2525 a 10271 rpm), dos mediciones por sentido. Resultado: $\tau_c = 0.0060$ N$\cdot$m (equivalente a 0.27 A) y $B = 2\times10^{-6}$ N$\cdot$m$\cdot$s/rad, con $R^2$ medio de 0.75: la corriente de vacío varía poco con la velocidad y el término viscoso queda mal definido. La medición en vacío de la Subsección~\ref{sec:motor775_ke}, a menor velocidad, da $\tau_c = 0.0052$ N$\cdot$m y $B = 5.2\times10^{-6}$ N$\cdot$m$\cdot$s/rad, del mismo orden. Ambos valores corresponden al motor solo; la reductora y el mecanismo del yugo agregan su propio rozamiento.
+
+\subsection{Ensayo 4: inductancia}
+\label{sec:motor775_e4}
+Con medidor LCR, en 7 posiciones del rotor: $L = 656\ \mu$H a 1 kHz y $L = 500\ \mu$H a 10 kHz (mínimo 464 $\mu$H). Se adopta el valor a 10 kHz por ser la frecuencia de medición más cercana al PWM del BTS7960 (20 a 25 kHz); $L$ baja con la frecuencia, por eso no se promedian ambas. El mínimo según la posición del rotor es el peor caso para el rizado de corriente. Con $R = 0.79\ \Omega$, $\tau_e = L/R \approx 0.63$ ms.
+
+\subsection{Ensayo 5: inercia $J$ y coeficiente viscoso $B$ (pendiente)}
+\label{sec:motor775_e5}
+Para $J$ y $B$ se usa el procedimiento de la referencia citada, con su planilla \code{Parametrizacion-Motor-DC Video.xlsx}; es la única parte del método de la referencia que se usa tal cual. El resto de los parámetros se obtuvo con los ensayos propios descriptos arriba. Las relaciones son:
+\begin{equation}
+\tau_{mec} = \frac{t_{mss}}{4},\qquad J = \frac{\tau_{mec}\,K_e\,K_t}{R},\qquad \tau_f = K_t\,i_{arr},\qquad B = \frac{K_t\,I_0 - \tau_f}{\omega},
+\label{eq:motor775_jb}
+\end{equation}
+donde $t_{mss}$ es el tiempo de estabilización de la velocidad ante un escalón de tensión, $\tau_{mec}$ la constante de tiempo mecánica, $i_{arr}$ la corriente con la que el eje empieza a girar al subir la tensión de a poco, $\tau_f$ el torque de rozamiento e $I_0$ la corriente de vacío a la velocidad $\omega$. La expresión de $J$ supone $RB \ll K_tK_e$, que se cumple con creces en este motor.
+
+Falta medir $t_{mss}$ e $i_{arr}$; por eso esta sección no informa $J$ ni $B$ por este método. El procedimiento propio prevé además un método de verificación independiente: medir la desaceleración libre al cortar la alimentación, con y sin un volante de inercia conocida.
+
+\subsection{Ensayo 6: límite térmico}
+\label{sec:motor775_e6}
+Con rotor bloqueado se aplicó corriente constante hasta estabilizar la temperatura de carcasa (Ensayo 6b, criterio por temperatura de carcasa). A 1 A, la carcasa pasó de 25 a 31 $^\circ$C y quedó estable a los 60 min, lo que da una resistencia térmica carcasa--aire de 7.44 $^\circ$C/W. Con un límite de carcasa de 55 $^\circ$C y una temperatura ambiente de uso de 30 $^\circ$C, la corriente continua admisible sin ventilación es $I_{cont} \approx 1.8$ A. Con ventilador, la resistencia térmica baja a 1.33 $^\circ$C/W y la estimación sube a 4.3 A, pero ese valor no debe usarse sin medir la temperatura del bobinado, que puede quedar 35 a 50 $^\circ$C por encima de la carcasa. La variante por el método de la resistencia (Ensayo 6) está incompleta.
+
+Este límite es térmico y de régimen continuo. Los efectos de FFB son mayormente transitorios, pero el centrado sostenido contra la mano se acerca a la condición de rotor bloqueado.
+
+\subsection{Ajuste del modelo en MATLAB}
+\label{sec:motor775_ajuste}
+Los valores medidos se usan como punto de partida de un ajuste fino en MATLAB con los scripts que acompañan a la referencia (carpeta \code{Modelado_Motor_DC_Sergio_CAE}):
+\begin{itemize}
+\item \code{DC_Motor.m}: Ecuaciones~\eqref{eq:motor775_electrica} y \eqref{eq:motor775_mecanica} sin $\tau_c$ ni $\tau_L$, con los parámetros $p = [J, B, K_e, K_t, R, L]$.
+\item \code{motor_simulate.m}: integra el modelo con \code{ode15s} usando la misma tensión de entrada que se aplicó al motor real.
+\item \code{f_objetivo.m}: suma de errores cuadráticos entre la velocidad simulada y la medida.
+\item \code{Regresion_Modelo.m}: minimiza esa suma con \code{fmincon}, con cada parámetro acotado a $\pm$20\% de su valor medido ($L$ entre $10^{-6}$ y 1 H), y grafica velocidad real, modelo inicial y modelo ajustado.
+\item \code{ValidaModelo.slx}: modelo de Simulink para comparar el modelo ajustado con datos de validación distintos de los usados en el ajuste.
+\end{itemize}
+Los datos de entrada son la respuesta de velocidad del motor a escalones de tensión, registrada con el tacómetro. Las cotas de $\pm$20\% mantienen el ajuste cerca de lo medido: si un parámetro termina contra una cota, la medición correspondiente se revisa en lugar de aceptar el valor ajustado.
+
+\textbf{Estado: pendiente.} Requiere los valores de $J$ y $B$ del Ensayo 5 como punto de partida.
+
+\subsection{Parámetros del modelo}
+\label{sec:motor775_parametros}
+\begin{center}
+\begin{tabular}{llll}\toprule
+Parámetro & Valor & Origen & Estado\\\midrule
+$R$ (ambiente) & 0.79 $\Omega$ & fuente continua, $v/i$ a $\approx$1 A & provisorio\\
+$L$ & 0.50 mH & LCR a 10 kHz & medido\\
+$K_t = K_e$ & 0.0222 V$\cdot$s/rad & promedio de 3 métodos & medido\\
+$\tau_c$ (motor solo) & 0.005--0.006 N$\cdot$m & Ensayo 3 y vacío & medido\\
+$B$ (motor solo) & 2--5 $\times10^{-6}$ N$\cdot$m$\cdot$s/rad & Ensayo 3 y vacío & orden de magnitud\\
+$J$ & --- & Ensayo 5 & pendiente\\
+$I_{cont}$ sin ventilación & 1.8 A & Ensayo 6b & medido\\
+$\tau_e = L/R$ & 0.63 ms & calculado & \\\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Próximos pasos}
+\label{sec:motor775_pasos}
+\begin{enumerate}
+\item Medir $t_{mss}$ e $i_{arr}$ y obtener $J$ y $B$ con la Ecuación~\eqref{eq:motor775_jb}.
+\item Registrar la respuesta de velocidad a escalones de tensión y hacer el ajuste en MATLAB (Subsección~\ref{sec:motor775_ajuste}); validar con datos distintos.
+\item Repetir la caracterización en el motor de pitch.
+\item Con el modelo ajustado, diseñar el control de corriente en MATLAB y Simulink, simularlo con el mismo algoritmo discreto que usará el firmware y llevarlo a la placa (RP2350 con BTS7960 y sensado de corriente).
+\end{enumerate}
