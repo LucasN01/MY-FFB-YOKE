@@ -37,6 +37,7 @@ Tarea: Revision del capitulo de tesis del modelo del motor DC 775
 - Datos: `modelizacion motor 775/` esta fuera de git en este equipo pero existe en disco. Leer los .xlsx con Python y openpyxl, sin guardarlos.
 - No compilar la tesis salvo para el punto 19: `powershell -ExecutionPolicy Bypass -File herramientas/flujo/compilar-tesis.ps1` (una linea OK/FALLO; hoy da 7 errores ignorados que ya estaban antes del cambio).
 - Resultado: `tmp/revision_codex.md` con "aprobado" o "requiere cambios" y la lista de hallazgos numerados (H1, H2...).
+- Ronda 2 (Claude, 2026-11-18): verificar solo que H1-H4 de la ronda 1 quedaron corregidos en el commit nuevo (`git diff 4ef84c1 HEAD -- tesis/`) y que no se introdujo nada nuevo incorrecto. Reemplazar `tmp/revision_codex.md` con el resultado de la ronda 2.
 - No crea version (solo documentacion).
 
 \## Última entrega
@@ -48,7 +49,7 @@ Tarea: Revision del capitulo de tesis del modelo del motor DC 775
 
 \## Revisión
 
-Pendiente: revision de Codex con `tmp/lista_control_modelo_motor.md`.
+Ronda 1 de Codex (2026-11-18): requiere cambios, 4 hallazgos, todos verificados por Claude contra la planilla y aplicados. H1: contacto de escobillas absorbido en R como simplificacion local, sin afirmarlo resistivo; caida de la posicion 2 como "compatible". H2: asimetria de Kt con causa pendiente (montaje como sospecha). H3: Icont "estimado por carcasa", con Ta 24 C, R0 0.92 y calculo de Rth explicitos. H4: rango del Ensayo 3 2507-10271 rpm. Ademas: T0 = 22 C como supuesto, el +-2 % de Kt como dispersion entre metodos y la separacion de escalas como hipotesis hasta medir J. Compila OK.
 
 \## Ensayos del usuario
 

@@ -28,7 +28,7 @@ La referencia citada omite $\tau_c$ y $\tau_L$. Sin ellos y en Laplace, las func
 \frac{I(s)}{V(s)} = \frac{Js + B}{LJs^2 + (RJ + LB)s + RB + K_tK_e}.
 \label{eq:motor775_tf}
 \end{equation}
-Para el lazo de corriente interesa la segunda. Como la constante de tiempo eléctrica $\tau_e = L/R$ es del orden de 0.6 ms y la mecánica es mucho mayor, a la escala del lazo de corriente el motor se comporta como $R + Ls$ con la fuerza contraelectromotriz como perturbación lenta.
+Para el lazo de corriente interesa la segunda. La constante de tiempo eléctrica $\tau_e = L/R$ es del orden de 0.6 ms. Si la mecánica es mucho mayor, como se espera (se confirmará al medir $J$, Subsección~\ref{sec:motor775_e5}), a la escala del lazo de corriente el motor se comporta como $R + Ls$ con la fuerza contraelectromotriz como perturbación lenta.
 
 \subsection{Banco de ensayo e instrumentos}
 \label{sec:motor775_banco}
@@ -58,7 +58,7 @@ $R^2$ de los ajustes de torque & 0.993 & \\\bottomrule
 \end{tabular}
 \end{center}
 
-La asimetría de 20\% en $K_t$ entre sentidos no proviene del motor, porque $K_e$ casi no varía con el sentido (Subsección~\ref{sec:motor775_ke}). Se atribuye al montaje: el brazo apoya sobre la celda en tracción en un sentido y en compresión en el otro. El promedio de ambos sentidos sí es consistente con $K_e$.
+La asimetría de 20\% en $K_t$ entre sentidos tiene causa pendiente de verificar. Se sospecha del montaje (el brazo apoya sobre la celda en tracción en un sentido y en compresión en el otro, además del largo del brazo de cada lado y el roce), porque $K_e$ casi no varía con el sentido (Subsección~\ref{sec:motor775_ke}); esto es un indicio, no una verificación. El promedio de ambos sentidos sí es consistente con $K_e$.
 
 La tensión de este ensayo se leyó con el multímetro sobre la tensión conmutada del BTS7960, sin filtro RC. Ensayos posteriores mostraron que esas lecturas no son confiables, por lo que el valor de $R$ de este ensayo se toma solo como comparación (Subsección~\ref{sec:motor775_r}).
 
@@ -77,7 +77,7 @@ $v/i$ medio & 0.801 $\Omega$ & 0.773 $\Omega$ & 0.787 $\Omega$ ($\pm$5.5\%)\\\bo
 \end{tabular}
 \end{center}
 
-La pendiente cambia mucho entre posiciones mientras que $v/i$ casi no cambia. El rango de corriente es angosto (varía menos de dos veces), y en ese caso pendiente y ordenada se compensan entre sí: con residuos de unos $\pm$30 mV, el intervalo de confianza de 95\% de la pendiente es de $\pm$0.2 $\Omega$ en cada tanda. Lo que esta medición determina bien es la resistencia efectiva entre bornes cerca de 1 A: $v/i = 0.787\ \Omega$. En la posición 2, $v/i$ baja de forma sostenida con la corriente, lo que indica una caída en escobillas de unos 0.2 V en esa posición.
+La pendiente cambia mucho entre posiciones mientras que $v/i$ casi no cambia. El rango de corriente es angosto (varía menos de dos veces), y en ese caso pendiente y ordenada se compensan entre sí: con residuos de unos $\pm$30 mV, el intervalo de confianza de 95\% de la pendiente es de $\pm$0.2 $\Omega$ en cada tanda. Lo que esta medición determina bien es la resistencia efectiva entre bornes cerca de 1 A: $v/i = 0.787\ \Omega$. En la posición 2, $v/i$ muestra una tendencia descendente con la corriente (de 0.85 a 0.71 $\Omega$), compatible con una caída fija en escobillas de unos 0.2 V en esa posición, aunque el rango medido no alcanza para identificarla.
 
 \subsection{Elección de $R$}
 \label{sec:motor775_r}
@@ -91,9 +91,9 @@ Ensayo 1, sin filtro & 0.686 & tensión conmutada leída sin filtro\\\bottomrule
 \end{tabular}
 \end{center}
 
-\textbf{Se adopta $R = 0.79\ \Omega$} a temperatura ambiente, de la medición con fuente continua: es la única en la que la tensión medida es continua y se toma directo en bornes, y coincide con la medición con óhmetro. El valor del Ensayo 1 queda descartado por la lectura sin filtro. La diferencia con el Ensayo 6b (0.92 $\Omega$, 17\% más) queda abierta. El ajuste en MATLAB (Subsección~\ref{sec:motor775_ajuste}) admite $R$ como parámetro libre dentro de $\pm$20\%, y por lo tanto cubre todo ese rango. El contacto de escobillas se comporta como resistivo en estos ensayos y queda incluido en $R$; no se modela una caída fija aparte.
+\textbf{Se adopta $R = 0.79\ \Omega$} a temperatura ambiente, de la medición con fuente continua: es la única en la que la tensión medida es continua y se toma directo en bornes, y coincide con la medición con óhmetro. El valor del Ensayo 1 queda descartado por la lectura sin filtro. La diferencia con el Ensayo 6b (0.92 $\Omega$, 17\% más) queda abierta. El ajuste en MATLAB (Subsección~\ref{sec:motor775_ajuste}) admite $R$ como parámetro libre dentro de $\pm$20\%, y por lo tanto cubre todo ese rango. Como simplificación local, el contacto de escobillas se absorbe en $R$ y no se modela una caída fija aparte; los ensayos no separaron su componente resistiva de una posible caída fija, de modo que $R = 0.79\ \Omega$ es una resistencia efectiva válida cerca de 1 A.
 
-$R$ del cobre aumenta con la temperatura según $R(T) = R_0\,[1 + 0.00393\,(T - T_0)]$. Con el bobinado a 60 $^\circ$C, $R$ sube alrededor de 15\%. El control de corriente no depende de conocer $R$ con exactitud, pero sí la prealimentación y la estimación de la fuerza contraelectromotriz.
+$R$ del cobre aumenta con la temperatura según $R(T) = R_0\,[1 + 0.00393\,(T - T_0)]$. No se registró la temperatura de la medición; suponiendo $T_0 = 22\ ^\circ$C, con el bobinado a 60 $^\circ$C $R$ sube alrededor de 15\%. El control de corriente no depende de conocer $R$ con exactitud, pero sí la prealimentación y la estimación de la fuerza contraelectromotriz.
 
 \subsection{Ensayo 2 y medición en vacío: $K_e$}
 \label{sec:motor775_ke}
@@ -106,16 +106,16 @@ $R$ del cobre aumenta con la temperatura según $R(T) = R_0\,[1 + 0.00393\,(T - 
 Método & $K_e$ o $K_t$ [V$\cdot$s/rad] & Diferencia entre sentidos\\\midrule
 Generador con taladro (Ensayo 2) & 0.02251 & 0.4\%\\
 Vacío como motor & 0.02178 & 0.8\%\\
-Torque con brazo y celda (Ensayo 1) & 0.02222 & 20\% (montaje)\\\midrule
+Torque con brazo y celda (Ensayo 1) & 0.02222 & 20\% (causa pendiente)\\\midrule
 \textbf{Adoptado} $K_t = K_e$ & \textbf{0.0222} ($\pm$2\%) & \\\bottomrule
 \end{tabular}
 \end{center}
 
-Los dos métodos de $K_e$ difieren en 3.2\%, y la diferencia no la explican ni $R$ ni el rango de velocidad. Quedan dos hipótesis sin verificar: la temperatura de los imanes (en ferrita, $K_e$ baja cerca de 0.2\%/$^\circ$C, de modo que unos 15 $^\circ$C de diferencia explican el 3\%) y la forma en que se midió la velocidad en cada ensayo. El $K_t$ del Ensayo 1 cae entre ambos, a menos de 2\% de cada uno, lo que confirma $K_t = K_e$. Para el control de corriente, una incertidumbre de 3\% en $K_t$ no es relevante. El valor adoptado equivale a 2.32 V/krpm.
+Los dos métodos de $K_e$ difieren en 3.2\%, y la diferencia no la explican ni $R$ ni el rango de velocidad. Quedan dos hipótesis sin verificar: la temperatura de los imanes (en ferrita, $K_e$ baja cerca de 0.2\%/$^\circ$C, de modo que unos 15 $^\circ$C de diferencia explican el 3\%) y la forma en que se midió la velocidad en cada ensayo. El $K_t$ del Ensayo 1 cae entre ambos, a menos de 2\% de cada uno, lo que confirma $K_t = K_e$. El $\pm$2\% del valor adoptado representa la dispersión entre métodos, no una incertidumbre metrológica completa. Para el control de corriente, una incertidumbre de 3\% en $K_t$ no es relevante. El valor adoptado equivale a 2.32 V/krpm.
 
 \subsection{Ensayo 3: rozamiento en vacío}
 \label{sec:motor775_e3}
-Girando libre en régimen estacionario, todo el torque del motor vence el rozamiento: $K_t\,I_0 = \tau_c + B\,\omega$, con $I_0$ la corriente de vacío. Se midió entre 6 y 24 V (2525 a 10271 rpm), dos mediciones por sentido. Resultado: $\tau_c = 0.0060$ N$\cdot$m (equivalente a 0.27 A) y $B = 2\times10^{-6}$ N$\cdot$m$\cdot$s/rad, con $R^2$ medio de 0.75: la corriente de vacío varía poco con la velocidad y el término viscoso queda mal definido. La medición en vacío de la Subsección~\ref{sec:motor775_ke}, a menor velocidad, da $\tau_c = 0.0052$ N$\cdot$m y $B = 5.2\times10^{-6}$ N$\cdot$m$\cdot$s/rad, del mismo orden. Ambos valores corresponden al motor solo; la reductora y el mecanismo del yugo agregan su propio rozamiento.
+Girando libre en régimen estacionario, todo el torque del motor vence el rozamiento: $K_t\,I_0 = \tau_c + B\,\omega$, con $I_0$ la corriente de vacío. Se midió entre 6 y 24 V (2507 a 10271 rpm), dos mediciones por sentido. Resultado: $\tau_c = 0.0060$ N$\cdot$m (equivalente a 0.27 A) y $B = 2\times10^{-6}$ N$\cdot$m$\cdot$s/rad, con $R^2$ medio de 0.75: la corriente de vacío varía poco con la velocidad y el término viscoso queda mal definido. La medición en vacío de la Subsección~\ref{sec:motor775_ke}, a menor velocidad, da $\tau_c = 0.0052$ N$\cdot$m y $B = 5.2\times10^{-6}$ N$\cdot$m$\cdot$s/rad, del mismo orden. Ambos valores corresponden al motor solo; la reductora y el mecanismo del yugo agregan su propio rozamiento.
 
 \subsection{Ensayo 4: inductancia}
 \label{sec:motor775_e4}
@@ -134,7 +134,7 @@ Falta medir $t_{mss}$ e $i_{arr}$; por eso esta sección no informa $J$ ni $B$ p
 
 \subsection{Ensayo 6: límite térmico}
 \label{sec:motor775_e6}
-Con rotor bloqueado se aplicó corriente constante hasta estabilizar la temperatura de carcasa (Ensayo 6b, criterio por temperatura de carcasa). A 1 A, la carcasa pasó de 25 a 31 $^\circ$C y quedó estable a los 60 min, lo que da una resistencia térmica carcasa--aire de 7.44 $^\circ$C/W. Con un límite de carcasa de 55 $^\circ$C y una temperatura ambiente de uso de 30 $^\circ$C, la corriente continua admisible sin ventilación es $I_{cont} \approx 1.8$ A. Con ventilador, la resistencia térmica baja a 1.33 $^\circ$C/W y la estimación sube a 4.3 A, pero ese valor no debe usarse sin medir la temperatura del bobinado, que puede quedar 35 a 50 $^\circ$C por encima de la carcasa. La variante por el método de la resistencia (Ensayo 6) está incompleta.
+Con rotor bloqueado se aplicó corriente constante hasta estabilizar la temperatura de carcasa (Ensayo 6b, criterio por temperatura de carcasa). A 1 A, con aire a 24 $^\circ$C, la carcasa pasó de 25 a 31 $^\circ$C y quedó estable a los 60 min. La potencia disipada se calcula como $P = I^2 R_0\,(k + T)/(k + T_{R_0})$ con $R_0 = 0.92\ \Omega$ (el valor medido con filtro RC en este ensayo, distinto de la $R$ del modelo eléctrico) y $k = 234.5\ ^\circ$C, lo que da 0.94 W y una resistencia térmica carcasa--aire de $(31 - 24)/0.94 = 7.44\ ^\circ$C/W. Con un límite de carcasa de 55 $^\circ$C y una temperatura ambiente de uso de 30 $^\circ$C, la corriente continua admisible sin ventilación se estima en $I_{cont} \approx 1.8$ A. Es una estimación a partir de la resistencia térmica, no una corriente ensayada hasta el límite. Con ventilador, la resistencia térmica baja a 1.33 $^\circ$C/W y la estimación sube a 4.3 A, pero ese valor no debe usarse sin medir la temperatura del bobinado, que puede quedar 35 a 50 $^\circ$C por encima de la carcasa. La variante por el método de la resistencia (Ensayo 6) está incompleta.
 
 Este límite es térmico y de régimen continuo. Los efectos de FFB son mayormente transitorios, pero el centrado sostenido contra la mano se acerca a la condición de rotor bloqueado.
 
@@ -163,7 +163,7 @@ $K_t = K_e$ & 0.0222 V$\cdot$s/rad & promedio de 3 métodos & medido\\
 $\tau_c$ (motor solo) & 0.005--0.006 N$\cdot$m & Ensayo 3 y vacío & medido\\
 $B$ (motor solo) & 2--5 $\times10^{-6}$ N$\cdot$m$\cdot$s/rad & Ensayo 3 y vacío & orden de magnitud\\
 $J$ & --- & Ensayo 5 & pendiente\\
-$I_{cont}$ sin ventilación & 1.8 A & Ensayo 6b & medido\\
+$I_{cont}$ sin ventilación & 1.8 A & Ensayo 6b & estimado por carcasa\\
 $\tau_e = L/R$ & 0.63 ms & calculado & \\\bottomrule
 \end{tabular}
 \end{center}
