@@ -116,7 +116,21 @@ Los dos métodos de $K_e$ difieren en 3.2\%, y la diferencia no la explican ni $
 
 \subsection{Ensayo 3: rozamiento en vacío}
 \label{sec:motor775_e3}
-Girando libre en régimen estacionario, todo el torque del motor vence el rozamiento: $K_t\,I_0 = \tau_c + B\,\omega$, con $I_0$ la corriente de vacío. Se midió entre 6 y 24 V (2507 a 10271 rpm), dos mediciones por sentido. Resultado: $\tau_c = 0.0060$ N$\cdot$m (equivalente a 0.27 A) y $B = 2\times10^{-6}$ N$\cdot$m$\cdot$s/rad, con $R^2$ medio de 0.75: la corriente de vacío varía poco con la velocidad y el término viscoso queda mal definido. La medición en vacío de la Subsección~\ref{sec:motor775_ke}, a menor velocidad, da $\tau_c = 0.0052$ N$\cdot$m y $B = 5.2\times10^{-6}$ N$\cdot$m$\cdot$s/rad, del mismo orden. Ambos valores corresponden al motor solo; la reductora y el mecanismo del yugo agregan su propio rozamiento.
+\textbf{Modelo de rozamiento.} Se usa el modelo estático clásico de rozamiento seco (Coulomb) más viscoso, con un rozamiento estático de despegue mayor que el seco en movimiento \cite{armstrong1994}. Es el que aparece en la Ecuación~\eqref{eq:motor775_mecanica}: $\tau_c\operatorname{sgn}(\omega) + B\,\omega$ con el eje girando, y $\tau_f$ (Subsección~\ref{sec:motor775_e5}) como torque necesario para que empiece a girar. El efecto Stribeck y la dinámica de pre-deslizamiento que describe la misma referencia no se modelan.
+
+\textbf{Ensayo.} Girando libre en régimen estacionario, $d\omega/dt = 0$ y $\tau_L = 0$, de modo que la Ecuación~\eqref{eq:motor775_mecanica} se reduce a $K_t\,I_0 = \tau_c + B\,\omega$, con $I_0$ la corriente de vacío: $\tau_c$ es la ordenada y $B$ la pendiente de la recta $K_t I_0$ en función de $\omega$. Se alimentó el motor con el BTS7960 en 7 escalones de ciclo de trabajo, de 28\% a 100\% (2507 a 10271 rpm), con unos 25 s en cada uno. Se hicieron dos mediciones por sentido de giro, registrando $I_0$ con el ACS712 cada 100 ms y la velocidad con el tacómetro. Se ajustó una recta por mínimos cuadrados a cada medición y se promediaron las cuatro:
+\begin{center}
+\begin{tabular}{lccc}\toprule
+Ajuste & $\tau_c$ [N$\cdot$m] & $B$ [N$\cdot$m$\cdot$s/rad] & $R^2$\\\midrule
+Ensayo 3, promedio de 4 mediciones & $5.99\times10^{-3}$ & $1.76\times10^{-6}$ & 0.75\\
+Medición en vacío (Subsección~\ref{sec:motor775_ke}), 794--4254 rpm & $5.19\times10^{-3}$ & $5.16\times10^{-6}$ & ---\\\bottomrule
+\end{tabular}
+\end{center}
+$\tau_c$ equivale a 0.27 A de corriente de vacío. El $R^2$ es bajo porque $I_0$ varía poco con la velocidad (0.27 a 0.35 A) frente a la dispersión del ACS712, que es de unos $\pm$0.02 A. Aun así, la recta reproduce cada punto con un error de 0.03 A o menos.
+
+\textbf{Elección.} Las dos rectas no coinciden porque $I_0$ no crece en forma lineal con la velocidad: la pendiente es mayor a baja velocidad. Extrapolada a 10250 rpm, la recta de la medición en vacío da $I_0 = 0.48$ A frente a 0.35 A medidos. La del Ensayo 3 da 0.29 A a 2500 rpm y 0.35 A a 10250 rpm, en acuerdo con lo medido. \textbf{Se adoptan para el modelo $\tau_c = 6.0\times10^{-3}$ N$\cdot$m y $B = 1.76\times10^{-6}$ N$\cdot$m$\cdot$s/rad del Ensayo 3}, porque cubren todo el rango de velocidad hasta 24 V. Para el cálculo de $J$ (Subsección~\ref{sec:motor775_e5}) se usan en cambio los de la medición en vacío, porque esos escalones transcurrieron en su rango de velocidad. A las velocidades de uso del yugo, el término viscoso es pequeño: a 1000 rpm, $B\,\omega$ es de 3 a 9\% de $\tau_c$ según el valor de $B$. Lo que importa es $\tau_c$, y las dos mediciones difieren en 15\%. Ambos valores corresponden al motor solo; la reductora y el mecanismo del yugo agregan su propio rozamiento.
+
+\textbf{Implementación en la simulación.} La función $\operatorname{sgn}(\omega)$ es discontinua en $\omega = 0$ y hace oscilar al integrador numérico cuando la velocidad pasa por cero. En el modelo de Simulink se reemplazó por $\tau_c\tanh(\omega/\omega_{tc})$ con $\omega_{tc} = 1$ rad/s (unos 10 rpm), que coincide con $\tau_c\operatorname{sgn}(\omega)$ en más de 99\% por encima de 30 rpm. Es una decisión numérica propia, no un valor medido. Como contrapartida, el modelo no retiene el eje cuando el torque aplicado es menor que $\tau_c$: lo deja girar muy lento. Por eso tampoco representa el rozamiento estático de despegue $\tau_f$.
 
 \subsection{Ensayo 4: inductancia}
 \label{sec:motor775_e4}
@@ -155,7 +169,7 @@ donde $t_{mss}$ es el tiempo de estabilización de la velocidad (criterio del 2\
 \label{fig:motor775_vacio}
 \end{figure}
 
-Con el motor ya girando, la tensión en bornes quedó por debajo de la de la fuente: por ejemplo, 4.48 V con 5 V y 11.0 V con 12 V. Dividiendo esa diferencia por la corriente de vacío (0.28 a 0.35 A, obtenida de $\tau_c$ y $B$ de la Subsección~\ref{sec:motor775_e3}), se deduce una resistencia en serie $R_s$ de 1.9 a 2.9 $\Omega$, atribuible al amperímetro en la escala usada y a los cables. Durante el ensayo, entonces, $R_{tot} = R + R_s \approx 2.7$ a 3.7 $\Omega$, y no 0.79 $\Omega$. A cada captura se le ajustó una exponencial por mínimos cuadrados entre el 40\% y el 90\% del cambio de tensión:
+Con el motor ya girando, la tensión en bornes quedó por debajo de la de la fuente: por ejemplo, 4.48 V con 5 V y 11.0 V con 12 V. Dividiendo esa diferencia por la corriente de vacío (0.28 a 0.35 A, obtenida de $\tau_c$ y $B$ de la medición en vacío, que cubre este rango de velocidad; Subsección~\ref{sec:motor775_e3}), se deduce una resistencia en serie $R_s$ de 1.9 a 2.9 $\Omega$, atribuible al amperímetro en la escala usada y a los cables. Durante el ensayo, entonces, $R_{tot} = R + R_s \approx 2.7$ a 3.7 $\Omega$, y no 0.79 $\Omega$. A cada captura se le ajustó una exponencial por mínimos cuadrados entre el 40\% y el 90\% del cambio de tensión:
 
 \begin{center}
 \begin{tabular}{cccccc}\toprule
@@ -170,9 +184,9 @@ Fuente [V] & $t_{mss}$ leído [ms] & $\tau$ ajustada [ms] & $4\tau$ [ms] & $R_{t
 
 $4\tau$ coincide con el $t_{mss}$ leído en pantalla con diferencias de 0 a 11\%, de modo que la respuesta es de primer orden y la regla $\tau_{mec} = t_{mss}/4$ vale. $\tau$ crece con la tensión aplicada, en buena parte porque también lo hace $R_{tot}$. Despejando con la $R_{tot}$ de cada ensayo, \textbf{$J = 8.1\times10^{-6}$ kg$\cdot$m$^2$} ($\pm$8\%, desvío entre ensayos). Corresponde al motor solo, sin reductora. Si en la planilla de la referencia se usa $R = 0.79\ \Omega$ con $t_{mss}$ medio de 0.195 s, se obtiene $J = 3.0\times10^{-5}$ kg$\cdot$m$^2$, casi cuatro veces más, porque se atribuye al motor la resistencia de todo el circuito. $R_s$ se dedujo suponiendo exacta la tensión indicada por la fuente; medir la caída del amperímetro en esa escala, o repetir sin él, cierra esa incertidumbre.
 
-Con $R = 0.79\ \Omega$ y alimentación sin resistencia en serie, como con el BTS7960, la constante de tiempo mecánica del motor solo es $\tau_{mec} = J R/(K_tK_e + RB) = 12.8$ ms y $t_{mss} \approx 4\tau_{mec} = 51$ ms.
+Con $R = 0.79\ \Omega$ y alimentación sin resistencia en serie, como con el BTS7960, la constante de tiempo mecánica del motor solo es $\tau_{mec} = J R/(K_tK_e + RB) = 12.9$ ms y $t_{mss} \approx 4\tau_{mec} = 52$ ms, con $B$ de la Subsección~\ref{sec:motor775_e3} (el rozamiento seco no cambia la constante de tiempo, solo la velocidad final).
 
-\textbf{Corriente de arranque y $B$.} Subiendo la tensión de a poco con el motor en vacío, el eje empezó a girar con 0.44, 0.34 y 0.40 A en distintas posiciones: $i_{arr} = 0.39$ A ($\pm$13\%). El torque de despegue es $\tau_f = K_t\,i_{arr} = 8.7\times10^{-3}$ N$\cdot$m, mayor que el rozamiento seco en movimiento $\tau_c = 5.2\times10^{-3}$ N$\cdot$m (Subsección~\ref{sec:motor775_e3}): el rozamiento estático supera al dinámico, como es habitual en escobillas y cojinetes. El $B$ de la Ecuación~\eqref{eq:motor775_jb} no se usa. Con el punto de vacío a 24 V ($I_0 = 0.39$ A a 10230 rpm) el numerador es la resta de dos torques casi iguales, y la planilla de la referencia da $B = -6.9\times10^{-8}$ N$\cdot$m$\cdot$s/rad, sin sentido físico. Además, $i_{arr}$ mide el rozamiento estático y no el seco en movimiento que supone el método. Se adopta $B = 5.2\times10^{-6}$ N$\cdot$m$\cdot$s/rad, la pendiente de $K_t\,I_0$ en función de $\omega$ de la medición en vacío (Subsección~\ref{sec:motor775_e3}).
+\textbf{Corriente de arranque y $B$.} Subiendo la tensión de a poco con el motor en vacío, el eje empezó a girar con 0.44, 0.34 y 0.40 A en distintas posiciones: $i_{arr} = 0.39$ A ($\pm$13\%). El torque de despegue es $\tau_f = K_t\,i_{arr} = 8.7\times10^{-3}$ N$\cdot$m, mayor que el rozamiento seco en movimiento $\tau_c = 5.2\times10^{-3}$ N$\cdot$m (Subsección~\ref{sec:motor775_e3}): el rozamiento estático supera al dinámico, como es habitual en escobillas y cojinetes. El $B$ de la Ecuación~\eqref{eq:motor775_jb} no se usa. Con el punto de vacío a 24 V ($I_0 = 0.39$ A a 10230 rpm) el numerador es la resta de dos torques casi iguales, y la planilla de la referencia da $B = -6.9\times10^{-8}$ N$\cdot$m$\cdot$s/rad, sin sentido físico. Además, $i_{arr}$ mide el rozamiento estático y no el seco en movimiento que supone el método. $B$ y $\tau_c$ se obtienen del ajuste de la Subsección~\ref{sec:motor775_e3}.
 
 El procedimiento propio prevé además un método de verificación independiente de $J$: medir la desaceleración libre al cortar la alimentación, con y sin un volante de inercia conocida.
 
@@ -196,6 +210,15 @@ Los datos de entrada son la respuesta de velocidad del motor a escalones de tens
 
 \textbf{Estado: pendiente.} Ya están los valores de partida de todos los parámetros (Subsección~\ref{sec:motor775_parametros}); falta registrar la respuesta de velocidad. Si se ajusta con las capturas de tensión en bornes del Ensayo 5, el modelo debe incluir la resistencia en serie $R_s$ del montaje.
 
+\textbf{Verificación en régimen con el Ensayo 3.} Mientras tanto, el modelo de Simulink de trabajo (\code{MotorModeloFFB.slx}, carpeta \code{Modelado_Motor_DC}) se verificó en régimen contra el Ensayo 3. Este modelo agrega a los de la referencia el rozamiento seco de la Subsección~\ref{sec:motor775_e3}. El script \code{Cargar_Ensayo3.m} aplica al modelo la tensión del ensayo y carga como referencia la corriente y la velocidad medidas.
+\begin{itemize}
+\item \textbf{Tensión aplicada.} El registro no mide la tensión en bornes: la estima como $24\,d - 1.2$ V, con $d$ el ciclo de trabajo. En cada escalón esa estimación queda 0.5 a 2 V por debajo de $K_e\,\omega + R\,I_0$. Por eso se usó $v = 0.2567\,d[\%] - 1.09$ V, una recta calibrada con $K_e\,\omega + R\,I_0$ en los escalones del propio ensayo (sentido horario), con error máximo de 0.7 V.
+\item \textbf{Corriente.} La corriente de régimen simulada difiere de la medida en 0.02 A o menos en los 7 escalones. Sin el rozamiento seco, el modelo daba 0.06 a 0.24 A contra 0.27 a 0.35 A medidos.
+\item \textbf{Velocidad.} La velocidad simulada queda dentro de $\pm$4\% de la medida. No es una verificación independiente, porque la tensión se calibró con la propia velocidad.
+\item \textbf{Inercia.} Durante las rampas de subida, la corriente medida supera a la de régimen en unos 0.09 A, el valor que predice el modelo para acelerar la inercia $J$. Es una confirmación indirecta de $J$.
+\end{itemize}
+El registro de 100 ms no resuelve los transitorios eléctricos ni mecánicos. Para ellos hacen falta las capturas de osciloscopio de la Subsección~\ref{sec:motor775_e4}.
+
 \subsection{Parámetros del modelo}
 \label{sec:motor775_parametros}
 \begin{center}
@@ -204,15 +227,15 @@ Parámetro & Valor & Origen & Estado\\\midrule
 $R$ (ambiente) & 0.79 $\Omega$ & fuente continua, $v/i$ a $\approx$1 A & provisorio\\
 $L$ & 0.50 mH & LCR a 10 kHz & medido\\
 $K_t = K_e$ & 0.0222 V$\cdot$s/rad & promedio de 3 métodos & medido\\
-$\tau_c$ (motor solo, en movimiento) & 0.005--0.006 N$\cdot$m & Ensayo 3 y vacío & medido\\
+$\tau_c$ (motor solo, en movimiento) & 6.0 $\times10^{-3}$ N$\cdot$m & Ensayo 3 & medido\\
 $\tau_f = K_t\,i_{arr}$ (despegue) & 8.7 $\times10^{-3}$ N$\cdot$m & Ensayo 5 & medido\\
 $i_{arr}$ & 0.39 A & Ensayo 5 & medido ($\pm$13\%)\\
-$B$ (motor solo) & 5.2 $\times10^{-6}$ N$\cdot$m$\cdot$s/rad & vacío & medido\\
+$B$ (motor solo) & 1.76 $\times10^{-6}$ N$\cdot$m$\cdot$s/rad & Ensayo 3 & medido ($R^2$ 0.75)\\
 $J$ (motor solo) & 8.1 $\times10^{-6}$ kg$\cdot$m$^2$ & Ensayo 5, con $R_s$ deducida & provisorio ($\pm$8\%)\\
 $I_{cont}$ sin ventilación & 1.8 A & Ensayo 6b & estimado por carcasa\\
 $\tau_e = L/R$ & 0.63 ms & calculado & \\
-$\tau_{mec} = JR/(K_tK_e + RB)$ & 12.8 ms & calculado & \\
-$t_{mss} \approx 4\tau_{mec}$ (motor solo) & 51 ms & calculado & \\\bottomrule
+$\tau_{mec} = JR/(K_tK_e + RB)$ & 12.9 ms & calculado & \\
+$t_{mss} \approx 4\tau_{mec}$ (motor solo) & 52 ms & calculado & \\\bottomrule
 \end{tabular}
 \end{center}
 
@@ -225,3 +248,7 @@ $t_{mss} \approx 4\tau_{mec}$ (motor solo) & 51 ms & calculado & \\\bottomrule
 \item Repetir la caracterización en el motor de pitch.
 \item Con el modelo ajustado, diseñar el control de corriente en MATLAB y Simulink, simularlo con el mismo algoritmo discreto que usará el firmware y llevarlo a la placa (RP2350 con BTS7960 y sensado de corriente).
 \end{enumerate}
+
+\begin{thebibliography}{9}
+\bibitem{armstrong1994} B.~Armstrong-Hélouvry, P.~Dupont y C.~Canudas de Wit, ``A survey of models, analysis tools and compensation methods for the control of machines with friction'', \emph{Automatica}, vol.~30, n.º~7, pp.~1083--1138, 1994. \href{https://doi.org/10.1016/0005-1098(94)90209-7}{doi:10.1016/0005-1098(94)90209-7}.
+\end{thebibliography}
