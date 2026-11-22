@@ -7,7 +7,7 @@ Los efectos descriptos en las secciones anteriores terminan en un ciclo de traba
 
 Esta sección documenta la caracterización del motor DC 775 del eje roll: el modelo matemático, los ensayos realizados, los resultados y el ajuste fino previsto en MATLAB. El motor de pitch es del mismo modelo y se medirá con el mismo procedimiento. Los datos y cálculos están en la planilla \code{modelizacion motor 775/Mediciones MOTOR ROLL.xlsx}, una hoja por ensayo.
 
-\textbf{Estado.} Los valores de esta sección son provisorios. Faltan el tiempo de estabilización mecánica $t_{mss}$ y la corriente de arranque $i_{arr}$ (Ensayo 5), sin los cuales no se obtienen la inercia $J$ ni el coeficiente viscoso $B$ por el método adoptado, y falta el ajuste en MATLAB contra la respuesta medida (Subsección~\ref{sec:motor775_ajuste}). Cuando cambie un valor medido, se actualiza esta sección.
+\textbf{Estado.} Todos los parámetros del modelo tienen un valor medido (Subsección~\ref{sec:motor775_parametros}). Siguen siendo provisorios hasta el ajuste en MATLAB contra la respuesta medida (Subsección~\ref{sec:motor775_ajuste}). La inercia $J$ depende de una resistencia en serie del montaje que se dedujo y no se midió (Subsección~\ref{sec:motor775_e5}). Cuando cambie un valor medido, se actualiza esta sección.
 
 \subsection{Modelo matemático}
 \label{sec:motor775_modelo}
@@ -28,7 +28,7 @@ La referencia citada omite $\tau_c$ y $\tau_L$. Sin ellos y en Laplace, las func
 \frac{I(s)}{V(s)} = \frac{Js + B}{LJs^2 + (RJ + LB)s + RB + K_tK_e}.
 \label{eq:motor775_tf}
 \end{equation}
-Para el lazo de corriente interesa la segunda. La constante de tiempo eléctrica $\tau_e = L/R$ es del orden de 0.6 ms. Si la mecánica es mucho mayor, como se espera (se confirmará al medir $J$, Subsección~\ref{sec:motor775_e5}), a la escala del lazo de corriente el motor se comporta como $R + Ls$ con la fuerza contraelectromotriz como perturbación lenta.
+Para el lazo de corriente interesa la segunda. La constante de tiempo eléctrica $\tau_e = L/R$ es del orden de 0.6 ms. La mecánica del motor solo, $\tau_{mec} \approx 13$ ms (Subsección~\ref{sec:motor775_e5}), es unas 20 veces mayor. Por eso, a la escala del lazo de corriente, el motor se comporta como $R + Ls$ con la fuerza contraelectromotriz como perturbación lenta.
 
 \subsection{Banco de ensayo e instrumentos}
 \label{sec:motor775_banco}
@@ -40,6 +40,7 @@ Los ensayos se hicieron con el motor fuera del yugo, sin reductora, siguiendo el
 \item Celda de carga con HX711 y brazo de palanca de 110.55 mm para el torque con rotor bloqueado.
 \item Tacómetro óptico para la velocidad del eje.
 \item Medidor LCR para la inductancia.
+\item Osciloscopio digital Rigol para las respuestas a escalón de tensión; las capturas (imagen y CSV) están en \code{modelizacion motor 775/MEDICIONES}.
 \item Termocupla tipo K (UT89X) para la temperatura de carcasa.
 \item Script \code{registrar_ensayo.py}, que registra en la PC los datos del microcontrolador y de la celda.
 \end{itemize}
@@ -121,16 +122,59 @@ Girando libre en régimen estacionario, todo el torque del motor vence el rozami
 \label{sec:motor775_e4}
 Con medidor LCR, en 7 posiciones del rotor: $L = 656\ \mu$H a 1 kHz y $L = 500\ \mu$H a 10 kHz (mínimo 464 $\mu$H). Se adopta el valor a 10 kHz por ser la frecuencia de medición más cercana al PWM del BTS7960 (20 a 25 kHz); $L$ baja con la frecuencia, por eso no se promedian ambas. El mínimo según la posición del rotor es el peor caso para el rizado de corriente. Con $R = 0.79\ \Omega$, $\tau_e = L/R \approx 0.63$ ms.
 
-\subsection{Ensayo 5: inercia $J$ y coeficiente viscoso $B$ (pendiente)}
+\textbf{Verificación con escalón (no concluyente).} Se intentó medir $\tau_e$ con rotor trabado, aplicando un escalón de 3 V desde la fuente de laboratorio con el amperímetro en serie y registrando con el osciloscopio (Figura~\ref{fig:motor775_tau}). La corriente final fue de 2.36 A. La lectura del 63\% del valor final dio 6 ms, pero la forma de onda no corresponde a un circuito $R$--$L$:
+\begin{itemize}
+\item a los 0.4 ms la señal llega a 6.84 V, más del doble de la tensión aplicada;
+\item a los 3.6 ms cae a 0.28 V y a los 9.5 ms sube a 1.88 V;
+\item se estabiliza en 1.56 V recién después de unos 15 ms.
+\end{itemize}
+Un circuito $R$--$L$ alimentado con un escalón responde con una exponencial, sin sobrepico ni oscilación. Lo registrado es una respuesta subamortiguada que se atribuye al regulador de la fuente al recibir el escalón de carga. Si se tomara $\tau_e = 6$ ms, resultaría $L$ de 4 a 9 mH según la resistencia del circuito, de 8 a 15 veces lo medido con el LCR. Además, con 5 ms/div el osciloscopio toma una muestra cada 0.2 ms, del mismo orden que el $\tau_e$ esperado, de modo que la captura no alcanza para resolverlo. \textbf{Se mantiene $L = 0.50$ mH del LCR.} Para repetir el escalón hacen falta una fuente que no limite (batería, o el BTS7960 con ciclo de trabajo fijo), la corriente medida con un shunt de baja inductancia o el ACS712 en lugar del multímetro, y una base de tiempo de 100 a 200 $\mu$s/div con disparo único.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.55\textwidth]{figuras/motor775/rotor_bloqueado_3V.png}
+\caption{Escalón de 3 V con rotor trabado (500 mV/div, 5 ms/div). El sobrepico y la oscilación muestran la respuesta de la fuente, no la constante $L/R$ del motor.}
+\label{fig:motor775_tau}
+\end{figure}
+
+\subsection{Ensayo 5: inercia $J$ y coeficiente viscoso $B$}
 \label{sec:motor775_e5}
-Para $J$ y $B$ se usa el procedimiento de la referencia citada, con su planilla \code{Parametrizacion-Motor-DC Video.xlsx}; es la única parte del método de la referencia que se usa tal cual. El resto de los parámetros se obtuvo con los ensayos propios descriptos arriba. Las relaciones son:
+Para $J$ y $B$ se partió del procedimiento de la referencia citada, con su planilla \code{Parametrizacion-Motor-DC Video.xlsx}. El resto de los parámetros se obtuvo con los ensayos propios descriptos arriba. Las relaciones de la referencia son:
 \begin{equation}
-\tau_{mec} = \frac{t_{mss}}{4},\qquad J = \frac{\tau_{mec}\,K_e\,K_t}{R},\qquad \tau_f = K_t\,i_{arr},\qquad B = \frac{K_t\,I_0 - \tau_f}{\omega},
+\tau_{mec} = \frac{t_{mss}}{4},\qquad J = \frac{\tau_{mec}\,K_e\,K_t}{R_{tot}},\qquad \tau_f = K_t\,i_{arr},\qquad B = \frac{K_t\,I_0 - \tau_f}{\omega},
 \label{eq:motor775_jb}
 \end{equation}
-donde $t_{mss}$ es el tiempo de estabilización de la velocidad ante un escalón de tensión, $\tau_{mec}$ la constante de tiempo mecánica, $i_{arr}$ la corriente con la que el eje empieza a girar al subir la tensión de a poco, $\tau_f$ el torque de rozamiento e $I_0$ la corriente de vacío a la velocidad $\omega$. La expresión de $J$ supone $RB \ll K_tK_e$, que se cumple con creces en este motor.
+donde $t_{mss}$ es el tiempo de estabilización de la velocidad (criterio del 2\%) ante un escalón de tensión, $\tau_{mec}$ la constante de tiempo mecánica, $R_{tot}$ la resistencia total del circuito durante el ensayo, $i_{arr}$ la corriente con la que el eje empieza a girar al subir la tensión de a poco, $\tau_f$ el torque de rozamiento e $I_0$ la corriente de vacío a la velocidad $\omega$. La referencia escribe $R$ en lugar de $R_{tot}$ porque supone una fuente ideal conectada directo al motor; la diferencia resultó decisiva en este ensayo. La expresión de $J$ supone $R_{tot}B \ll K_tK_e$, que se cumple con creces en este motor.
 
-Falta medir $t_{mss}$ e $i_{arr}$; por eso esta sección no informa $J$ ni $B$ por este método. El procedimiento propio prevé además un método de verificación independiente: medir la desaceleración libre al cortar la alimentación, con y sin un volante de inercia conocida.
+\textbf{Tiempo de estabilización.} Con el motor en vacío se aplicaron escalones desde la fuente de laboratorio con el amperímetro en serie, y se registró con el osciloscopio la tensión en bornes del motor (Figura~\ref{fig:motor775_vacio}). Esa tensión es $R\,i + K_e\,\omega$: cuando la corriente baja a la de vacío, queda casi proporcional a la velocidad y su estabilización es la de la velocidad.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.55\textwidth]{figuras/motor775/vacio_12V.png}
+\caption{Tensión en bornes del motor en vacío ante un escalón de 12 V de la fuente (5 V/div, 100 ms/div). La rampa inicial no es instantánea porque el amperímetro y los cables quedan en serie con el motor.}
+\label{fig:motor775_vacio}
+\end{figure}
+
+Con el motor ya girando, la tensión en bornes quedó por debajo de la de la fuente: por ejemplo, 4.48 V con 5 V y 11.0 V con 12 V. Dividiendo esa diferencia por la corriente de vacío (0.28 a 0.35 A, obtenida de $\tau_c$ y $B$ de la Subsección~\ref{sec:motor775_e3}), se deduce una resistencia en serie $R_s$ de 1.9 a 2.9 $\Omega$, atribuible al amperímetro en la escala usada y a los cables. Durante el ensayo, entonces, $R_{tot} = R + R_s \approx 2.7$ a 3.7 $\Omega$, y no 0.79 $\Omega$. A cada captura se le ajustó una exponencial por mínimos cuadrados entre el 40\% y el 90\% del cambio de tensión:
+
+\begin{center}
+\begin{tabular}{cccccc}\toprule
+Fuente [V] & $t_{mss}$ leído [ms] & $\tau$ ajustada [ms] & $4\tau$ [ms] & $R_{tot}$ [$\Omega$] & $J$ [kg$\cdot$m$^2$]\\\midrule
+5.00 & 176 & 43.9 & 176 & 2.66 & $8.1\times10^{-6}$\\
+7.49 & 184 & 49.0 & 196 & 3.34 & $7.2\times10^{-6}$\\
+8.99 & 192 & 50.1 & 201 & 3.15 & $7.9\times10^{-6}$\\
+10.51 & 204 & 56.4 & 226 & 3.04 & $9.2\times10^{-6}$\\
+12.00 & 220 & 60.2 & 241 & 3.67 & $8.1\times10^{-6}$\\\bottomrule
+\end{tabular}
+\end{center}
+
+$4\tau$ coincide con el $t_{mss}$ leído en pantalla con diferencias de 0 a 11\%, de modo que la respuesta es de primer orden y la regla $\tau_{mec} = t_{mss}/4$ vale. $\tau$ crece con la tensión aplicada, en buena parte porque también lo hace $R_{tot}$. Despejando con la $R_{tot}$ de cada ensayo, \textbf{$J = 8.1\times10^{-6}$ kg$\cdot$m$^2$} ($\pm$8\%, desvío entre ensayos). Corresponde al motor solo, sin reductora. Si en la planilla de la referencia se usa $R = 0.79\ \Omega$ con $t_{mss}$ medio de 0.195 s, se obtiene $J = 3.0\times10^{-5}$ kg$\cdot$m$^2$, casi cuatro veces más, porque se atribuye al motor la resistencia de todo el circuito. $R_s$ se dedujo suponiendo exacta la tensión indicada por la fuente; medir la caída del amperímetro en esa escala, o repetir sin él, cierra esa incertidumbre.
+
+Con $R = 0.79\ \Omega$ y alimentación sin resistencia en serie, como con el BTS7960, la constante de tiempo mecánica del motor solo es $\tau_{mec} = J R/(K_tK_e + RB) = 12.8$ ms y $t_{mss} \approx 4\tau_{mec} = 51$ ms.
+
+\textbf{Corriente de arranque y $B$.} Subiendo la tensión de a poco con el motor en vacío, el eje empezó a girar con 0.44, 0.34 y 0.40 A en distintas posiciones: $i_{arr} = 0.39$ A ($\pm$13\%). El torque de despegue es $\tau_f = K_t\,i_{arr} = 8.7\times10^{-3}$ N$\cdot$m, mayor que el rozamiento seco en movimiento $\tau_c = 5.2\times10^{-3}$ N$\cdot$m (Subsección~\ref{sec:motor775_e3}): el rozamiento estático supera al dinámico, como es habitual en escobillas y cojinetes. El $B$ de la Ecuación~\eqref{eq:motor775_jb} no se usa. Con el punto de vacío a 24 V ($I_0 = 0.39$ A a 10230 rpm) el numerador es la resta de dos torques casi iguales, y la planilla de la referencia da $B = -6.9\times10^{-8}$ N$\cdot$m$\cdot$s/rad, sin sentido físico. Además, $i_{arr}$ mide el rozamiento estático y no el seco en movimiento que supone el método. Se adopta $B = 5.2\times10^{-6}$ N$\cdot$m$\cdot$s/rad, la pendiente de $K_t\,I_0$ en función de $\omega$ de la medición en vacío (Subsección~\ref{sec:motor775_e3}).
+
+El procedimiento propio prevé además un método de verificación independiente de $J$: medir la desaceleración libre al cortar la alimentación, con y sin un volante de inercia conocida.
 
 \subsection{Ensayo 6: límite térmico}
 \label{sec:motor775_e6}
@@ -150,7 +194,7 @@ Los valores medidos se usan como punto de partida de un ajuste fino en MATLAB co
 \end{itemize}
 Los datos de entrada son la respuesta de velocidad del motor a escalones de tensión, registrada con el tacómetro. Las cotas de $\pm$20\% mantienen el ajuste cerca de lo medido: si un parámetro termina contra una cota, la medición correspondiente se revisa en lugar de aceptar el valor ajustado.
 
-\textbf{Estado: pendiente.} Requiere los valores de $J$ y $B$ del Ensayo 5 como punto de partida.
+\textbf{Estado: pendiente.} Ya están los valores de partida de todos los parámetros (Subsección~\ref{sec:motor775_parametros}); falta registrar la respuesta de velocidad. Si se ajusta con las capturas de tensión en bornes del Ensayo 5, el modelo debe incluir la resistencia en serie $R_s$ del montaje.
 
 \subsection{Parámetros del modelo}
 \label{sec:motor775_parametros}
@@ -160,18 +204,23 @@ Parámetro & Valor & Origen & Estado\\\midrule
 $R$ (ambiente) & 0.79 $\Omega$ & fuente continua, $v/i$ a $\approx$1 A & provisorio\\
 $L$ & 0.50 mH & LCR a 10 kHz & medido\\
 $K_t = K_e$ & 0.0222 V$\cdot$s/rad & promedio de 3 métodos & medido\\
-$\tau_c$ (motor solo) & 0.005--0.006 N$\cdot$m & Ensayo 3 y vacío & medido\\
-$B$ (motor solo) & 2--5 $\times10^{-6}$ N$\cdot$m$\cdot$s/rad & Ensayo 3 y vacío & orden de magnitud\\
-$J$ & --- & Ensayo 5 & pendiente\\
+$\tau_c$ (motor solo, en movimiento) & 0.005--0.006 N$\cdot$m & Ensayo 3 y vacío & medido\\
+$\tau_f = K_t\,i_{arr}$ (despegue) & 8.7 $\times10^{-3}$ N$\cdot$m & Ensayo 5 & medido\\
+$i_{arr}$ & 0.39 A & Ensayo 5 & medido ($\pm$13\%)\\
+$B$ (motor solo) & 5.2 $\times10^{-6}$ N$\cdot$m$\cdot$s/rad & vacío & medido\\
+$J$ (motor solo) & 8.1 $\times10^{-6}$ kg$\cdot$m$^2$ & Ensayo 5, con $R_s$ deducida & provisorio ($\pm$8\%)\\
 $I_{cont}$ sin ventilación & 1.8 A & Ensayo 6b & estimado por carcasa\\
-$\tau_e = L/R$ & 0.63 ms & calculado & \\\bottomrule
+$\tau_e = L/R$ & 0.63 ms & calculado & \\
+$\tau_{mec} = JR/(K_tK_e + RB)$ & 12.8 ms & calculado & \\
+$t_{mss} \approx 4\tau_{mec}$ (motor solo) & 51 ms & calculado & \\\bottomrule
 \end{tabular}
 \end{center}
 
 \subsection{Próximos pasos}
 \label{sec:motor775_pasos}
 \begin{enumerate}
-\item Medir $t_{mss}$ e $i_{arr}$ y obtener $J$ y $B$ con la Ecuación~\eqref{eq:motor775_jb}.
+\item Medir la caída del amperímetro en la escala usada en el Ensayo 5 (o repetir los escalones sin él) para confirmar $R_s$ y, con ella, $J$.
+\item Repetir el escalón con rotor trabado con una fuente que no limite y la corriente medida con shunt o ACS712, para verificar $L$ (Subsección~\ref{sec:motor775_e4}).
 \item Registrar la respuesta de velocidad a escalones de tensión y hacer el ajuste en MATLAB (Subsección~\ref{sec:motor775_ajuste}); validar con datos distintos.
 \item Repetir la caracterización en el motor de pitch.
 \item Con el modelo ajustado, diseñar el control de corriente en MATLAB y Simulink, simularlo con el mismo algoritmo discreto que usará el firmware y llevarlo a la placa (RP2350 con BTS7960 y sensado de corriente).
