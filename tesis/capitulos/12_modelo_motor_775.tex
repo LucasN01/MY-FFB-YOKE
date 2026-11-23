@@ -7,7 +7,7 @@ Los efectos descriptos en las secciones anteriores terminan en un ciclo de traba
 
 Esta sección documenta la caracterización del motor DC 775 del eje roll: el modelo matemático, los ensayos realizados, los resultados y el ajuste fino previsto en MATLAB. El motor de pitch es del mismo modelo y se medirá con el mismo procedimiento. Los datos y cálculos están en la planilla \code{modelizacion motor 775/Mediciones MOTOR ROLL.xlsx}, una hoja por ensayo.
 
-\textbf{Estado.} Todos los parámetros del modelo tienen un valor medido (Subsección~\ref{sec:motor775_parametros}). La resistencia del circuito con el driver y la inercia se ajustaron en MATLAB contra la corriente medida en escalones de tensión (Subsecciones~\ref{sec:motor775_captura} y~\ref{sec:motor775_ajuste}). Con la tensión medida en bornes y un tacómetro óptico, la velocidad del modelo difiere de la medida entre 0.6 y 2.2\% en régimen (Subsección~\ref{sec:motor775_validacion}). Para observar en detalle la aceleración, resta incorporar el encoder magnético previsto, cuya resolución es mayor que la del tacómetro de una marca por vuelta. Cuando cambie un valor medido, se actualiza esta sección.
+\textbf{Estado.} Todos los parámetros del modelo tienen un valor medido (Subsección~\ref{sec:motor775_parametros}). La resistencia del circuito con el driver y la inercia se ajustaron en MATLAB contra la corriente medida en escalones de tensión (Subsecciones~\ref{sec:motor775_captura} y~\ref{sec:motor775_ajuste}). Con la tensión medida en bornes y un tacómetro óptico, la velocidad del modelo difiere de la medida entre 0.6 y 2.2\% en régimen (Subsección~\ref{sec:motor775_validacion}). Un barrido en vacío a cuatro ciclos de trabajo, con 50 escalones en cada uno, permitió determinar $K_e$, el rozamiento, la resistencia con corriente elevada y la inercia con las mismas mediciones. Con esos valores, el modelo reproduce la velocidad en régimen con una diferencia de 0.2 a 1.5\% (Subsección~\ref{sec:motor775_barrido}). Para observar en detalle la aceleración, resta incorporar el encoder magnético previsto, cuya resolución es mayor que la del tacómetro de una marca por vuelta. Cuando cambie un valor medido, se actualiza esta sección.
 
 \subsection{Modelo matemático}
 \label{sec:motor775_modelo}
@@ -94,6 +94,8 @@ Ensayo 1, sin filtro & 0.686 & tensión conmutada leída sin filtro\\\bottomrule
 
 \textbf{Se adopta $R = 0.79\ \Omega$} a temperatura ambiente, de la medición con fuente continua: es la única en la que la tensión medida es continua y se toma directo en bornes, y coincide con la medición con óhmetro. El valor del Ensayo 1 queda descartado por la lectura sin filtro. La diferencia con el Ensayo 6b (0.92 $\Omega$, 17\% más) queda abierta. El ajuste en MATLAB (Subsección~\ref{sec:motor775_ajuste}) admite $R$ como parámetro libre dentro de $\pm$20\%, y por lo tanto cubre todo ese rango. Como simplificación local, el contacto de escobillas se absorbe en $R$ y no se modela una caída fija aparte; los ensayos no separaron su componente resistiva de una posible caída fija, de modo que $R = 0.79\ \Omega$ es una resistencia efectiva válida cerca de 1 A.
 
+\textbf{Actualización.} Con corrientes de 3 a 13 A, la resistencia efectiva entre bornes resultó menor: el barrido en vacío y una medición a rotor trabado sin multímetro en serie dieron entre 0.56 y 0.73 $\Omega$. El modelo adopta $R_{motor} = 0.66\ \Omega$, obtenido en el ajuste del barrido. El análisis completo está en la Subsección~\ref{sec:motor775_barrido}.
+
 $R$ del cobre aumenta con la temperatura según $R(T) = R_0\,[1 + 0.00393\,(T - T_0)]$. No se registró la temperatura de la medición; suponiendo $T_0 = 22\ ^\circ$C, con el bobinado a 60 $^\circ$C $R$ sube alrededor de 15\%. El control de corriente no depende de conocer $R$ con exactitud, pero sí la prealimentación y la estimación de la fuerza contraelectromotriz.
 
 \subsection{Ensayo 2 y medición en vacío: $K_e$}
@@ -107,10 +109,13 @@ $R$ del cobre aumenta con la temperatura según $R(T) = R_0\,[1 + 0.00393\,(T - 
 Método & $K_e$ o $K_t$ [V$\cdot$s/rad] & Diferencia entre sentidos\\\midrule
 Generador con taladro (Ensayo 2) & 0.02251 & 0.4\%\\
 Vacío como motor & 0.02178 & 0.8\%\\
-Torque con brazo y celda (Ensayo 1) & 0.02222 & 20\% (causa pendiente)\\\midrule
-\textbf{Adoptado} $K_t = K_e$ & \textbf{0.0222} ($\pm$2\%) & \\\bottomrule
+Torque con brazo y celda (Ensayo 1) & 0.02222 & 20\% (causa pendiente)\\
+Barrido en vacío con tensión en bornes y tacómetro & 0.02252 & un sentido\\\midrule
+\textbf{Adoptado} $K_t = K_e$ & \textbf{0.0225} & \\\bottomrule
 \end{tabular}
 \end{center}
+
+\textbf{Actualización.} El valor adoptado inicialmente fue $K_e = 0.0222$ V$\cdot$s/rad ($\pm$2\%), promedio de los tres primeros métodos. El barrido en vacío de la Subsección~\ref{sec:motor775_barrido} mide la tensión directamente en bornes y la velocidad con el tacómetro, a cuatro velocidades y con 50 escalones promediados en cada una. Dio $K_e = 0.02252$ V$\cdot$s/rad con $R^2 = 0.99994$, valor que coincide con el del Ensayo 2 (0.02251 V$\cdot$s/rad). Este último es el otro método en el que no intervienen $R$ ni las escobillas. Por esa coincidencia se adopta $K_t = K_e = 0.0225$ V$\cdot$s/rad, equivalente a 2.36 V/krpm. La medición en vacío como motor, 3\% menor, queda atribuida a la medición de velocidad de ese ensayo. El párrafo siguiente conserva el análisis original.
 
 Los dos métodos de $K_e$ difieren en 3.2\%, y la diferencia no la explican ni $R$ ni el rango de velocidad. Quedan dos hipótesis sin verificar: la temperatura de los imanes (en ferrita, $K_e$ baja cerca de 0.2\%/$^\circ$C, de modo que unos 15 $^\circ$C de diferencia explican el 3\%) y la forma en que se midió la velocidad en cada ensayo. El $K_t$ del Ensayo 1 cae entre ambos, a menos de 2\% de cada uno, lo que confirma $K_t = K_e$. El $\pm$2\% del valor adoptado representa la dispersión entre métodos, no una incertidumbre metrológica completa. Para el control de corriente, una incertidumbre de 3\% en $K_t$ no es relevante. El valor adoptado equivale a 2.32 V/krpm.
 
@@ -129,6 +134,8 @@ Medición en vacío (Subsección~\ref{sec:motor775_ke}), 794--4254 rpm & $5.19\t
 $\tau_c$ equivale a 0.27 A de corriente de vacío. El $R^2$ es bajo porque $I_0$ varía poco con la velocidad (0.27 a 0.35 A) frente a la dispersión del ACS712, que es de unos $\pm$0.02 A. Aun así, la recta reproduce cada punto con un error de 0.03 A o menos.
 
 \textbf{Elección.} Las dos rectas no coinciden porque $I_0$ no crece en forma lineal con la velocidad: la pendiente es mayor a baja velocidad. Extrapolada a 10250 rpm, la recta de la medición en vacío da $I_0 = 0.48$ A frente a 0.35 A medidos. La del Ensayo 3 da 0.29 A a 2500 rpm y 0.35 A a 10250 rpm, en acuerdo con lo medido. \textbf{Se adoptan para el modelo $\tau_c = 6.0\times10^{-3}$ N$\cdot$m y $B = 1.76\times10^{-6}$ N$\cdot$m$\cdot$s/rad del Ensayo 3}, porque cubren todo el rango de velocidad hasta 24 V. Para el cálculo de $J$ (Subsección~\ref{sec:motor775_e5}) se usan en cambio los de la medición en vacío, porque esos escalones transcurrieron en su rango de velocidad. A las velocidades de uso del yugo, el término viscoso es pequeño: a 1000 rpm, $B\,\omega$ es de 3 a 9\% de $\tau_c$ según el valor de $B$. Lo que importa es $\tau_c$, y las dos mediciones difieren en 15\%. Ambos valores corresponden al motor solo; la reductora y el mecanismo del yugo agregan su propio rozamiento.
+
+\textbf{Actualización.} El barrido en vacío de la Subsección~\ref{sec:motor775_barrido}, con la tensión en bornes, el tacómetro y 50 escalones promediados por ciclo de trabajo, dio $\tau_c = 4.7\times10^{-3}$ N$\cdot$m y $B = 3.7\times10^{-6}$ N$\cdot$m$\cdot$s/rad entre 1250 y 4870 rpm. El modelo adopta estos valores porque cubren el rango de velocidad más próximo al de uso del yugo, y con ellos la corriente de régimen del modelo difiere de la medida entre $-3.6$ y $+5.7$\%. Sin embargo, en el extremo superior del rango la recta sobreestima el rozamiento: extrapolada a 10250 rpm, da $K_t I_0 = 8.7\times10^{-3}$ N$\cdot$m (0.39 A), frente a 0.35 A medidos en el Ensayo 3. Esta diferencia confirma que la pendiente disminuye a alta velocidad.
 
 \textbf{Implementación en la simulación.} La función $\operatorname{sgn}(\omega)$ es discontinua en $\omega = 0$ y hace oscilar al integrador numérico cuando la velocidad pasa por cero. En el modelo de Simulink se reemplazó por $\tau_c\tanh(\omega/\omega_{tc})$ con $\omega_{tc} = 1$ rad/s (unos 10 rpm), que coincide con $\tau_c\operatorname{sgn}(\omega)$ en más de 99\% por encima de 30 rpm. Es una decisión numérica propia, no un valor medido. Como contrapartida, el modelo no retiene el eje cuando el torque aplicado es menor que $\tau_c$: lo deja girar muy lento. Por eso tampoco representa el rozamiento estático de despegue $\tau_f$.
 
@@ -409,24 +416,80 @@ A los 0.39 s, los cursores indican 413.8 rad/s para la función de transferencia
 \label{fig:motor775_val_20a_vel}
 \end{figure}
 
+Las capturas de esta subsección se simularon con los parámetros vigentes en ese momento ($K_e = 0.0222$ V$\cdot$s/rad, $R_{motor} = 0.787\ \Omega$, $\tau_c = 6.0\times10^{-3}$ N$\cdot$m). Los valores definitivos surgen del barrido de la Subsección~\ref{sec:motor775_barrido}.
+
+\subsection{Barrido en vacío a varios ciclos de trabajo}
+\label{sec:motor775_barrido}
+\textbf{Objetivo y procedimiento.} Con dos capturas a un único ciclo de trabajo, $K_e$, $\tau_c$ y $B$ no pueden separarse: en régimen, cada captura aporta un solo punto de las rectas $v - R\,i$ y $K_t\,i$ en función de $\omega$. Por ese motivo se realizó un barrido en vacío con la fuente de 24 V y 20 A, la tensión medida en bornes y el tacómetro, a cuatro ciclos de trabajo: 20, 30, 40 y 50\%. Para cada ciclo de trabajo se registraron 50 escalones de 800 ms ($N = 20$), separados 3 s para que el motor se detuviera, y se promediaron. Los ciclos de trabajo se recorrieron en el orden 20, 40, 30 y 50\%, con una pausa de 60 s entre ellos, para repartir el calentamiento del bobinado. El sketch de captura se amplió a 100 repeticiones por comando, y el script \code{Capturar_Barrido.m} ejecuta el barrido completo (unos 15 min). Con 50 escalones, el tacómetro reúne entre 727 y 2961 puntos por ciclo de trabajo, y el desvío del cero de corriente, que varía $\pm$0.065 A entre escalones, se reduce a unos $\pm$0.01 A en el promedio.
+
+\textbf{Resultados en régimen.} El script \code{Analizar_Barrido.m} toma los valores medios a partir de 0.4 s:
+\begin{center}
+\begin{tabular}{ccccc}\toprule
+Ciclo de trabajo & Tensión en bornes & Corriente & Velocidad (tacómetro) & $\tau$ de la aceleración\\\midrule
+20\% & 3.14 V & 0.238 A & 1249 rpm & 17.0 ms\\
+30\% & 6.55 V & 0.251 A & 2704 rpm & 16.1 ms\\
+40\% & 9.20 V & 0.260 A & 3797 rpm & 16.2 ms\\
+50\% & 11.71 V & 0.304 A & 4868 rpm & 16.2 ms\\\bottomrule
+\end{tabular}
+\end{center}
+Con estos cuatro puntos se plantean las dos ecuaciones de régimen de la Subsección~\ref{sec:motor775_modelo}. De la ecuación eléctrica, $v - R_{motor}\,i = K_e\,\omega$, la pendiente de la recta da $K_e = 0.02252$ V$\cdot$s/rad, con $R^2 = 0.99994$ y una ordenada de 4 mV. Si se fuerza la ordenada a cero, resulta $K_e = 0.02253$ V$\cdot$s/rad. El término $R_{motor}\,i$ representa menos de 0.2 V, de modo que el resultado casi no depende de la resistencia adoptada. De la ecuación mecánica, $K_t\,i = \tau_c + B\,\omega$ con $K_t = K_e$, se obtienen $\tau_c = 4.71\times10^{-3}$ N$\cdot$m (0.209 A) y $B = 3.67\times10^{-6}$ N$\cdot$m$\cdot$s/rad, con $R^2 = 0.83$.
+
+\textbf{Lectura de la Figura~\ref{fig:motor775_barrido_ke}.} El panel izquierdo muestra $v - R_{motor}\,i$ en función de la velocidad del tacómetro: cada círculo es el valor de régimen de un ciclo de trabajo y la recta es el ajuste, cuya pendiente es $K_e$. Los cuatro puntos están sobre la recta. El panel derecho muestra el torque de rozamiento $K_t\,i$ en mN$\cdot$m. Los puntos se apartan de la recta hasta 0.2 mN$\cdot$m, que equivalen a 0.01 A, del orden de la incertidumbre de la corriente de régimen. El punto de 50\% se encuentra por encima de la tendencia de los tres restantes y es el que más influye en $B$: sin él, resultaría $B \approx 1.9\times10^{-6}$ N$\cdot$m$\cdot$s/rad y $\tau_c \approx 5.1\times10^{-3}$ N$\cdot$m. Por lo tanto, $\tau_c$ queda bien determinado, mientras que $B$ solo se conoce dentro de un factor de dos.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuras/motor775/barrido_ke_rozamiento.png}
+\caption{Barrido en vacío (\code{barrido_20261123_182847}): recta de la ecuación eléctrica en régimen, cuya pendiente es $K_e$ (izquierda), y torque de rozamiento en función de la velocidad (derecha).}
+\label{fig:motor775_barrido_ke}
+\end{figure}
+
+\textbf{Lectura de la Figura~\ref{fig:motor775_barrido_acel}.} Se superponen los puntos del tacómetro de los 50 escalones de cada ciclo de trabajo, cada uno con su color, y la curva continua del mismo color es el ajuste de una exponencial de primer orden, $\omega(t) = \omega_f\,(1 - e^{-t/\tau})$. Cada punto es la velocidad media de una vuelta: por eso no hay puntos al comienzo del arranque, y a 20\% el primero aparece recién a unos 35 ms. La constante de tiempo resulta prácticamente la misma en los cuatro casos, entre 16.1 y 17.0 ms. Entre 50 y 100 ms los puntos quedan algo por debajo de la exponencial, porque la tensión en bornes no es un escalón ideal: durante el arranque, la corriente elevada produce una caída en la fuente y en el driver, equivalente a una resistencia en serie de unos 0.12 $\Omega$, que se estimó de la pendiente de la tensión en función de la corriente entre 4 y 150 ms. Por esta razón, la inercia que se obtiene directamente de $\tau$, $J = 9.25\times10^{-6}$ kg$\cdot$m$^2$ ($\pm$3\% entre ciclos de trabajo), es solo indicativa. El valor definitivo surge del ajuste, que excita el modelo con la tensión medida.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuras/motor775/barrido_aceleracion.png}
+\caption{Velocidad medida por el tacómetro durante la aceleración, a los cuatro ciclos de trabajo (50 escalones superpuestos en cada caso), con el ajuste de primer orden.}
+\label{fig:motor775_barrido_acel}
+\end{figure}
+
+\textbf{Ajuste de $R$ y $J$.} Con $K_e$, $\tau_c$ y $B$ fijados en los valores de régimen, \code{Ajuste_Modelo_Captura.m} ajusta $R_{motor}$ y $J$ con \code{fmincon} \cite{mathworks_fmincon} sobre las cuatro capturas a la vez. Minimiza la suma del error cuadrático medio de la corriente y de la velocidad del tacómetro, normalizados por su valor máximo. Para que la comparación sea equivalente a la medición, la velocidad del modelo se promedia a lo largo de cada vuelta. Resultan $R_{motor} = 0.66\ \Omega$ y $J = 8.58\times10^{-6}$ kg$\cdot$m$^2$, con un error normalizado de 0.0158. Para verificar la elección, el ajuste se repitió con todos los parámetros libres: dio $R_{motor} = 0.646\ \Omega$, $J = 8.79\times10^{-6}$ kg$\cdot$m$^2$ y $K_e = 0.02267$ V$\cdot$s/rad, con un error de 0.0146. La mejora es pequeña frente a la que se obtiene al fijar cada parámetro a partir de su medición más directa. Con el conjunto adoptado, el modelo reproduce en régimen la velocidad del tacómetro con una diferencia de 0.2 a 1.5\% y la corriente con una diferencia de $-3.6$ a $+5.7$\%.
+
+\textbf{Lectura de las Figuras~\ref{fig:motor775_barrido_d20} y~\ref{fig:motor775_barrido_d50}.} Muestran los primeros 200 ms de los escalones a 20\% y a 50\%, los extremos del barrido, simulados con los parámetros adoptados. En el panel superior, los puntos son la corriente medida (promedio de 50 escalones, una muestra cada 2 ms) y la curva es la corriente del modelo excitado con la tensión medida en bornes. En el inferior, los círculos son la velocidad del tacómetro y la curva es la velocidad del modelo. A 50\%, la primera muestra de corriente (12.8 A) supera al modelo (11.8 A) por el mismo motivo indicado en la Subsección~\ref{sec:motor775_validacion}: con $N = 20$, la tensión del primer intervalo de 2 ms promedia el inicio del escalón con el retardo del filtro. En ambos casos, la curva del modelo se adelanta levemente a los círculos durante la aceleración. Esto se debe a que la figura dibuja la velocidad instantánea del modelo, mientras que cada punto del tacómetro es la velocidad media de la vuelta anterior. En el ajuste se compara la velocidad promediada en la misma vuelta.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/motor775/barrido_modelo_d20.png}
+\caption{Escalón en vacío al 20\% (\code{escalon_d20_N20_x50_20261123_181612}): corriente y velocidad medidas y del modelo con los parámetros adoptados.}
+\label{fig:motor775_barrido_d20}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/motor775/barrido_modelo_d50.png}
+\caption{Escalón en vacío al 50\% (\code{escalon_d50_N20_x50_20261123_182846}): corriente y velocidad medidas y del modelo con los parámetros adoptados.}
+\label{fig:motor775_barrido_d50}
+\end{figure}
+
+\textbf{Resistencia del motor con corriente elevada.} El valor $R_{motor} = 0.66\ \Omega$ es 16\% menor que el medido con fuente continua cerca de 1 A (Subsección~\ref{sec:motor775_rdc}). Para descartar que la diferencia proviniera del modelo, se calculó directamente $R = (v - K_e\,\omega)/i$ en los primeros 3 a 9 ms de cada captura, con corrientes de 3 a 13 A: resultó entre 0.62 y 0.73 $\Omega$. También se descartó un error de ganancia del ACS712. Para ello, a rotor trabado y con un multímetro en serie con el motor, se aplicaron ciclos de trabajo constantes durante 5 s (comando \code{c} del sketch). Con el cero calibrado, el ACS712 indicó entre 2 y 8\% \emph{menos} que el multímetro (1.66 a 2.57 A); un sensor que leyera de más habría producido el efecto contrario. Luego se repitió la prueba sin el multímetro, cuya resistencia interna y la de sus puntas sumaban unos 0.35 $\Omega$. Entre 2.6 y 5.7 A, $v/i$ resultó de 0.56 a 0.69 $\Omega$. Esta medición no permitió separar la resistencia del bobinado de una caída fija en escobillas, por dos motivos. Las corridas se hicieron sin pausas, de modo que $R$ aumentó con el calentamiento acumulado, alrededor de 1\% cada 5 s. Además, con el rotor detenido, el contacto de las escobillas resultó inestable: a 5.7 A la corriente osciló entre 5.3 y 6.3 A con la tensión constante. Se concluye que la resistencia efectiva entre bornes depende de la corriente y del estado del contacto de las escobillas: 0.79 $\Omega$ cerca de 1 A y entre 0.56 y 0.73 $\Omega$ entre 3 y 13 A. Para el modelo se adopta 0.66 $\Omega$, valor obtenido con el motor girando y a temperatura ambiente, en el rango de corriente del control de fuerza.
+
 \subsection{Parámetros del modelo}
 \label{sec:motor775_parametros}
 \begin{center}
 \begin{tabular}{p{0.28\textwidth}p{0.16\textwidth}p{0.31\textwidth}p{0.13\textwidth}}\toprule
 Parámetro & Valor & Origen & Estado\\\midrule
-$R_{motor}$ (ambiente) & 0.79 $\Omega$ & fuente continua, $v/i$ a $\approx$1 A & medido\\
+$R_{motor}$ (ambiente, 3 a 13 A) & 0.66 $\Omega$ & ajuste con \code{fmincon} (barrido en vacío); 0.79 $\Omega$ a $\approx$1 A con fuente continua & ajustado\\
 $R$ del circuito con el BTS7960 & 0.869 $\Omega$ & ajuste con \code{fmincon} (escalón en vacío) & ajustado\\
 $L$ & 0.50 mH & LCR a 10 kHz; escalón a rotor trabado: 0.49--0.55 mH & medido\\
-$K_t = K_e$ & 0.0222 V$\cdot$s/rad & promedio de 3 métodos & medido\\
-$\tau_c$ (motor solo, en movimiento) & 6.0 $\times10^{-3}$ N$\cdot$m & Ensayo 3 & medido\\
-$\tau_f = K_t\,i_{arr}$ (despegue) & 8.7 $\times10^{-3}$ N$\cdot$m & Ensayo 5 & medido\\
+$K_t = K_e$ & 0.0225 V$\cdot$s/rad & barrido en vacío, régimen; Ensayo 2: 0.02251 & medido\\
+$\tau_c$ (motor solo, en movimiento) & 4.7 $\times10^{-3}$ N$\cdot$m & barrido en vacío, 1250--4870 rpm & medido\\
+$\tau_f = K_t\,i_{arr}$ (despegue) & 8.8 $\times10^{-3}$ N$\cdot$m & Ensayo 5 & medido\\
 $i_{arr}$ & 0.39 A & Ensayo 5 & medido ($\pm$13\%)\\
-$B$ (motor solo) & 1.76 $\times10^{-6}$ N$\cdot$m$\cdot$s/rad & Ensayo 3 & medido ($R^2$ 0.75)\\
-$J$ (motor solo) & 8.06 $\times10^{-6}$ kg$\cdot$m$^2$ & ajuste con \code{fmincon}; Ensayo 5: 8.1 $\times10^{-6}$ & ajustado\\
+$B$ (motor solo) & 3.7 $\times10^{-6}$ N$\cdot$m$\cdot$s/rad & barrido en vacío, 1250--4870 rpm & medido ($R^2$ 0.83)\\
+$J$ (motor solo) & 8.58 $\times10^{-6}$ kg$\cdot$m$^2$ & ajuste con \code{fmincon} (barrido en vacío); Ensayo 5: 8.1 $\times10^{-6}$ & ajustado\\
 $I_{cont}$ sin ventilación & 1.8 A & Ensayo 6b & estimado por carcasa\\
-$\tau_e = L/R$ (motor solo / circuito) & 0.63 / 0.58 ms & calculado & \\
-$\tau_{mec} = JR/(K_tK_e + RB)$ (motor solo / circuito) & 12.8 / 14.2 ms & calculado & \\
-$t_{mss} \approx 4\tau_{mec}$ (motor solo / circuito) & 51 / 57 ms & calculado & \\\bottomrule
+$\tau_e = L/R$ (motor solo / circuito) & 0.76 / 0.58 ms & calculado & \\
+$\tau_{mec} = JR/(K_tK_e + RB)$ (motor solo / circuito) & 11.1 / 14.6 ms & calculado & \\
+$t_{mss} \approx 4\tau_{mec}$ (motor solo / circuito) & 45 / 59 ms & calculado & \\\bottomrule
 \end{tabular}
 \end{center}
 
@@ -435,7 +498,7 @@ $t_{mss} \approx 4\tau_{mec}$ (motor solo / circuito) & 51 / 57 ms & calculado &
 \begin{enumerate}
 \item Incorporar el encoder magnético AS5600 al sistema de captura y repetir el ajuste incluyendo la velocidad medida (Subsección~\ref{sec:motor775_ajuste}). Validar luego el modelo con capturas distintas de las empleadas en el ajuste.
 \item Considerar en el diseño del control de corriente que la tensión efectiva del driver es entre 0.6 y 0.8 V inferior a $d \cdot V_{B+}$ con un ciclo de trabajo del 40\%, y que esa diferencia depende de la corriente (Subsección~\ref{sec:motor775_validacion}).
-\item Medir $R$ y $L$ a rotor trabado con el driver dentro de su rango de alimentación. Esto requiere una fuente capaz de entregar unos 10 A a 8 V, o una resistencia de potencia en serie con la tensión medida directamente en bornes del motor.
+\item Separar la resistencia del bobinado de la caída en escobillas a rotor trabado, con corriente de hasta unos 10 A. Para ello deben hacerse pausas entre puntos, de modo que la temperatura no cambie, y repetir la medición en varias posiciones del eje. La medición con el comando \code{c} del sketch (Subsección~\ref{sec:motor775_barrido}) no lo logró, por el calentamiento acumulado y por la inestabilidad del contacto con el rotor detenido.
 \item Repetir la caracterización en el motor de pitch.
 \item Con el modelo ajustado, diseñar el control de corriente en MATLAB y Simulink, simularlo con el mismo algoritmo discreto que usará el firmware y llevarlo a la placa (RP2350 con BTS7960 y sensado de corriente).
 \end{enumerate}
