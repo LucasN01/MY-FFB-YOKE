@@ -336,6 +336,13 @@ Del análisis se desprenden las siguientes conclusiones:
 \item \emph{Tensión}: la curva azul es la tensión de bornes leída en A1, afectada por el filtro RC. La curva naranja es la misma tensión con el retardo del filtro compensado, y constituye la entrada del modelo.
 \end{itemize}
 
+\textbf{Velocidad estimada y velocidad del modelo.} Ambas curvas emplean los parámetros medidos, pero responden a preguntas distintas:
+\begin{itemize}
+\item La \emph{velocidad estimada} es una medición indirecta. En cada instante toma la tensión y la corriente medidas y despeja $\omega$ de la ecuación eléctrica~\eqref{eq:motor775_electrica}, sin integrar ninguna ecuación en el tiempo. Solo intervienen $R$, $L$ y $K_e$; los parámetros mecánicos $J$, $B$ y $\tau_c$ no participan. El motor actúa así como sensor de su propia velocidad a través de la fuerza contraelectromotriz. Como contrapartida, la estimación hereda el ruido de la corriente medida, que el término $L\,di/dt$ amplifica.
+\item La \emph{velocidad del modelo} es una predicción. Se obtiene integrando en conjunto las ecuaciones eléctrica~\eqref{eq:motor775_electrica} y mecánica~\eqref{eq:motor775_mecanica} desde el motor en reposo, con la tensión medida como única entrada. Intervienen todos los parámetros ($R$, $L$, $K_e$, $K_t$, $J$, $B$ y $\tau_c$), y la corriente medida no se utiliza: el modelo calcula su propia corriente, que se compara con la medida en el panel superior. Esta es la respuesta que reproduce el modelo de Simulink.
+\end{itemize}
+La comparación de ambas curvas con el tacómetro permite localizar el origen de una discrepancia. Si las dos coinciden con el tacómetro, los parámetros eléctricos y mecánicos son consistentes con la medición. Si la estimada coincide y la del modelo no, el error se encuentra en los parámetros mecánicos ($J$, $B$ o $\tau_c$), que solo usa el modelo. Si la estimada no coincide, el error se encuentra en $R$, en $K_e$ o en la medición de corriente o de tensión. La velocidad estimada es, además, la que podría calcular el firmware para conocer la velocidad del motor sin un encoder, lo que hace relevante conocer $R$ con precisión para el control.
+
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figuras/motor775/vacio_regulable_matlab.png}
