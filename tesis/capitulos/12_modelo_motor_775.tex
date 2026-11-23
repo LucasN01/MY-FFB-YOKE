@@ -7,7 +7,7 @@ Los efectos descriptos en las secciones anteriores terminan en un ciclo de traba
 
 Esta sección documenta la caracterización del motor DC 775 del eje roll: el modelo matemático, los ensayos realizados, los resultados y el ajuste fino previsto en MATLAB. El motor de pitch es del mismo modelo y se medirá con el mismo procedimiento. Los datos y cálculos están en la planilla \code{modelizacion motor 775/Mediciones MOTOR ROLL.xlsx}, una hoja por ensayo.
 
-\textbf{Estado.} Todos los parámetros del modelo tienen un valor medido (Subsección~\ref{sec:motor775_parametros}). Siguen siendo provisorios hasta el ajuste en MATLAB contra la respuesta medida (Subsección~\ref{sec:motor775_ajuste}). La inercia $J$ depende de una resistencia en serie del montaje que se dedujo y no se midió (Subsección~\ref{sec:motor775_e5}). Cuando cambie un valor medido, se actualiza esta sección.
+\textbf{Estado.} Todos los parámetros del modelo tienen un valor medido (Subsección~\ref{sec:motor775_parametros}). La resistencia del circuito con el driver y la inercia se ajustaron en MATLAB contra la corriente medida en escalones de tensión (Subsecciones~\ref{sec:motor775_captura} y~\ref{sec:motor775_ajuste}). Resta validar el modelo con velocidad medida directamente, lo que requiere el encoder magnético previsto. Cuando cambie un valor medido, se actualiza esta sección.
 
 \subsection{Modelo matemático}
 \label{sec:motor775_modelo}
@@ -142,7 +142,7 @@ Con medidor LCR, en 7 posiciones del rotor: $L = 656\ \mu$H a 1 kHz y $L = 500\ 
 \item a los 3.6 ms cae a 0.28 V y a los 9.5 ms sube a 1.88 V;
 \item se estabiliza en 1.56 V recién después de unos 15 ms.
 \end{itemize}
-Un circuito $R$--$L$ alimentado con un escalón responde con una exponencial, sin sobrepico ni oscilación. Lo registrado es una respuesta subamortiguada que se atribuye al regulador de la fuente al recibir el escalón de carga. Si se tomara $\tau_e = 6$ ms, resultaría $L$ de 4 a 9 mH según la resistencia del circuito, de 8 a 15 veces lo medido con el LCR. Además, con 5 ms/div el osciloscopio toma una muestra cada 0.2 ms, del mismo orden que el $\tau_e$ esperado, de modo que la captura no alcanza para resolverlo. \textbf{Se mantiene $L = 0.50$ mH del LCR.} Para repetir el escalón hacen falta una fuente que no limite (batería, o el BTS7960 con ciclo de trabajo fijo), la corriente medida con un shunt de baja inductancia o el ACS712 en lugar del multímetro, y una base de tiempo de 100 a 200 $\mu$s/div con disparo único.
+Un circuito $R$--$L$ alimentado con un escalón responde con una exponencial, sin sobrepico ni oscilación. Lo registrado es una respuesta subamortiguada que se atribuye al regulador de la fuente al recibir el escalón de carga. Si se tomara $\tau_e = 6$ ms, resultaría $L$ de 4 a 9 mH según la resistencia del circuito, de 8 a 15 veces lo medido con el LCR. Además, con 5 ms/div el osciloscopio toma una muestra cada 0.2 ms, del mismo orden que el $\tau_e$ esperado, de modo que la captura no alcanza para resolverlo. \textbf{Se mantiene $L = 0.50$ mH del LCR.} El escalón se repitió posteriormente con el sistema de adquisición sincronizada de la Subsección~\ref{sec:motor775_captura}. Con este sistema se obtuvo $L = 0.49$ a $0.55$ mH, valor que confirma la medición con LCR.
 
 \begin{figure}[htbp]
 \centering
@@ -196,19 +196,58 @@ Con rotor bloqueado se aplicó corriente constante hasta estabilizar la temperat
 
 Este límite es térmico y de régimen continuo. Los efectos de FFB son mayormente transitorios, pero el centrado sostenido contra la mano se acerca a la condición de rotor bloqueado.
 
+\subsection{Captura de escalones con adquisición sincronizada}
+\label{sec:motor775_captura}
+Los ensayos anteriores no permiten observar el transitorio eléctrico, cuya constante de tiempo es inferior a 1 ms. Por ese motivo se desarrolló un sistema de adquisición propio, compuesto por el programa \code{captura_escalon.ino} y el script \code{Capturar_Escalon.m}. El sistema aplica un escalón de ciclo de trabajo con el BTS7960 y registra simultáneamente la corriente del motor y la tensión de alimentación.
+
+\textbf{Hardware.} Se emplea un Arduino Pro Micro (ATmega32U4, 16 MHz) que genera el PWM del driver a 20 kHz con el Timer1. La corriente se mide con el ACS712 de 20 A en la entrada A0. La tensión de alimentación B+ se mide en la entrada A1 mediante un divisor resistivo de 27 k$\Omega$ y 5.6 k$\Omega$, con un capacitor de 20 nF como filtro (constante de tiempo de 0.09 ms). La relación del divisor se calibró con un multímetro.
+
+\textbf{Muestreo sincronizado.} El conversor analógico-digital se dispara por hardware con la comparación del Timer1, en la mitad del intervalo de encendido de cada período del PWM. En ese instante, y para un rizado triangular, la corriente instantánea coincide con su valor medio en el período, de modo que la muestra no contiene la componente de rizado. Los disparos alternan entre corriente y tensión, lo que resulta en 10 kHz por canal. Cada captura almacena 400 muestras en memoria y las transmite al finalizar. Mediante un factor de decimación $N$, cada muestra almacenada es el promedio de $N$ pares consecutivos, con una ventana total de $400\,N \times 0.1$ ms.
+
+\textbf{Promediado de repeticiones.} Cada ensayo aplica $M$ escalones idénticos, separados por 3 s para que el motor se detenga. Las respuestas se promedian muestra a muestra, de forma análoga al modo de promediado de un osciloscopio digital. Dado que todos los escalones se inician sincronizados con el PWM, el promedio reduce el ruido aleatorio en un factor $\sqrt{M}$ sin deformar la respuesta. La tensión aplicada al motor se calcula como $d \cdot V_{B+}$, con $d$ el ciclo de trabajo y $V_{B+}$ la tensión medida.
+
+\textbf{Resultados.} Se realizaron los siguientes ensayos:
+\begin{center}
+\begin{tabular}{p{0.30\textwidth}p{0.62\textwidth}}\toprule
+Ensayo & Resultado\\\midrule
+Vacío, $d = 40\%$ con 24 V, $N = 5$ (ventana de 200 ms), 2 y 4 repeticiones & Pico de 9.8 A a los 2.2 ms, frente a 10.7 A del modelo con $R = 0.787\ \Omega$. Caída de la corriente al 36.8\% en 14.0 ms y corriente de régimen de 0.28 A. La tensión de alimentación descendió solo de 24.0 a 23.6 V durante el pico. Con el motor en régimen, la corriente presentó un desvío estándar de 0.04 A.\\
+Rotor trabado, $d = 12\%$ con 24 V & Corriente final de 0.26 A, en lugar de los 3.6 A esperados. Con ciclos de trabajo bajos, los tiempos de conmutación del BTS7960 consumen la mayor parte del pulso de 6 $\mu$s, y la tensión efectiva resulta de unos 0.2 V. El Ensayo 3 muestra el mismo comportamiento: no hubo corriente por debajo de un ciclo de trabajo del 11\%. El ensayo se descartó.\\
+Rotor trabado, $d = 100\%$ con 5 V, $N = 1$, 4 repeticiones & Sin conmutación, la regresión $v = R\,i + L\,di/dt$ sobre el primer milisegundo dio $L = 0.49$ mH. El 63\% del valor final dio 0.55 mH y el del tramo rápido, 0.52 mH. La resistencia aparente del circuito resultó de 2.3 a 2.9 $\Omega$, porque a 4.8 V el BTS7960 opera por debajo de su rango de alimentación, de 5.5 a 27.5 V~\cite{bts7960}. Por ello, el ensayo es válido para $L$ pero no para $R$.\\\bottomrule
+\end{tabular}
+\end{center}
+
+Una conclusión de interés práctico es que, en el BTS7960, la tensión efectiva es inferior a $d \cdot V_{B+}$, en mayor medida cuanto menor es el ciclo de trabajo. Además, el driver no debe operar con menos de 8 V, que es el límite inferior del rango en que el fabricante especifica sus características. Ambos aspectos deben considerarse en el diseño del control de corriente.
+
 \subsection{Ajuste del modelo en MATLAB}
 \label{sec:motor775_ajuste}
-Los valores medidos se usan como punto de partida de un ajuste fino en MATLAB con los scripts que acompañan a la referencia (carpeta \code{Modelado_Motor_DC_Sergio_CAE}):
+La referencia provee scripts de ajuste, encabezados por \code{Regresion_Modelo.m}, que se conservan en la carpeta \code{Modelado_Motor_DC_Sergio_CAE}. Estos scripts minimizan con \code{fmincon} el error cuadrático entre la velocidad simulada y la medida, ajustando $J$, $B$, $K_e$, $K_t$, $R$ y $L$ dentro de $\pm$20\% de sus valores iniciales. No se emplearon sin modificaciones, por tres motivos:
 \begin{itemize}
-\item \code{DC_Motor.m}: Ecuaciones~\eqref{eq:motor775_electrica} y \eqref{eq:motor775_mecanica} sin $\tau_c$ ni $\tau_L$, con los parámetros $p = [J, B, K_e, K_t, R, L]$.
-\item \code{motor_simulate.m}: integra el modelo con \code{ode15s} usando la misma tensión de entrada que se aplicó al motor real.
-\item \code{f_objetivo.m}: suma de errores cuadráticos entre la velocidad simulada y la medida.
-\item \code{Regresion_Modelo.m}: minimiza esa suma con \code{fmincon}, con cada parámetro acotado a $\pm$20\% de su valor medido ($L$ entre $10^{-6}$ y 1 H), y grafica velocidad real, modelo inicial y modelo ajustado.
-\item \code{ValidaModelo.slx}: modelo de Simulink para comparar el modelo ajustado con datos de validación distintos de los usados en el ajuste.
+\item no se dispone de velocidad medida con resolución suficiente: el tacómetro solo resuelve el régimen permanente, y la velocidad que se puede derivar de las capturas depende de los propios parámetros del modelo;
+\item su modelo omite el rozamiento seco $\tau_c$, que en este motor explica la mayor parte de la corriente de vacío (Subsección~\ref{sec:motor775_e3});
+\item ajusta $K_e$ y $K_t$ como parámetros independientes, aunque en unidades SI son iguales, y la velocidad es poco sensible a $L$, de modo que varios parámetros no quedan determinados por los datos.
 \end{itemize}
-Los datos de entrada son la respuesta de velocidad del motor a escalones de tensión, registrada con el tacómetro. Las cotas de $\pm$20\% mantienen el ajuste cerca de lo medido: si un parámetro termina contra una cota, la medición correspondiente se revisa en lugar de aceptar el valor ajustado.
 
-\textbf{Estado: pendiente.} Ya están los valores de partida de todos los parámetros (Subsección~\ref{sec:motor775_parametros}); falta registrar la respuesta de velocidad. Si se ajusta con las capturas de tensión en bornes del Ensayo 5, el modelo debe incluir la resistencia en serie $R_s$ del montaje.
+\textbf{Procedimiento adoptado.} Se desarrolló el script \code{Ajuste_Modelo_Captura.m}, que conserva el criterio de la referencia pero compara la \emph{corriente} medida en las capturas de la Subsección~\ref{sec:motor775_captura}. El modelo utilizado es el de las Ecuaciones~\eqref{eq:motor775_electrica} y~\eqref{eq:motor775_mecanica}, con $K_t = K_e$ y el rozamiento seco representado como $\tau_c\tanh(\omega/\omega_{tc})$. En cada captura, el modelo se excita con la tensión medida y se integra con paso de 5 $\mu$s. Su salida se promedia en las mismas ventanas que la medición, para que ambas magnitudes sean comparables. Se minimiza el valor eficaz del error de corriente, normalizado por el pico de cada captura, mediante \code{fmincon} con restricciones de cota~\cite{mathworks_fmincon}. Las cotas son de $\pm$30\% del valor inicial. $K_e$ y $\tau_c$ permanecen fijos, por haberse medido de forma independiente con buen ajuste. Si un parámetro finaliza contra una cota, el resultado no se acepta y se revisa la medición correspondiente.
+
+\textbf{Resultados.} Se ajustaron simultáneamente las dos capturas en vacío al 40\% (Figura~\ref{fig:motor775_ajuste}):
+\begin{center}
+\begin{tabular}{lcccc}\toprule
+Caso & $R$ [$\Omega$] & $J$ [kg$\cdot$m$^2$] & $L$ [mH] & Error normalizado\\\midrule
+Valores iniciales & 0.787 & $8.10\times10^{-6}$ & 0.50 & 0.032\\
+$R$ y $J$ libres & \textbf{0.869} & $\mathbf{8.06\times10^{-6}}$ & 0.50 (fija) & 0.028\\
+$R$, $J$ y $L$ libres & 0.859 & $7.97\times10^{-6}$ & 0.65 (contra la cota) & 0.021\\\bottomrule
+\end{tabular}
+\end{center}
+La inercia ajustada difiere en 0.5\% del valor del Ensayo 5, lo que confirma esa medición. La resistencia ajustada, de 0.869 $\Omega$, es 10\% mayor que la del motor medida en bornes (0.787 $\Omega$). La diferencia corresponde a los elementos en serie del circuito de potencia: transistores del BTS7960, sensor ACS712, conductores y conexiones. Este valor es el que interviene en el control de corriente, por lo que se adopta en el modelo como $R$ del circuito; la resistencia del motor se conserva por separado. Cuando $L$ se deja libre, finaliza contra la cota superior, en contradicción con el ensayo a rotor trabado. Esto se atribuye a que, con conmutación, la tensión efectiva del driver difiere de $d \cdot V_{B+}$ durante el arranque (hipótesis no verificada). Por ello, $L$ se mantiene fija en 0.50 mH.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.75\textwidth]{figuras/motor775/ajuste_escalon_vacio.png}
+\caption{Escalón en vacío al 40\% con 24 V (promedio de 4 repeticiones): corriente medida y simulada con los parámetros iniciales y ajustados (arriba) y velocidad simulada (abajo).}
+\label{fig:motor775_ajuste}
+\end{figure}
+
+\textbf{Herramientas complementarias.} El modelo de Simulink \code{MotorModeloFFB.slx} puede reproducir una captura: aplica la tensión medida y muestra la corriente medida junto a la del modelo no lineal y a la de la función de transferencia, con una opción para simular el rotor trabado. Tanto el sistema de captura como el ajuste admiten la velocidad medida con el encoder magnético AS5600 cuando éste se incorpore. En ese caso, el ajuste incluirá también el error de velocidad.
 
 \textbf{Verificación en régimen con el Ensayo 3.} Mientras tanto, el modelo de Simulink de trabajo (\code{MotorModeloFFB.slx}, carpeta \code{Modelado_Motor_DC}) se verificó en régimen contra el Ensayo 3. Este modelo agrega a los de la referencia el rozamiento seco de la Subsección~\ref{sec:motor775_e3}. El script \code{Cargar_Ensayo3.m} aplica al modelo la tensión del ensayo y carga como referencia la corriente y la velocidad medidas.
 \begin{itemize}
@@ -222,33 +261,35 @@ El registro de 100 ms no resuelve los transitorios eléctricos ni mecánicos. Pa
 \subsection{Parámetros del modelo}
 \label{sec:motor775_parametros}
 \begin{center}
-\begin{tabular}{llll}\toprule
+\begin{tabular}{p{0.28\textwidth}p{0.16\textwidth}p{0.31\textwidth}p{0.13\textwidth}}\toprule
 Parámetro & Valor & Origen & Estado\\\midrule
-$R$ (ambiente) & 0.79 $\Omega$ & fuente continua, $v/i$ a $\approx$1 A & provisorio\\
-$L$ & 0.50 mH & LCR a 10 kHz & medido\\
+$R_{motor}$ (ambiente) & 0.79 $\Omega$ & fuente continua, $v/i$ a $\approx$1 A & medido\\
+$R$ del circuito con el BTS7960 & 0.869 $\Omega$ & ajuste con \code{fmincon} (escalón en vacío) & ajustado\\
+$L$ & 0.50 mH & LCR a 10 kHz; escalón a rotor trabado: 0.49--0.55 mH & medido\\
 $K_t = K_e$ & 0.0222 V$\cdot$s/rad & promedio de 3 métodos & medido\\
 $\tau_c$ (motor solo, en movimiento) & 6.0 $\times10^{-3}$ N$\cdot$m & Ensayo 3 & medido\\
 $\tau_f = K_t\,i_{arr}$ (despegue) & 8.7 $\times10^{-3}$ N$\cdot$m & Ensayo 5 & medido\\
 $i_{arr}$ & 0.39 A & Ensayo 5 & medido ($\pm$13\%)\\
 $B$ (motor solo) & 1.76 $\times10^{-6}$ N$\cdot$m$\cdot$s/rad & Ensayo 3 & medido ($R^2$ 0.75)\\
-$J$ (motor solo) & 8.1 $\times10^{-6}$ kg$\cdot$m$^2$ & Ensayo 5, con $R_s$ deducida & provisorio ($\pm$8\%)\\
+$J$ (motor solo) & 8.06 $\times10^{-6}$ kg$\cdot$m$^2$ & ajuste con \code{fmincon}; Ensayo 5: 8.1 $\times10^{-6}$ & ajustado\\
 $I_{cont}$ sin ventilación & 1.8 A & Ensayo 6b & estimado por carcasa\\
-$\tau_e = L/R$ & 0.63 ms & calculado & \\
-$\tau_{mec} = JR/(K_tK_e + RB)$ & 12.9 ms & calculado & \\
-$t_{mss} \approx 4\tau_{mec}$ (motor solo) & 52 ms & calculado & \\\bottomrule
+$\tau_e = L/R$ (motor solo / circuito) & 0.63 / 0.58 ms & calculado & \\
+$\tau_{mec} = JR/(K_tK_e + RB)$ (motor solo / circuito) & 12.8 / 14.2 ms & calculado & \\
+$t_{mss} \approx 4\tau_{mec}$ (motor solo / circuito) & 51 / 57 ms & calculado & \\\bottomrule
 \end{tabular}
 \end{center}
 
 \subsection{Próximos pasos}
 \label{sec:motor775_pasos}
 \begin{enumerate}
-\item Medir la caída del amperímetro en la escala usada en el Ensayo 5 (o repetir los escalones sin él) para confirmar $R_s$ y, con ella, $J$.
-\item Repetir el escalón con rotor trabado con una fuente que no limite y la corriente medida con shunt o ACS712, para verificar $L$ (Subsección~\ref{sec:motor775_e4}).
-\item Registrar la respuesta de velocidad a escalones de tensión y hacer el ajuste en MATLAB (Subsección~\ref{sec:motor775_ajuste}); validar con datos distintos.
+\item Incorporar el encoder magnético AS5600 al sistema de captura y repetir el ajuste incluyendo la velocidad medida (Subsección~\ref{sec:motor775_ajuste}). Validar luego el modelo con capturas distintas de las empleadas en el ajuste.
+\item Medir $R$ y $L$ a rotor trabado con el driver dentro de su rango de alimentación. Esto requiere una fuente capaz de entregar unos 10 A a 8 V, o una resistencia de potencia en serie con la tensión medida directamente en bornes del motor.
 \item Repetir la caracterización en el motor de pitch.
 \item Con el modelo ajustado, diseñar el control de corriente en MATLAB y Simulink, simularlo con el mismo algoritmo discreto que usará el firmware y llevarlo a la placa (RP2350 con BTS7960 y sensado de corriente).
 \end{enumerate}
 
 \begin{thebibliography}{9}
 \bibitem{armstrong1994} B.~Armstrong-Hélouvry, P.~Dupont y C.~Canudas de Wit, ``A survey of models, analysis tools and compensation methods for the control of machines with friction'', \emph{Automatica}, vol.~30, n.º~7, pp.~1083--1138, 1994. \href{https://doi.org/10.1016/0005-1098(94)90209-7}{doi:10.1016/0005-1098(94)90209-7}.
+\bibitem{bts7960} Infineon Technologies, \emph{BTS 7960 High Current PN Half Bridge NovalithIC}, hoja de datos, rev.~1.1, diciembre de 2004.
+\bibitem{mathworks_fmincon} The MathWorks, Inc., ``fmincon: Find minimum of constrained nonlinear multivariable function'', \emph{Optimization Toolbox Documentation}, versión R2021a.
 \end{thebibliography}
