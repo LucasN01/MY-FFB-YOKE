@@ -7,7 +7,7 @@ Los efectos descriptos en las secciones anteriores terminan en un ciclo de traba
 
 Esta sección documenta la caracterización del motor DC 775 del eje roll: el modelo matemático, los ensayos realizados, los resultados y el ajuste fino previsto en MATLAB. El motor de pitch es del mismo modelo y se medirá con el mismo procedimiento. Los datos y cálculos están en la planilla \code{modelizacion motor 775/Mediciones MOTOR ROLL.xlsx}, una hoja por ensayo.
 
-\textbf{Estado.} Todos los parámetros del modelo tienen un valor medido (Subsección~\ref{sec:motor775_parametros}). La resistencia del circuito con el driver y la inercia se ajustaron en MATLAB contra la corriente medida en escalones de tensión (Subsecciones~\ref{sec:motor775_captura} y~\ref{sec:motor775_ajuste}). Resta validar el modelo con velocidad medida directamente, lo que requiere el encoder magnético previsto. Cuando cambie un valor medido, se actualiza esta sección.
+\textbf{Estado.} Todos los parámetros del modelo tienen un valor medido (Subsección~\ref{sec:motor775_parametros}). La resistencia del circuito con el driver y la inercia se ajustaron en MATLAB contra la corriente medida en escalones de tensión (Subsecciones~\ref{sec:motor775_captura} y~\ref{sec:motor775_ajuste}). Con la tensión medida en bornes y un tacómetro óptico, la velocidad del modelo difiere de la medida entre 0.6 y 2.2\% en régimen (Subsección~\ref{sec:motor775_validacion}). Para observar en detalle la aceleración, resta incorporar el encoder magnético previsto, cuya resolución es mayor que la del tacómetro de una marca por vuelta. Cuando cambie un valor medido, se actualiza esta sección.
 
 \subsection{Modelo matemático}
 \label{sec:motor775_modelo}
@@ -258,6 +258,157 @@ La inercia ajustada difiere en 0.5\% del valor del Ensayo 5, lo que confirma esa
 \end{itemize}
 El registro de 100 ms no resuelve los transitorios eléctricos ni mecánicos. Para ellos hacen falta las capturas de osciloscopio de la Subsección~\ref{sec:motor775_e4}.
 
+\subsection{Modelo de Simulink}
+\label{sec:motor775_simulink}
+El modelo de trabajo \code{MotorModeloFFB.slx} parte del modelo de la referencia y le incorpora las entradas y señales necesarias para comparar el motor real con el modelo.
+
+\textbf{Lectura de la Figura~\ref{fig:motor775_simulink}.} En el extremo izquierdo, la llave \emph{Fuente} selecciona la tensión aplicada al motor. En la posición superior, la tensión es un pulso de 24 V generado por el bloque \emph{Pulse Generator}. En la posición inferior, es la tensión medida de un ensayo, proporcionada por el bloque \emph{Tension medida} (variable \code{v_med}). La misma tensión alimenta tres representaciones del motor:
+\begin{itemize}
+\item el subsistema \emph{Motor DC}, que resuelve las Ecuaciones~\eqref{eq:motor775_electrica} y~\eqref{eq:motor775_mecanica} con el rozamiento seco, y entrega la corriente $i(t)$, la velocidad $\omega(t)$ y la posición $\theta(t)$;
+\item el bloque \emph{Velocidad}, que contiene la función de transferencia lineal $G_{\omega v}(s) = \omega(s)/V(s)$ de la Ecuación~\eqref{eq:motor775_tf}, sin rozamiento seco;
+\item el bloque \emph{Corriente Giv}, que contiene la función de transferencia lineal $G_{iv}(s) = I(s)/V(s)$ de la misma ecuación, también sin rozamiento seco.
+\end{itemize}
+Las mediciones del ensayo ingresan por los bloques \emph{Velocidad medida} (variable \code{w_med}), \emph{Tacometro LM393} (variable \code{rpm_taco}, convertida de rpm a rad/s) y \emph{Corriente medida} (variable \code{i_med}). El multiplexor \emph{Mux velocidad} reúne las cuatro velocidades en el osciloscopio \emph{Vel [rad/s]}. El \emph{Mux corriente} reúne las tres corrientes en el osciloscopio \emph{Scope corriente}, y su producto por $K_t$ se muestra en \emph{Scope torque}. El bloque \emph{data} almacena el tiempo, las velocidades, la tensión aplicada y la corriente en el espacio de trabajo. El bloque \emph{Arduino}, heredado de la referencia, permanece comentado.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figuras/motor775/simulink_modelo.png}
+\caption{Modelo de Simulink \code{MotorModeloFFB.slx}: fuente de tensión seleccionable, modelo no lineal, funciones de transferencia lineales, señales medidas y osciloscopios.}
+\label{fig:motor775_simulink}
+\end{figure}
+
+\textbf{Lectura de la Figura~\ref{fig:motor775_simulink_motor}.} El subsistema \emph{Motor DC} implementa las dos ecuaciones diferenciales con integradores. La rama superior calcula $di/dt = (v - R\,i - K_a\,\omega)/L$ y la integra para obtener $i(t)$. La rama inferior calcula $d\omega/dt = (K_m\,i - B\,\omega - \tau_c\tanh(\omega/\omega_{tc}))/J$, donde el bloque \emph{Friccion seca} representa el rozamiento de Coulomb (Subsección~\ref{sec:motor775_e3}). El bloque \emph{Eje libre} multiplica la aceleración por 1 con el eje libre y por 0 con el rotor trabado, lo que permite simular los dos tipos de ensayo. Un tercer integrador obtiene la posición $\theta(t)$ a partir de $\omega(t)$.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth]{figuras/motor775/simulink_motor_dc.png}
+\caption{Subsistema \emph{Motor DC}: ecuación eléctrica (arriba), ecuación mecánica con rozamiento seco y viscoso (abajo) y ganancia \emph{Eje libre} para simular el rotor trabado.}
+\label{fig:motor775_simulink_motor}
+\end{figure}
+
+\subsection{Validación con tensión en bornes y tacómetro}
+\label{sec:motor775_validacion}
+En los escalones en vacío de la Subsección~\ref{sec:motor775_captura}, la tensión del motor se calculó como $d \cdot V_{B+}$. Al incorporar un tacómetro, la velocidad medida resultó entre 6 y 8\% inferior a la del modelo. Despejando la tensión real de la ecuación eléctrica en régimen ($v = K_e\,\omega + R\,i$), se obtuvo que el motor recibía entre 0.6 y 0.8 V menos que $d \cdot V_{B+}$. Esa diferencia corresponde a pérdidas del driver en la conmutación. Para eliminar esta incertidumbre, se modificó el sistema de captura en tres aspectos:
+\begin{itemize}
+\item \textbf{Tensión en bornes.} El divisor resistivo se conectó al borne del motor que recibe el PWM (M+), y el capacitor de la entrada A1 se aumentó a 0.1 $\mu$F. Con la resistencia equivalente del divisor (4.6 k$\Omega$), el filtro tiene una constante de tiempo de 0.46 ms y promedia la tensión conmutada. El script compensa ese retardo de primer orden mediante $v = v_{A1} + \tau\,dv_{A1}/dt$. La tensión así obtenida incluye las pérdidas del driver, de modo que el modelo se excita con la tensión real y utiliza la resistencia del motor ($R_{motor} = 0.787\ \Omega$) en lugar de la del circuito.
+\item \textbf{Tacómetro.} El sensor óptico LM393 empleado en el Ensayo 3 se conectó a la entrada 4 del Arduino. Esa entrada no admite interrupción externa y su captura por hardware está asociada al Timer1, que genera el PWM. Por eso se lee dentro de la interrupción del conversor, cada 50 $\mu$s, y se registra el instante de cada flanco. El disco tiene una marca por vuelta, de modo que cada par de flancos consecutivos proporciona la velocidad media durante una vuelta: $n = 60/\Delta t$ rpm. Se trata de la única medición directa de velocidad del sistema.
+\item \textbf{Corrección del cero de corriente.} En cada escalón, el promedio de las muestras anteriores al arranque, con corriente nula, se toma como desvío del cero del ACS712 y se resta. La corrección se incorporó después de observar, en una captura previa, corrimientos de 0.3 a 0.5 A entre escalones de una misma serie.
+\end{itemize}
+
+Se realizaron dos ensayos en vacío con un ciclo de trabajo del 40\%, decimación $N = 20$ (ventana de 800 ms, una muestra cada 2 ms) y 4 repeticiones. Los ensayos difieren únicamente en la fuente de alimentación del driver: una fuente regulable ajustada en 24 V y una fuente fija de 24 V y 20 A. La velocidad del modelo se evaluó en los instantes de cada punto del tacómetro.
+
+\begin{center}
+\begin{tabular}{p{0.40\textwidth}cc}\toprule
+Magnitud & Fuente regulable en 24 V & Fuente de 24 V y 20 A\\
+& (\code{..._145124}) & (\code{..._151529})\\\midrule
+Tensión en bornes entre 2 y 5 ms & 6.89 V & 8.04 V\\
+Tensión en bornes en régimen & 8.70 V & 9.22 V\\
+Pico de corriente medido / modelo & 8.65 / 6.97 A & 9.44 / 8.15 A\\
+Velocidad del tacómetro en régimen & 3622 rpm & 3778 rpm\\
+Velocidad del modelo en régimen & 3643 rpm (+0.6\%) & 3863 rpm (+2.2\%)\\
+Velocidad del modelo entre 20 y 50 ms & +1.9\% & +3.4\%\\
+Tiempo al 98\% de la velocidad final (tacómetro) & 109 ms & 94 ms\\
+Corriente de régimen medida / modelo & 0.252 / 0.301 A & 0.275 / 0.303 A\\
+$K_e$ obtenida en régimen, $(v - R\,i)/\omega$ & 0.0224 V$\cdot$s/rad & 0.0228 V$\cdot$s/rad\\\bottomrule
+\end{tabular}
+\end{center}
+
+Del análisis se desprenden las siguientes conclusiones:
+\begin{itemize}
+\item \textbf{Velocidad.} Con la tensión medida en bornes, la velocidad del modelo difiere de la del tacómetro entre 0.6 y 2.2\% en régimen, y entre 1 y 3.4\% durante la aceleración. La discrepancia de 6 a 8\% observada con $d \cdot V_{B+}$ se debía, por lo tanto, a la tensión supuesta y no a los parámetros del motor.
+\item \textbf{Constante $K_e$.} La constante obtenida en régimen (0.0224 y 0.0228 V$\cdot$s/rad) difiere en 1 a 3\% del valor adoptado de 0.0222 V$\cdot$s/rad, dentro de la dispersión entre métodos de la Subsección~\ref{sec:motor775_ke}.
+\item \textbf{Tensión en bornes.} La tensión crece desde valores menores durante el arranque hasta el régimen. Con corriente elevada, la caída en la fuente y en el driver es mayor, y con la fuente regulable esa caída es más pronunciada. Este efecto explica la aproximación lenta de la velocidad a su valor final, que el modelo reproduce al recibir la tensión medida.
+\item \textbf{Pico de corriente.} El modelo subestima el pico de corriente, porque con $N = 20$ la primera muestra de tensión promedia 2 ms, en los que coexisten el inicio del escalón y el retardo del filtro. El transitorio eléctrico se estudia con $N = 1$ a 5 (Subsección~\ref{sec:motor775_captura}).
+\item \textbf{Corriente de régimen.} La corriente de régimen medida resultó entre 9 y 16\% menor que la del modelo, lo que indica un rozamiento algo menor que el del Ensayo 3 en estas condiciones. Con dos ensayos no se considera suficiente para modificar $\tau_c$.
+\end{itemize}
+
+\textbf{Lectura de las Figuras~\ref{fig:motor775_val_reg_matlab} y~\ref{fig:motor775_val_20a_matlab}.} Ambas figuras son generadas por \code{Capturar_Escalon.m}, con el tiempo en milisegundos a partir del escalón, y presentan tres paneles:
+\begin{itemize}
+\item \emph{Corriente}: la curva azul con puntos es la corriente medida por el ACS712, promediada entre los 4 escalones y con el cero corregido; las curvas grises, cuando se distinguen, corresponden a cada escalón individual. La curva naranja es la corriente del modelo excitado con la tensión medida.
+\item \emph{Velocidad} (en rpm): la curva azul es la velocidad \emph{estimada}, que no se mide sino que se calcula a partir de la tensión y la corriente medidas como $\omega = (v - R\,i - L\,di/dt)/K_e$, y depende de la exactitud de esos parámetros. La curva naranja es la velocidad del modelo y los círculos son la velocidad medida por el tacómetro. El valor negativo de la curva estimada en el instante del escalón es un efecto del término $L\,di/dt$ y no tiene significado físico.
+\item \emph{Tensión}: la curva azul es la tensión de bornes leída en A1, afectada por el filtro RC. La curva naranja es la misma tensión con el retardo del filtro compensado, y constituye la entrada del modelo.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuras/motor775/vacio_regulable_matlab.png}
+\caption{Escalón en vacío al 40\% con la fuente regulable en 24 V (\code{escalon_d40_N20_x4_20261123_145124}): corriente, velocidad y tensión en bornes, medidas y simuladas.}
+\label{fig:motor775_val_reg_matlab}
+\end{figure}
+
+\textbf{Lectura de las Figuras~\ref{fig:motor775_val_reg_corr} y~\ref{fig:motor775_val_20a_corr}.} Corresponden al osciloscopio \emph{Scope corriente} de Simulink al reproducir cada captura con la llave \emph{Fuente} en la posición inferior. El eje horizontal está en segundos: la simulación comienza 40 ms antes del escalón, porque la captura registra 20 muestras previas. Las curvas son:
+\begin{itemize}
+\item \emph{i Motor DC} (azul): la corriente del subsistema no lineal, con rozamiento seco;
+\item \emph{i medida} (naranja): la corriente medida en el ensayo;
+\item \emph{i Giv}: la corriente de la función de transferencia lineal. Aparece atenuada en la leyenda porque se desactivó su visualización; sin rozamiento seco, su valor de régimen sería mucho menor que el medido.
+\end{itemize}
+Los cursores comparan ambas corrientes en régimen: 0.313 y 0.260 A con la fuente regulable, y 0.319 y 0.276 A con la fuente de 20 A.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/motor775/vacio_regulable_corriente.png}
+\caption{Corriente simulada y medida en Simulink, fuente regulable en 24 V.}
+\label{fig:motor775_val_reg_corr}
+\end{figure}
+
+\textbf{Lectura de las Figuras~\ref{fig:motor775_val_reg_vel} y~\ref{fig:motor775_val_20a_vel}.} Corresponden al osciloscopio \emph{Vel [rad/s]}, con la velocidad en rad/s (1 rad/s = 9.55 rpm). Las cuatro curvas son:
+\begin{itemize}
+\item \emph{Vel Fenomenologico} (amarilla): la velocidad del subsistema no lineal \emph{Motor DC};
+\item \emph{Vel Funcion Transferencia} (azul): la velocidad de $G_{\omega v}(s)$. Al no incluir el rozamiento seco, resulta algo mayor en régimen;
+\item \emph{Vel Real} (naranja): la velocidad del bloque \emph{Velocidad medida}, que en una captura sin encoder corresponde a la velocidad estimada por fuerza contraelectromotriz;
+\item \emph{Vel Tacometro} (verde): la velocidad medida por el tacómetro. El tramo recto inicial, desde el origen hasta el primer punto, es una interpolación y no una medición: el primer valor se obtiene recién al completarse la primera vuelta.
+\end{itemize}
+Los cursores comparan la función de transferencia con el tacómetro a los 0.39 s: 390.6 y 378.8 rad/s con la fuente regulable, y 413.8 y 395.2 rad/s con la fuente de 20 A. Con el modelo no lineal, las diferencias se reducen a las indicadas en la tabla anterior.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/motor775/vacio_regulable_velocidad.png}
+\caption{Velocidades simuladas, estimada y medida con tacómetro en Simulink, fuente regulable en 24 V.}
+\label{fig:motor775_val_reg_vel}
+\end{figure}
+
+Las tres figuras siguientes corresponden al ensayo con la fuente de 24 V y 20 A. Con esta fuente, la tensión en bornes durante el arranque es mayor (8.04 V contra 6.89 V entre 2 y 5 ms), por lo que el pico de corriente y la velocidad final también lo son.
+
+\textbf{Lectura de la Figura~\ref{fig:motor775_val_20a_matlab}.} Igual que en la Figura~\ref{fig:motor775_val_reg_matlab}:
+\begin{itemize}
+\item en el panel superior, la corriente medida (azul) y la del modelo (naranja);
+\item en el central, la velocidad estimada por fuerza contraelectromotriz (azul), la del modelo (naranja) y la medida por el tacómetro (círculos);
+\item en el inferior, la tensión de bornes leída en A1 (azul) y la misma con el filtro compensado, entrada del modelo (naranja).
+\end{itemize}
+La separación visible entre los círculos del tacómetro y las curvas de velocidad corresponde a la diferencia de 2.2\% indicada en la tabla.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuras/motor775/vacio_24v20a_matlab.png}
+\caption{Escalón en vacío al 40\% con la fuente de 24 V y 20 A (\code{escalon_d40_N20_x4_20261123_151529}): corriente, velocidad y tensión en bornes, medidas y simuladas.}
+\label{fig:motor775_val_20a_matlab}
+\end{figure}
+
+\textbf{Lectura de la Figura~\ref{fig:motor775_val_20a_corr}.} Osciloscopio \emph{Scope corriente}, con el eje de tiempo en segundos y el escalón a los 40 ms. Se muestran la corriente del subsistema no lineal \emph{i Motor DC} (azul) y la corriente medida \emph{i medida} (naranja); la de la función de transferencia, \emph{i Giv}, se encuentra desactivada. En régimen, los cursores indican 0.319 A para el modelo y 0.276 A para la medición.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/motor775/vacio_24v20a_corriente.png}
+\caption{Corriente simulada y medida en Simulink, fuente de 24 V y 20 A.}
+\label{fig:motor775_val_20a_corr}
+\end{figure}
+
+\textbf{Lectura de la Figura~\ref{fig:motor775_val_20a_vel}.} Osciloscopio \emph{Vel [rad/s]}, con las mismas cuatro curvas que en la Figura~\ref{fig:motor775_val_reg_vel}:
+\begin{itemize}
+\item modelo no lineal (amarilla);
+\item función de transferencia sin rozamiento seco (azul);
+\item velocidad estimada (naranja);
+\item tacómetro (verde), cuyo tramo recto inicial es una interpolación hasta el primer punto medido.
+\end{itemize}
+A los 0.39 s, los cursores indican 413.8 rad/s para la función de transferencia y 395.2 rad/s para el tacómetro.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/motor775/vacio_24v20a_velocidad.png}
+\caption{Velocidades simuladas, estimada y medida con tacómetro en Simulink, fuente de 24 V y 20 A.}
+\label{fig:motor775_val_20a_vel}
+\end{figure}
+
 \subsection{Parámetros del modelo}
 \label{sec:motor775_parametros}
 \begin{center}
@@ -283,6 +434,7 @@ $t_{mss} \approx 4\tau_{mec}$ (motor solo / circuito) & 51 / 57 ms & calculado &
 \label{sec:motor775_pasos}
 \begin{enumerate}
 \item Incorporar el encoder magnético AS5600 al sistema de captura y repetir el ajuste incluyendo la velocidad medida (Subsección~\ref{sec:motor775_ajuste}). Validar luego el modelo con capturas distintas de las empleadas en el ajuste.
+\item Considerar en el diseño del control de corriente que la tensión efectiva del driver es entre 0.6 y 0.8 V inferior a $d \cdot V_{B+}$ con un ciclo de trabajo del 40\%, y que esa diferencia depende de la corriente (Subsección~\ref{sec:motor775_validacion}).
 \item Medir $R$ y $L$ a rotor trabado con el driver dentro de su rango de alimentación. Esto requiere una fuente capaz de entregar unos 10 A a 8 V, o una resistencia de potencia en serie con la tensión medida directamente en bornes del motor.
 \item Repetir la caracterización en el motor de pitch.
 \item Con el modelo ajustado, diseñar el control de corriente en MATLAB y Simulink, simularlo con el mismo algoritmo discreto que usará el firmware y llevarlo a la placa (RP2350 con BTS7960 y sensado de corriente).
