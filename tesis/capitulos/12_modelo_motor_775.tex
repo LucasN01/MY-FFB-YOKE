@@ -507,7 +507,7 @@ $t_{mss} \approx 4\tau_{mec}$ (motor solo / circuito) & 45 / 59 ms & calculado &
 \item Considerar en el diseño del control de corriente que la tensión efectiva del driver es entre 0.6 y 0.8 V inferior a $d \cdot V_{B+}$ con un ciclo de trabajo del 40\%, y que esa diferencia depende de la corriente (Subsección~\ref{sec:motor775_validacion}).
 \item Separar la resistencia del bobinado de la caída en escobillas a rotor trabado, con corriente de hasta unos 10 A. Para ello deben hacerse pausas entre puntos, de modo que la temperatura no cambie, y repetir la medición en varias posiciones del eje. La medición con el comando \code{c} del sketch (Subsección~\ref{sec:motor775_barrido}) no lo logró, por el calentamiento acumulado y por la inestabilidad del contacto con el rotor detenido.
 \item Repetir la caracterización en el motor de pitch.
-\item Con el modelo ajustado, diseñar el control de corriente en MATLAB y Simulink, simularlo con el mismo algoritmo discreto que usará el firmware y llevarlo a la placa (RP2350 con BTS7960 y sensado de corriente).
+\item Llevar a la placa el control de corriente diseñado y simulado en la Sección~\ref{sec:control_corriente} (RP2350 con BTS7960 y sensado de corriente).
 \end{enumerate}
 
 \begin{thebibliography}{9}

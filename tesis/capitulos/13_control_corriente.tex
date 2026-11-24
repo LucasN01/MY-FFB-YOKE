@@ -1,0 +1,351 @@
+\section{CONTROL DE CORRIENTE}
+\label{sec:control_corriente}
+
+\subsection{Objetivo y estado}
+\label{sec:cc_objetivo}
+El torque de un motor de corriente continua de imán permanente es proporcional a la corriente, $\tau_m = K_t\,i$. Para que la fuerza en el mando sea la que calculan los efectos, hay que imponer la corriente y no el ciclo de trabajo: con un ciclo de trabajo fijo, la corriente depende además de la resistencia, de la temperatura y de la velocidad a la que la mano mueve el eje (Sección~\ref{sec:motor775}).
+
+Esta sección desarrolla el diseño de ese lazo de corriente: la conversión del comando en amperes, el cálculo del controlador según el apunte de la cátedra de Electrónica de Potencia \cite{oros2010}, su paso a tiempo discreto y su verificación en MATLAB y Simulink con el motor caracterizado en la Sección~\ref{sec:motor775}. El requisito principal es temporal: el lazo de efectos entrega un comando nuevo cada 2 ms, y la corriente debe alcanzar cada valor antes de que llegue el siguiente.
+
+\textbf{Estado.} El diseño está calculado y simulado, pero no implementado en el firmware ni ensayado. El firmware actual aplica el comando directamente como ciclo de trabajo a 490 Hz. Los resultados de esta sección son, por lo tanto, de simulación, y se señalan como supuestos los valores que no provienen de una medición. Las corrientes máximas de cada eje son una propuesta a validar con la reductora.
+
+\subsection{Origen de la información}
+\label{sec:cc_fuentes}
+\begin{center}
+\begin{tabular}{p{0.34\textwidth}p{0.58\textwidth}}\toprule
+Elemento & Origen\\\midrule
+Estructura en cascada y regla de frecuencia de cruce & Apunte \cite{oros2010}, secc. 7.9.1, págs. 7.34--7.35\\
+Modelo promediado del convertidor ($k_{PWM}$) & Apunte, secc. 7.9.1, ec. 7.54--7.55, págs. 7.35--7.36\\
+Modelo del motor para el diseño & Apunte, secc. 7.9.2, ec. 7.56--7.61, págs. 7.36--7.37\\
+Cálculo del PI de corriente & Apunte, secc. 7.9.4.1, ec. 7.67--7.71, págs. 7.39--7.40\\
+Rizado de corriente con PWM unipolar & Apunte, secc. 7.8.5, ec. 7.51, pág. 7.34\\
+Límites y anti-windup & Apunte, secc. 7.9.6 y 7.9.7, págs. 7.45--7.46; recálculo: \cite{astrom2008}\\
+Parámetros del motor & Mediciones propias (Subsección~\ref{sec:motor775_parametros})\\
+Bloque \emph{Motor DC} de Simulink & \code{MotorModeloFFB.slx} (Subsección~\ref{sec:motor775_simulink})\\
+Frecuencia máxima del driver & Hoja de datos del BTS7960 \cite{bts7960cc}: 25 kHz\\
+Sensor de corriente y conversores & Hojas de datos del ACS712 \cite{acs712}, RP2350 \cite{rp2350} y ADS1115 \cite{ads1115}\\
+Comando, período y límites & Código del firmware: \code{include/mis_defines.h}, \code{include/SimEffects.h} y \code{include/MotorDriver.h}\\\bottomrule
+\end{tabular}
+\end{center}
+
+El apunte diseña en tiempo continuo, para un motor cuya velocidad impone la carga a través de la inercia. No trata el muestreo, el retardo de cálculo, la resolución del conversor ni un eje movido por la mano. Esos aspectos se agregan en las Subsecciones~\ref{sec:cc_discreto} a~\ref{sec:cc_resultados}. Al usarlo se encontró que la ec. 7.54 imprime la ganancia del convertidor invertida: lo correcto es $k_{PWM} = v_a/v_c = V_d/\hat V_{tri}$, valor con el que se obtienen los resultados del propio ejemplo.
+
+\subsection{Del comando a la corriente}
+\label{sec:cc_escala}
+El lazo de efectos entrega un comando adimensional $u$ entre $-1$ y $+1$, que no tiene por sí mismo un significado en amperes. Se define una corriente de fondo de escala $I_{FS}$ para cada eje:
+\begin{equation}
+I^* = u\,I_{FS},\qquad \tau_{eje} = \eta\,N\,K_t\,I^*,
+\label{eq:cc_escala}
+\end{equation}
+donde $I^*$ es la corriente de referencia [A], $N$ la relación de la reductora y $\eta$ su rendimiento, todavía no medido. Los valores que siguen son ideales ($\eta = 1$). El firmware limita el comando a $|u| \leq 220/255 = 0.863$ (\code{SIMCONNECT_EXTRA_LIMIT}), de modo que la corriente máxima pedida es $0.863\,I_{FS}$.
+
+La elección de $I_{FS}$ está acotada por cuatro datos:
+\begin{itemize}
+\item \textbf{Corriente de rotor trabado.} Con el techo de PWM y 24 V, $0.863\cdot 24/0.869 = 23.8$ A. Es la corriente a la que tiende hoy el motor trabado con comando máximo, sin lazo. Supera el rango del ACS712 de 20 A y la capacidad de la fuente.
+\item \textbf{Límite térmico.} La corriente continua admisible se estimó en 1.8 A sin ventilación (Subsección~\ref{sec:motor775_e6}). Los valores mayores solo pueden sostenerse un tiempo corto, por lo que el firmware deberá incluir un limitador $I^2t$.
+\item \textbf{Rozamiento.} El motor despega con 0.39 A (Ensayo 5). Un comando menor que $0.39/I_{FS}$ no alcanza a moverlo: cuanto menor es $I_{FS}$, mayor es esa zona muerta.
+\item \textbf{Reductora.} Multiplica el torque por $N$, pero también el rozamiento, y la inercia del motor por $N^2$.
+\end{itemize}
+
+\begin{center}
+\begin{tabular}{lcc}\toprule
+ & Roll & Pitch\\\midrule
+Relación $N$ & 13.7 & 19.2 (polea de 75 mm de diámetro)\\
+$I_{FS}$ propuesta (hipótesis) & 5 A & 4 A\\
+Efecto por ampere & 0.308 N$\cdot$m/A & 11.5 N/A\\
+Con $u = 1$ & 1.54 N$\cdot$m & 46 N\\
+Con el máximo real, $u = 0.863$ & 1.33 N$\cdot$m (4.31 A) & 40 N (3.45 A)\\
+Con 1.8 A & 0.55 N$\cdot$m & 21 N\\
+Zona muerta por rozamiento del motor & 7.8\% & 9.8\%\\\bottomrule
+\end{tabular}
+\end{center}
+En roll se reemplazó la relación prevista de 1:3.7 por 1:13.7. Con la primera, la corriente continua admisible daba solo 0.15 N$\cdot$m. Si el torque resulta excesivo, se reduce bajando $I_{FS}$ por software. El rozamiento y la inercia que se sienten al mover el mando, en cambio, no se reducen de ese modo. El motor de pitch todavía no se caracterizó y se calcula con los parámetros del de roll.
+
+\subsection{Diseño del controlador PI}
+\label{sec:cc_pi}
+\subsubsection{Planta}
+Se parte de la Ecuación~\eqref{eq:motor775_electrica}. La constante mecánica es unas 20 veces mayor que la eléctrica (Subsección~\ref{sec:motor775_modelo}), de modo que la fuerza contraelectromotriz se trata como una perturbación lenta y la planta se reduce a
+\begin{equation}
+G(s) = \frac{I(s)}{V(s)} = \frac{1/R}{1 + s\,\tau_e},\qquad \tau_e = \frac{L}{R} = \frac{0.50\ \text{mH}}{0.869\ \Omega} = 0.576\ \text{ms}.
+\label{eq:cc_planta}
+\end{equation}
+Se usa la resistencia del circuito con el driver, porque es la que ve el controlador.
+
+\subsubsection{Frecuencia de PWM}
+El rizado de corriente del PWM unipolar es máximo con ciclo de trabajo 0.5 (ec. 7.51 del apunte):
+\begin{equation}
+\Delta I_{pp,\max} = \frac{V_d}{4\,L\,f_s} = \frac{24}{4\cdot 0.50\times10^{-3}\cdot 20\times10^{3}} = 0.60\ \text{A}.
+\label{eq:cc_rizado}
+\end{equation}
+Se adopta $f_s = 20$ kHz, dentro del máximo de 25 kHz del BTS7960. Con los 490 Hz actuales, el período (2.04 ms) es 3.5 veces $\tau_e$ y más largo que el propio período del lazo de efectos: la corriente casi alcanza su valor final en cada pulso, y no es posible regularla.
+
+\subsubsection{Cálculo de las ganancias}
+El controlador es $C(s) = K_p + K_i/s$. Según las ec. 7.68 y 7.71 del apunte, el cero se ubica sobre el polo eléctrico y la ganancia fija la frecuencia de cruce $\omega_c$. Si la salida del controlador se expresa en volts y el ciclo de trabajo se obtiene dividiendo por la tensión de alimentación, $k_{PWM} = 1$ y
+\begin{equation}
+\frac{K_p}{K_i} = \tau_e,\qquad K_i = \frac{\omega_c R}{k_{PWM}} = \omega_c R,\qquad K_p = \omega_c L,\qquad C(s)\,G(s) = \frac{\omega_c}{s}.
+\label{eq:cc_ganancias}
+\end{equation}
+El lazo cerrado ideal es de primer orden, con constante de tiempo $1/\omega_c$ y margen de fase de $90^\circ$. El apunte recomienda un cruce entre una y dos décadas por debajo de $f_s$, es decir, entre 200 y 2000 Hz. Con $f_c = 1$ kHz ($f_s/20$):
+\[
+K_p = 2\pi\cdot1000\cdot0.50\times10^{-3} = 3.14\ \text{V/A},\qquad
+K_i = 2\pi\cdot1000\cdot0.8687 = 5458\ \text{V/(A}\cdot\text{s)}.
+\]
+
+\textbf{Validación del procedimiento.} Antes de aplicarlo al motor 775 se reprodujo en MATLAB el ejemplo numérico del apunte (Tabla 7.3, pág. 7.38: $R_a = 2\ \Omega$, $L_a = 5.2$ mH, $k_{PWM} = 12$, cruce en 1 kHz). Se obtuvo $k_{iI} = 1047.2$, $k_{pI} = 2.723$, cruce en 1000.0 Hz y margen de fase de $90.0^\circ$. El apunte (pág. 7.41) indica 1050.0 y 2.73.
+
+\subsection{Controlador discreto}
+\label{sec:cc_discreto}
+\subsubsection{Margen de fase real}
+El firmware medirá la corriente una vez por período ($T_s = 50\ \mu$s), calculará y aplicará la tensión en el período siguiente. La retención y ese retardo restan fase. En MATLAB se discretizó la planta con retención de orden cero (\code{c2d}), se agregó un período de retardo y se usó el PI con integración de Euler hacia adelante. La elección de $f_c$ surge de la siguiente comparación, lineal y sin saturación:
+
+\begin{center}
+\begin{tabular}{ccccc}\toprule
+$f_c$ [Hz] & Margen de fase & Margen de ganancia & Establecimiento al 2\% & Sobrepico\\\midrule
+300 & $80.8^\circ$ & 20.9 dB & 1.75 ms & 0.0\%\\
+500 & $75.8^\circ$ & 16.4 dB & 0.95 ms & 0.3\%\\
+800 & $68.4^\circ$ & 12.4 dB & 0.45 ms & 0.6\%\\
+\textbf{1000} & $\mathbf{63.3^\circ}$ & \textbf{10.4 dB} & \textbf{0.45 ms} & \textbf{2.2\%}\\
+1500 & $50.4^\circ$ & 6.9 dB & 0.55 ms & 20.2\%\\
+2000 & $37.2^\circ$ & 4.4 dB & 0.80 ms & 45.0\%\\\bottomrule
+\end{tabular}
+\end{center}
+Con 300 Hz, el establecimiento consume casi todo el intervalo de 2 ms. Por encima de 1 kHz el sobrepico crece y el tiempo ya no mejora. Se adopta 1 kHz.
+
+\textbf{Lectura de la Figura~\ref{fig:cc_bode}.} La curva continua es el diseño del apunte: la magnitud cae 20 dB por década, cruza 0 dB en 1 kHz y la fase es constante en $-90^\circ$. La curva de trazos es el lazo discreto con el retardo de cálculo: su magnitud casi coincide, pero la fase cae con la frecuencia, hasta cruzar $-180^\circ$ cerca de 3.3 kHz. En el cruce (963 Hz) quedan $63.3^\circ$ de margen, en lugar de $90^\circ$.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/control_corriente/bode.png}
+\caption{Respuesta en frecuencia a lazo abierto del control de corriente de roll: diseño continuo y lazo discreto a 20 kHz con un período de retardo.}
+\label{fig:cc_bode}
+\end{figure}
+
+\subsubsection{Algoritmo}
+Con $e_k = I^*_k - i_k$, en cada período se calcula
+\begin{align}
+v_k &= K_p\,e_k + x_k, & v^{sat}_k &= \sat(v_k, \pm V_{max}),\nonumber\\
+x_{k+1} &= x_k + K_i T_s\left[e_k + \frac{v^{sat}_k - v_k}{K_p}\right], & D_k &= \frac{v^{sat}_k}{V_{bus}},
+\label{eq:cc_algoritmo}
+\end{align}
+donde $x$ es el estado del integrador [V], $V_{max} = (220/255)\,V_{bus} = 20.7$ V y $D$ el ciclo de trabajo con signo, que se aplica en el período siguiente.
+
+\subsubsection{Anti-windup}
+\label{sec:cc_aw}
+En los saltos grandes, $K_p\,e$ supera la tensión disponible y la salida satura. El apunte propone congelar el integrador mientras la salida está saturada y el error empuja en el mismo sentido (secc. 7.9.7). La Ecuación~\eqref{eq:cc_algoritmo} usa en cambio el recálculo (\emph{back-calculation}) \cite{astrom2008}: descuenta del integrador la parte de la tensión que no se pudo aplicar. Con el coeficiente $1/K_p$, el integrador acumula solo el error que la tensión realmente aplicada pudo atender. Como el cero del PI coincide con el polo de la planta, eso evita la cola lenta, de constante $\tau_e$, que deja el congelamiento. En la simulación de referencia con comandos al azar e $I_{FS} = 10$ A, el error al final de los 2 ms fue de 0.15 A con congelamiento y 0.04 A con recálculo.
+
+\textbf{Lectura de la Figura~\ref{fig:cc_aw}.} Ambas curvas coinciden mientras la tensión está saturada, porque la pendiente la fija la alimentación. Sin anti-windup, el integrador acumuló de más y la corriente llega a unos 11.4 A antes de volver a los 8.63 A pedidos. Con el recálculo, el sobrepico es de unos 0.3 A.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/control_corriente/antiwindup.png}
+\caption{Efecto del anti-windup con saltos de $\pm 8.63$ A ($I_{FS} = 10$ A, para forzar la saturación): corriente media por período de PWM.}
+\label{fig:cc_aw}
+\end{figure}
+
+\subsubsection{Prealimentaciones descartadas}
+Se probaron dos términos adicionales. Sumar $R\,I^*$ es contraproducente: el PI ya cancela el polo eléctrico, y en la simulación con comandos al azar ($I_{FS}=5$ A) el sobrepico pasó de 0.18 a 1.40 A. Sumar $K_e\,\omega$ con la velocidad del encoder cada 2 ms no mejoró el resultado: con rotor libre, el error final fue 0.066 A, frente a 0.060 A sin él. El bloque queda en el modelo, desactivado.
+
+\subsection{Medición de la corriente}
+\label{sec:cc_medicion}
+El lazo necesita una muestra por período de PWM. El ADS1115, previsto inicialmente, entrega 860 muestras por segundo como máximo \cite{ads1115}, unas 430 por eje al alternar dos canales: menos de una por cada comando de 2 ms. El conversor interno del RP2350 (12 bits, 500 kmuestras/s \cite{rp2350}) permite tomarlas sincronizadas con el PWM.
+
+\textbf{Lectura de la Figura~\ref{fig:cc_ads}.} Los dos paneles superiores muestran el lazo propuesto, calculado con un script independiente del modelo de Simulink. El inferior muestra los mismos comandos con el ADS1115, prealimentación $R\,I^*$ y una corrección integral lenta, con una resistencia real 15\% mayor que la nominal. La corriente no alcanza la referencia: al final de los 2 ms queda un error de hasta 1.05 A, frente a 0.05 A del lazo propuesto.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/control_corriente/ads1115.png}
+\caption{Lazo con el conversor interno (arriba y centro) y con el ADS1115 (abajo), rotor trabado, $I_{FS} = 5$ A (script \code{Control_Corriente_775.m}).}
+\label{fig:cc_ads}
+\end{figure}
+
+El ACS712 de 20 A entrega 2.5 V $\pm$ 0.1 V/A con alimentación de 5 V \cite{acs712}, y los pines analógicos del RP2350 admiten 3.3 V. Se adapta con un divisor de 4.7 k$\Omega$ y 6.8 k$\Omega$ (factor 0.591) y un capacitor de 2.2 nF junto al pin. La resistencia total, de 11.5 k$\Omega$, respeta la carga mínima de 4.7 k$\Omega$ del sensor. Un traductor de niveles digital, como el TXS0108E, no es aplicable a una señal analógica.
+
+\textbf{Ruido.} El divisor atenúa por igual la señal y el ruido del sensor, y su ruido térmico equivale a unos 0.04 mA. Solo aumenta el efecto del conversor: el escalón de 12 bits pasa de 8 a 14 mA. Con 0.05 A eficaces supuestos para el sensor y unos 9.2 bits efectivos supuestos para el conversor, el ruido total pasa de 0.053 a 0.057 A (8\%). Es una estimación a verificar con mediciones sin corriente. Más importante es la alimentación: el sensor es ratiométrico, y una caída de 100 mV en los 5 V desplaza el cero 50 mV, equivalentes a 0.5 A. Por eso se prevé medir también los 5 V y calibrar el cero al encender.
+
+\textbf{Instante de muestreo.} Con PWM centrado, la corriente instantánea en el centro del intervalo de apagado coincide con su valor medio. El filtro del divisor ($\tau = 6.1\ \mu$s) retrasa el rizado, y la muestra deja de coincidir con la media. En Simulink, a 4.3 A y sin ruido, el sesgo es de $-0.038$ A si se muestrea en el centro, y de $+0.004$ A si se muestrea 6.1 $\mu$s después. Este desfase forma parte del diseño.
+
+\subsection{Modelo de Simulink}
+\label{sec:cc_simulink}
+El modelo \code{Control_Corriente_FFB.slx} (carpeta \code{modelizacion motor 775/Control_Corriente}) toma una copia del subsistema \emph{Motor DC} validado en la Subsección~\ref{sec:motor775_validacion} y cierra el lazo a su alrededor. \code{MotorModeloFFB.slx} no se modificó. El modelo se genera con el script \code{Crear_Modelo_Control.m}, de modo que la construcción es reproducible.
+
+\textbf{Lectura de la Figura~\ref{fig:cc_modelo}.} De izquierda a derecha, por el camino directo:
+\begin{itemize}
+\item \emph{Comando +-1}: entrega un valor de \code{cmd_ws} cada 2 ms y lo mantiene, como la salida del lazo de efectos. \emph{Recorte} aplica el límite de $\pm 0.863$ e \emph{I\_FS} lo convierte en $I^*$. El bloque \emph{2 ms a Ts} adapta el período al lazo de corriente, que se ejecuta 40 veces por comando.
+\item \emph{Error} y \emph{PI corriente}: diferencia con la corriente medida y controlador de la Ecuación~\eqref{eq:cc_algoritmo}.
+\item \emph{Retardo calculo}: retardo de un período, propio de la ejecución digital.
+\item \emph{BTS7960 PWM}: convierte la tensión pedida en la aplicada al motor.
+\item \emph{Motor DC}: planta, con las entradas de tensión, torque externo ($T_L$) e inercia adicional ($J_L$).
+\item \emph{Kt} y \emph{Reductora N}: torque ideal en el eje.
+\end{itemize}
+Por el camino de realimentación, \emph{Sensor ACS712 + ADC} devuelve la corriente medida. \emph{Encoder 2 ms} y \emph{Ka (FCEM)} forman la prealimentación de velocidad, desactivada. \emph{T\_L en el eje} y \emph{J\_L reflejada} se dividen por $N$ y $N^2$ para referirlos al motor. Los bloques de la derecha grafican las señales y las envían al espacio de trabajo.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuras/control_corriente/simulink_modelo.png}
+\caption{Modelo \code{Control_Corriente_FFB.slx}: lazo de corriente alrededor del motor caracterizado.}
+\label{fig:cc_modelo}
+\end{figure}
+
+\textbf{Lectura de la Figura~\ref{fig:cc_sim_pi}.} \emph{Kp} y \emph{Integral Ki} forman el PI. \emph{Limite Vmax} recorta la salida. El lazo inferior calcula la diferencia entre la salida recortada y la pedida, la divide por $K_p$ y la suma a la entrada del integrador: es el anti-windup por recálculo.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{figuras/control_corriente/simulink_pi.png}
+\caption{Subsistema \emph{PI corriente}.}
+\label{fig:cc_sim_pi}
+\end{figure}
+
+\textbf{Lectura de la Figura~\ref{fig:cc_sim_pwm}.} La tensión pedida se divide por $V_{bus}$ y se separa en signo y módulo, como hace el driver al elegir la rama que conmuta. El módulo se compara con una portadora triangular de 20 kHz, desfasada 6.1 $\mu$s. \emph{Pulso perdido} permite representar el tiempo que el driver no conduce en cada período. \emph{Elegir} permite usar la tensión promediada, equivalente al modelo lineal del apunte, en lugar de la conmutada.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/control_corriente/simulink_pwm.png}
+\caption{Subsistema \emph{BTS7960 PWM}: modulación unipolar centrada o tensión promediada.}
+\label{fig:cc_sim_pwm}
+\end{figure}
+
+\textbf{Lectura de la Figura~\ref{fig:cc_sim_sensor}.} La corriente pasa por la sensibilidad del ACS712, el divisor con su filtro y el cero de 2.5 V atenuado. Luego se muestrea a 20 kHz, se suma el ruido, y se aplican el rango de 0 a 3.3 V y los escalones de 12 bits. Los dos últimos bloques hacen la conversión inversa, que hará el firmware.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figuras/control_corriente/simulink_sensor.png}
+\caption{Subsistema \emph{Sensor ACS712 + ADC}.}
+\label{fig:cc_sim_sensor}
+\end{figure}
+
+\textbf{Lectura de la Figura~\ref{fig:cc_sim_motor}.} Es el subsistema de la Figura~\ref{fig:motor775_simulink_motor} con dos entradas más. $T_L$ se resta en la suma de torques y $J_L$ se suma a $J$ antes de dividir:
+\begin{equation}
+(J + J_L)\,\frac{d\omega}{dt} = K_t\,i - B\,\omega - \tau_c\tanh\!\left(\frac{\omega}{\omega_{tc}}\right) - T_L,\qquad J_L = \frac{J_{eje}}{N^2},\quad T_L = \frac{T_{eje}}{N}.
+\label{eq:cc_carga}
+\end{equation}
+La idea de incorporar estas entradas se tomó de un modelo de motor de corriente continua de Simulink consultado como comparación (\code{DC_Motor.slx}, 2021). Ese modelo resuelve la misma ecuación eléctrica, pero reúne todo el rozamiento en un término viscoso, calculado en vacío. Aplicado a este motor, a 20 rad/s daría unos 0.27 mN$\cdot$m, frente a 4.8 mN$\cdot$m del modelo con rozamiento seco. Como el mando trabaja a baja velocidad, se conservó el modelo propio. La relación $J_{eje}/N^2$ vale para una inercia constante, y los valores de la reductora todavía no se midieron.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth]{figuras/control_corriente/simulink_motor_dc.png}
+\caption{Subsistema \emph{Motor DC} de la copia, con las entradas $T_L$ y $J_L$.}
+\label{fig:cc_sim_motor}
+\end{figure}
+
+\subsection{Uso en MATLAB}
+\label{sec:cc_uso}
+\begin{center}
+\begin{tabular}{p{0.32\textwidth}p{0.60\textwidth}}\toprule
+Archivo & Función\\\midrule
+\code{Parametros_Control.m} & Lee los parámetros medidos de \code{Parametros_Motor_FFB.m}, calcula $K_p$ y $K_i$, muestra los márgenes y arma el comando de prueba\\
+\code{Control_Corriente_FFB.slx} & Modelo del lazo\\
+\code{Verificar_Control.m} & Ejecuta los casos de la Subsección~\ref{sec:cc_resultados} y mide tiempo de llegada y error\\
+\code{Figuras_Control.m} & Valida el procedimiento con el ejemplo del apunte y genera las figuras de esta sección\\
+\code{Control_Corriente_775.m} & Simulación independiente, sin Simulink, para contrastar resultados\\
+\code{Crear_Modelo_Control.m} & Genera el modelo copiando el bloque \emph{Motor DC}\\\bottomrule
+\end{tabular}
+\end{center}
+Se usan MATLAB R2021a, Simulink y Control System Toolbox (\code{tf}, \code{c2d}, \code{pid}, \code{margin}, \code{stepinfo}). El cálculo central es:
+\begin{verbatim}
+fc  = 1000;  wc = 2*pi*fc;     % cruce: fs/20
+tau_e = L/R;                   % polo que cancela el cero del PI (ec. 7.68)
+Ki  = wc*R;                    % ec. 7.71, con kPWM = 1
+Kp  = tau_e*Ki;
+Lz  = pid(Kp,Ki,0,0,Ts) * c2d(tf(1,[L R]),Ts,'zoh') / tf('z',Ts);
+[Gm,Pm] = margin(Lz);          % con un periodo de retardo
+\end{verbatim}
+
+El procedimiento de trabajo es:
+\begin{enumerate}
+\item Correr \code{Parametros_Control}. Para el otro eje, definir antes \code{eje = 'PITCH'}.
+\item Abrir y simular \code{Control_Corriente_FFB}.
+\item Modificar en el espacio de trabajo la variable a estudiar y volver a simular: \code{Kp}, \code{Ki}, \code{I_FS}, \code{cmd_ws} (comando), \code{eje_trabado}, \code{usar_conmutado}, \code{t_perdido}, \code{ruido_A}, \code{J_eje} o \code{tl_ws} (torque externo en el eje de salida).
+\item Correr \code{Verificar_Control} para evaluar el conjunto de casos.
+\end{enumerate}
+Cuando cambie un parámetro medido del motor, basta con actualizar \code{Parametros_Motor_FFB.m} y repetir los pasos 1 y 4.
+
+\textbf{Paso de integración.} El paso máximo es $T_s/50$, con tolerancia relativa $10^{-6}$. Con $T_s/10$ y $10^{-4}$ aparecieron oscilaciones de hasta 0.4 A que desaparecen al reducir el paso: se trata de un error numérico, no del control, atribuido a que el método de paso variable omite conmutaciones.
+
+\subsection{Resultados}
+\label{sec:cc_resultados}
+Se aplican escalones de plena escala, comandos chicos ($\pm 0.05$) y 20 comandos al azar, uno cada 2 ms. El \emph{tiempo de llegada} es el que tarda la corriente media en quedar a menos del 5\% del salto (o 0.15 A, si es mayor), en el peor de los saltos. El \emph{error final} es la diferencia entre la corriente y la referencia justo antes del comando siguiente, en el peor caso.
+
+\begin{center}
+\begin{tabular}{lcc}\toprule
+Caso (roll, $I_{FS} = 5$ A salvo indicación) & Tiempo de llegada & Error final\\\midrule
+Rotor trabado, PWM conmutado & 0.27 ms & 0.032 A\\
+Rotor trabado, tensión promediada & 0.39 ms & 0.036 A\\
+Rotor libre & 0.27 ms & 0.060 A\\
+Rotor libre, $J_{eje} = 0.01$ kg$\cdot$m$^2$ (supuesta) & 0.27 ms & 0.035 A\\
+Ídem, con torque externo de $\pm 1.5$ N$\cdot$m & 0.27 ms & 0.036 A\\
+$I_{FS} = 10$ A & 0.46 ms & 0.043 A\\
+$I_{FS} = 10$ A, sin anti-windup & 1.33 ms & 0.347 A\\
+$R$ del motor 30\% mayor & 0.62 ms & 0.064 A\\
+$L$ 30\% menor / mayor & 0.59 / 0.85 ms & 0.077 / 0.068 A\\
+Driver que pierde 1.5 $\mu$s por pulso (supuesto) & 0.92 ms & 0.049 A\\
+Muestra sin desfasar & 0.28 ms & 0.061 A\\
+$f_c = 500$ Hz & 0.77 ms & 0.036 A\\\bottomrule
+\end{tabular}
+\end{center}
+Salvo sin anti-windup, en todos los casos la corriente llega antes de 1 ms, la mitad del tiempo disponible. En los casos con $R$ y $L$ alteradas se cambia solo la planta: el controlador conserva las ganancias nominales.
+
+\textbf{Límite físico.} El salto más exigente no puede ser más rápido que la respuesta a tensión máxima. Para pasar de $-I_m$ a $+I_m$ con el rotor trabado,
+\begin{equation}
+t_{min} = \tau_e \ln\frac{I_{max} + I_m}{I_{max} - I_m},\qquad I_{max} = \frac{V_{max}}{R} = 23.8\ \text{A},
+\label{eq:cc_tmin}
+\end{equation}
+que da 0.21 ms para $I_m = 4.31$ A y 0.44 ms para 8.63 A. El requisito de 2 ms es, entonces, alcanzable con este motor y esta alimentación.
+
+\textbf{Lectura de la Figura~\ref{fig:cc_escalones}.} El panel superior muestra que la corriente sigue a la referencia en los escalones grandes, chicos y al azar. En el central, la tensión pedida satura a 20.7 V solo en los saltos grandes, y en régimen se mantiene en unos 4 V. En el inferior se ve que el torque electromagnético sigue a la corriente sin otro retardo.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figuras/control_corriente/escalones.png}
+\caption{Respuesta simulada del lazo de roll con rotor trabado y PWM conmutado: corriente, tensión pedida y torque ideal en el eje.}
+\label{fig:cc_escalones}
+\end{figure}
+
+\textbf{Lectura de la Figura~\ref{fig:cc_detalle}.} En el salto de $-4.31$ a $+4.31$ A, durante el primer período la corriente no cambia: es el retardo de cálculo. Luego sube con la pendiente que permite la alimentación y se establece. Los puntos son las muestras del conversor, que siguen el valor medio del rizado.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/control_corriente/detalle.png}
+\caption{Detalle de un salto de $-4.31$ a $+4.31$ A: corriente instantánea con rizado y muestras del conversor.}
+\label{fig:cc_detalle}
+\end{figure}
+
+\textbf{Lectura de la Figura~\ref{fig:cc_carga}.} Con el rotor libre y una inercia supuesta de 0.01 kg$\cdot$m$^2$ en el eje, se aplica un torque externo de 1.5 N$\cdot$m a los 20 ms y se invierte a los 50 ms. El eje se acelera hasta $-4.3$ rad/s, pero la corriente sigue a la referencia como con el rotor trabado: la fuerza pedida no depende de cómo se mueva el eje. En los intervalos en que la corriente y la velocidad tienen signos opuestos, el motor absorbe energía mecánica; parte puede volver hacia la fuente, efecto que el modelo no incluye.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figuras/control_corriente/carga.png}
+\caption{Lazo de corriente con torque externo en el eje de salida.}
+\label{fig:cc_carga}
+\end{figure}
+
+\subsubsection{Verificaciones del modelo}
+\begin{itemize}
+\item \textbf{Equivalencia.} Con $T_L = 0$ y $J_L = 0$, la copia con las entradas nuevas da la misma corriente y la misma velocidad que sin ellas: la diferencia es nula.
+\item \textbf{Torque externo.} Con $I^* = 0$, $T_{eje} = -1$ N$\cdot$m y $J_{eje} = 0.01$ kg$\cdot$m$^2$, la velocidad del motor a los 0.1 s es 109.95 rad/s. El cálculo a mano sin rozamiento viscoso, $(1/N - \tau_c)\,t/(J + J_L)$, da 110.40 rad/s.
+\item \textbf{Contraste.} El script independiente, con un integrador y una prueba distintos, da resultados concordantes: con $I_{FS} = 10$ A, 0.50 ms, frente a 0.46 ms de Simulink.
+\end{itemize}
+
+\subsection{Corriente y fuerza en la mano}
+\label{sec:cc_fuerza}
+Que la corriente llegue a tiempo asegura el torque electromagnético, no la fuerza en el mando. Entre ambos quedan el rozamiento, la inercia reflejada, el juego y el rendimiento de la reductora, que el lazo de corriente no mide ni corrige. Vistos en el eje de roll, el rozamiento de despegue del motor ($8.8\times10^{-3}$ N$\cdot$m) equivale a 0.12 N$\cdot$m y su inercia, a $1.6\times10^{-3}$ kg$\cdot$m$^2$. Por eso los efectos pequeños pueden no percibirse aunque la corriente sea la pedida. Este efecto se evaluará con la reductora montada.
+
+\subsection{Limitaciones y próximos pasos}
+\label{sec:cc_pasos}
+El modelo no incluye la regeneración hacia la fuente, la caída real del BTS7960 ni su comportamiento con pulsos muy cortos, la variación de temperatura durante el ensayo, ni el juego y el rendimiento de la reductora.
+\begin{enumerate}
+\item Medir el ruido del ACS712 con el divisor y sin corriente, y reemplazar el valor supuesto.
+\item Definir la protección de la alimentación ante regeneración, el corte por sobrecorriente por hardware y el limitador $I^2t$.
+\item Implementar el algoritmo en el firmware: PWM centrado de 20 kHz, muestra sincronizada y desfasada, PI con recálculo y una prueba en C++ que compare su salida con la de MATLAB.
+\item Ensayar con rotor trabado y 1 a 2 A, y comparar la corriente medida con la simulada. Luego, con el eje libre y movido a mano.
+\item Con la reductora, caracterizar ambos ejes (inercia, rozamiento, relación y rendimiento), cargar $J_{eje}$ en el modelo y ajustar $I_{FS}$.
+\item Repetir el cálculo para pitch con sus parámetros medidos.
+\end{enumerate}
+
+\begin{thebibliography}{9}
+\bibitem{oros2010} R.~C.~Oros, \emph{Regulación de motores de corriente continua}, capítulo~7 del apunte de la cátedra Electrónica de Potencia, rev.~C, Córdoba, 2010.
+\bibitem{astrom2008} K.~J.~Åström y R.~M.~Murray, \emph{Feedback Systems: An Introduction for Scientists and Engineers}, Princeton University Press, 2008, capítulo de control PID (integrator windup).
+\bibitem{bts7960cc} Infineon Technologies, \emph{BTS 7960 High Current PN Half Bridge NovalithIC}, hoja de datos, rev.~1.1, diciembre de 2004.
+\bibitem{acs712} Allegro MicroSystems, \emph{ACS712: Fully Integrated, Hall-Effect-Based Linear Current Sensor IC}, hoja de datos.
+\bibitem{rp2350} Raspberry Pi Ltd, \emph{RP2350 Datasheet}, capítulos de PWM y ADC.
+\bibitem{ads1115} Texas Instruments, \emph{ADS111x Ultra-Small, Low-Power, I$^2$C-Compatible, 860-SPS, 16-Bit ADCs}, hoja de datos.
+\end{thebibliography}
