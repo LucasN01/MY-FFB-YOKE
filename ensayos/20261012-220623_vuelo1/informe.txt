@@ -1,0 +1,35 @@
+ENSAYO D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\ensayos\20261012-220623_vuelo1 | filas tel=90289 sent=15879 pico=15965 gan=168
+A fidelidad: OK emparejadas=100.000% q=100.000% gust=100.000% buffet=100.000% ground=100.000% env=100.000% peor=q@95822109:0.000050 excluidas=0 esperadas=14974 no_emparejadas_drop=0
+B1: OK violaciones=0
+B2: OK violaciones=0
+B3: OK violaciones=0
+B4: OK violaciones=0
+B5: OK violaciones=0
+B6: OK violaciones=0 transiciones=13 evaluadas=13 latencia_max=63ms
+B7: OK violaciones=0 pico=0.000% puente=0.000% dropped=0.000
+B8: OK violaciones=0
+B9: OK violaciones=0 lineas=16133 malas=0
+C us/lp/gap max=277/2377/2404 | lp>=2000=1 | centrado signo R=99.160% P=100.000% | corr q-ias=0.986 | skip=0.000 excluidas=0
+01 PAUSA: 0.125s ias=0.000 gs=0.000 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=
+02 PARADO: 132.172s ias=0.042 gs=0.049 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.030/0.063 pwmR/P=8.000/16.000 act=100.000% marca=
+03 PAUSA: 12.594s ias=0.000 gs=0.000 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=inicio
+04 PARADO: 21.141s ias=0.000 gs=0.000 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.006/0.011 pwmR/P=1.000/3.000 act=100.000% marca=inicio
+05 PAUSA: 19.281s ias=0.000 gs=0.000 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=F1
+06 PARADO: 56.578s ias=0.468 gs=0.489 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.100/0.221 pwmR/P=25.000/56.000 act=99.912% marca=F1
+07 RODAJE: 51.328s ias=85.322 gs=87.823 q=0.510 gust=0.000 buf=0.000 gnd=1.000 cmdR/P=0.304/0.068 pwmR/P=78.000/17.000 act=100.000% marca=F4
+08 TREN: 157.344s ias=139.006 gs=143.384 q=1.334 gust=0.000 buf=1.000 gnd=0.000 cmdR/P=0.343/0.720 pwmR/P=87.000/184.000 act=100.000% marca=F5
+09 VUELO: 3.469s ias=100.256 gs=109.538 q=0.700 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.064/0.018 pwmR/P=16.000/4.000 act=100.000% marca=F8
+10 TREN: 89.734s ias=115.754 gs=125.779 q=0.928 gust=0.000 buf=0.272 gnd=0.000 cmdR/P=0.237/0.562 pwmR/P=61.000/143.000 act=98.007% marca=F8
+11 PERDIDA: 8.625s ias=67.450 gs=72.580 q=0.360 gust=0.000 buf=0.916 gnd=0.000 cmdR/P=0.129/0.145 pwmR/P=33.000/37.000 act=100.000% marca=F9
+12 TREN: 11.172s ias=93.174 gs=104.665 q=0.613 gust=0.000 buf=0.256 gnd=0.000 cmdR/P=0.157/0.099 pwmR/P=40.000/25.000 act=100.000% marca=F9
+13 PAUSA: 8.062s ias=81.990 gs=90.353 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=F10
+14 TREN: 4.532s ias=81.990 gs=90.353 q=0.476 gust=0.000 buf=0.212 gnd=0.000 cmdR/P=0.110/0.040 pwmR/P=28.000/10.000 act=98.913% marca=F10
+15 PERDIDA: 7.500s ias=60.019 gs=66.417 q=0.280 gust=0.000 buf=0.646 gnd=0.000 cmdR/P=0.129/0.134 pwmR/P=33.000/34.000 act=100.000% marca=F11
+16 TREN: 12.781s ias=81.832 gs=87.167 q=0.499 gust=0.000 buf=0.164 gnd=0.000 cmdR/P=0.114/0.044 pwmR/P=29.000/11.000 act=42.236% marca=F11
+17 PAUSA: 7.984s ias=81.832 gs=87.167 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=F12
+18 TREN: 19.297s ias=105.941 gs=112.541 q=0.792 gust=0.642 buf=0.098 gnd=0.000 cmdR/P=0.220/0.102 pwmR/P=56.000/26.000 act=88.169% marca=F12
+19 PERDIDA: 14.047s ias=89.103 gs=104.742 q=0.656 gust=0.849 buf=1.000 gnd=0.000 cmdR/P=0.335/0.613 pwmR/P=85.000/156.000 act=97.518% marca=F13
+20 TREN: 148.594s ias=190.459 gs=197.811 q=2.473 gust=0.015 buf=1.000 gnd=1.000 cmdR/P=0.414/0.418 pwmR/P=106.000/107.000 act=100.000% marca=F13
+21 RODAJE: 23.844s ias=91.919 gs=94.036 q=0.586 gust=0.000 buf=0.000 gnd=1.000 cmdR/P=0.204/0.112 pwmR/P=52.000/29.000 act=100.000% marca=F13
+22 PAUSA: 30.781s ias=0.001 gs=0.001 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=F13
+RESULTADO: OK

@@ -1,0 +1,67 @@
+17:18:43.439	0.028	PC	inicio del registro: Pro Micro COM20, UNO no usado, archivos D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\modelizacion motor 775\registros\PRUEBA2_20261117_171843_*
+17:18:49.145	5.734	PC	comando a MICRO: r
+17:20:16.766	93.355	PC	comando a MICRO: r
+17:20:17.444	94.033	PC	comando a MICRO: z
+17:20:17.944	94.533	MICRO	# cero ACS712: 511.6 cuentas (2.498 V)
+17:20:39.006	115.595	TERMICO	inicio: 1 A constantes hasta 's'. SIN corte automatico por temperatura: cortar con 's' si la carcasa llega a 70 C o la hoja marca CORTAR.
+17:20:39.006	115.595	PC	comando a MICRO: c 1
+17:20:39.009	115.598	MICRO	# sostenido: I=1.00 A, t=3600.0 s, techo de duty 17.5 %
+17:20:39.459	116.048	MICRO	# cero ACS712: 511.5 cuentas (2.498 V)
+17:20:40.095	116.684	MICRO	# FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+17:20:40.096	116.685	MICRO	# corriente medida 0.00 A. Driver apagado. Revisar y enviar r para rearmar.
+17:20:40.120	116.709	PC	comando a MICRO: s
+17:20:40.121	116.710	TERMICO	ensayo interrumpido: el Pro Micro paso a FALLA: FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+17:20:40.122	116.711	MICRO	# driver apagado
+17:20:47.300	123.889	PC	comando a MICRO: r
+17:20:47.301	123.890	MICRO	# rearmado
+17:20:48.192	124.781	PC	comando a MICRO: z
+17:20:48.693	125.282	MICRO	# cero ACS712: 511.5 cuentas (2.498 V)
+17:21:06.564	143.154	PC	comando a MICRO: s
+17:21:06.566	143.155	MICRO	# driver apagado
+17:21:08.956	145.545	PC	comando a MICRO: r
+17:21:10.253	146.842	PC	comando a MICRO: z
+17:21:10.754	147.343	MICRO	# cero ACS712: 511.6 cuentas (2.498 V)
+17:21:13.875	150.464	TERMICO	inicio: 1 A constantes hasta 's'. SIN corte automatico por temperatura: cortar con 's' si la carcasa llega a 70 C o la hoja marca CORTAR.
+17:21:13.875	150.464	PC	comando a MICRO: c 1
+17:21:13.878	150.467	MICRO	# sostenido: I=1.00 A, t=3600.0 s, techo de duty 17.5 %
+17:21:14.327	150.916	MICRO	# cero ACS712: 511.5 cuentas (2.498 V)
+17:21:15.749	152.338	TERMICO	>>> LECTURA t=0 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.000 A  duty=15.07 %  duty/duty0=1.000
+17:21:17.664	154.253	MICRO	# techo de duty ajustado a 17.5 % (estable 14.99 %)
+17:21:22.441	159.031	PC	comando a MICRO: s
+17:21:22.446	159.035	MICRO	# fin de punto (parado a mano): I_obj=1.00 A, I_media=1.000 A, duty_medio=15.25 %, V_est=2.46 V, tramo estable=6.8 s
+17:21:22.447	159.036	MICRO	# pausa de 10 s antes del proximo punto
+17:21:22.491	159.080	PC	comando a MICRO: s
+17:21:22.491	159.080	TERMICO	ensayo terminado con 's', driver apagado
+17:21:22.492	159.081	MICRO	# driver apagado
+17:21:22.505	159.094	TERMICO	tabla guardada en D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\modelizacion motor 775\registros\PRUEBA2_20261117_171843_termico.csv (columna i_A -> columna I de la hoja)
+17:21:24.780	161.369	TERMICO	inicio: 2 A constantes hasta 's'. SIN corte automatico por temperatura: cortar con 's' si la carcasa llega a 70 C o la hoja marca CORTAR.
+17:21:24.780	161.370	PC	comando a MICRO: s
+17:21:24.781	161.370	TERMICO	ensayo interrumpido: el Pro Micro no esta en reposo (R); esperar o enviar r
+17:21:24.783	161.372	MICRO	# driver apagado
+17:21:28.194	164.784	PC	comando a MICRO: r
+17:21:32.443	169.032	MICRO	# listo para el proximo punto
+17:21:32.502	169.091	TERMICO	inicio: 2 A constantes hasta 's'. SIN corte automatico por temperatura: cortar con 's' si la carcasa llega a 70 C o la hoja marca CORTAR.
+17:21:32.503	169.092	PC	comando a MICRO: s
+17:21:32.503	169.092	TERMICO	ensayo interrumpido: el Pro Micro no esta en reposo (R); esperar o enviar r
+17:21:32.503	169.092	MICRO	# driver apagado
+17:21:38.054	174.643	PC	comando a MICRO: r
+17:21:41.519	178.108	PC	comando a MICRO: z
+17:21:42.019	178.608	MICRO	# cero ACS712: 511.6 cuentas (2.498 V)
+17:21:46.964	183.553	TERMICO	inicio: 2 A constantes hasta 's'. SIN corte automatico por temperatura: cortar con 's' si la carcasa llega a 70 C o la hoja marca CORTAR.
+17:21:46.965	183.554	PC	comando a MICRO: c 2
+17:21:46.968	183.557	MICRO	# sostenido: I=2.00 A, t=3600.0 s, techo de duty 21.7 %
+17:21:47.417	184.006	MICRO	# cero ACS712: 511.5 cuentas (2.498 V)
+17:21:49.848	186.437	TERMICO	>>> LECTURA t=0 min: anotar V en bornes y T carcasa en el Excel <<<  I=2.000 A  duty=17.74 %  duty/duty0=1.000
+17:21:51.721	188.310	MICRO	# techo de duty ajustado a 21.7 % (estable 17.75 %)
+17:23:49.917	306.506	TERMICO	>>> LECTURA t=2 min: anotar V en bornes y T carcasa en el Excel <<<  I=2.000 A  duty=17.69 %  duty/duty0=0.997
+17:25:49.906	426.495	TERMICO	>>> LECTURA t=4 min: anotar V en bornes y T carcasa en el Excel <<<  I=2.000 A  duty=17.90 %  duty/duty0=1.009
+17:26:08.472	445.061	PC	comando a MICRO: s
+17:26:08.476	445.066	MICRO	# fin de punto (parado a mano): I_obj=2.00 A, I_media=2.000 A, duty_medio=17.75 %, V_est=3.06 V, tramo estable=258.8 s
+17:26:08.477	445.066	MICRO	# pausa de 10 s antes del proximo punto
+17:26:08.518	445.107	PC	comando a MICRO: s
+17:26:08.518	445.108	TERMICO	ensayo terminado con 's', driver apagado
+17:26:08.520	445.109	TERMICO	tabla guardada en D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\modelizacion motor 775\registros\PRUEBA2_20261117_171843_termico.csv (columna i_A -> columna I de la hoja)
+17:26:08.520	445.109	MICRO	# driver apagado
+17:26:09.564	446.153	PC	comando a MICRO: s (al salir)
+17:26:09.566	446.155	MICRO	# driver apagado
+17:26:10.168	446.757	PC	fin del registro

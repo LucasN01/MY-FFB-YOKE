@@ -1,0 +1,1074 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot,es-noshorthands]{babel}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,array,tabularx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!45!black,urlcolor=blue!45!black}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlist{itemsep=3pt,topsep=4pt}
+\renewcommand{\arraystretch}{1.18}
+\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,frame=single,breaklines=true,showstringspaces=false,keepspaces=true}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\pendiente}{\textit{por medir}}
+\newcommand{\caja}[3]{\par\noindent\fcolorbox{#1}{#1!4}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\textbf{\color{#1}#2} #3}}\par}
+\newcommand{\advertencia}[1]{\caja{red!55!black}{Advertencia.}{#1}}
+\newcommand{\nota}[1]{\caja{blue!45!black}{Nota.}{#1}}
+\newcommand{\alternativa}[1]{\caja{green!35!black}{Si no se cuenta con eso.}{#1}}
+\newcommand{\control}[1]{\caja{orange!70!black}{Cómo saber si salió bien.}{#1}}
+\newcommand{\enc}[2]{\begin{tabular}[b]{@{}c@{}}#1\\#2\end{tabular}}
+
+\title{Caracterización de los motores DC 775\\[2pt]\large Paso a paso: primero el motor solo, después con la reductora}
+\author{Procedimiento de ensayo para roll y pitch\\Proyecto MiYoke PD}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Este documento explica, paso a paso y suponiendo que el lector nunca hizo estas mediciones, cómo obtener los parámetros de cada motor DC 775 \emph{sin} la caja reductora: $R$ (resistencia del bobinado), $V_{esc}$ (caída en escobillas), $K_t$ (constante de torque), $K_e$ (constante de fuerza contraelectromotriz), rozamiento, $J_m$ (inercia del rotor), $L$ (inductancia) e $I_{cont}$ (corriente continua admisible). Luego indica cómo medir la reductora (relación real, rendimiento, rozamiento y juego) y cómo combinar todo para obtener lo que necesita el control de corriente: en roll, torque en el eje por ampere; en pitch, fuerza en la empuñadura por ampere (conversión de N\,m a N mediante el radio de la polea). Se hacen las mismas mediciones en los dos motores. Los números de los ejemplos son \textbf{supuestos} y solo muestran cómo se hace la cuenta. Reemplaza, para el enfoque de ensayo, a \code{caracterizacion_motores_775.tex}, que medía directamente con la reductora puesta. El diseño del controlador PI se desarrolla en \code{procedimiento_control_corriente.tex}.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%=====================================================================
+\section{Qué se va a obtener y para qué sirve}
+\label{sec:objetivo}
+
+El control de corriente funciona así: el firmware decide una \emph{fuerza} (pitch) o un \emph{torque} (roll) que la mano debe sentir, la convierte en una \emph{corriente} y un lazo PI ajusta el PWM del BTS7960 hasta que por el motor circule esa corriente. Para hacer esa conversión, y para que el PI sea estable y rápido, hacen falta los parámetros de la Tabla~\ref{tab:parametros}.
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.13\linewidth}X}
+\toprule
+Parámetro & Unidad & Para qué se usa \\
+\midrule
+$R$ (resistencia del bobinado) & $\Omega$ & Tensión necesaria para hacer circular una corriente; calor ($I^2R$, con $I$ (corriente) y $R$ (resistencia del bobinado)); ganancia del PI. \\
+$V_{esc}$ (caída en escobillas) & V & Tensión mínima para que circule corriente; se suma en la prealimentación. \\
+$K_t$ (constante de torque) & N\,m/A & Torque del motor por cada ampere. Es \textbf{el} dato central. \\
+$K_e$ (constante de fuerza contraelectromotriz) & V\,s/rad & Tensión que genera el motor al girar. En SI vale lo mismo que $K_t$ (constante de torque) (sirve de control cruzado). \\
+$\tau_c$ (rozamiento de Coulomb), $b$ (coeficiente de rozamiento viscoso) & N\,m; N\,m\,s/rad & Torque que se pierde dentro del motor; compensación de rozamiento. \\
+$J_m$ (inercia del rotor) & kg\,m$^2$ & Masa que se siente en pitch al reflejarla por la reductora; compensación de inercia (opcional). \\
+$L$ (inductancia) & mH & Rapidez del lazo de corriente y rizado del PWM. \\
+$I_{cont}$ (corriente continua admisible) & A & Límite térmico: hasta dónde se puede pedir corriente sostenida. \\
+\midrule
+$N$ (relación de reducción), $\eta_d$ (rendimiento directo), $\eta_i$ (rendimiento inverso), juego & -- & Relación real y rendimiento de la reductora (directo e inverso). \\
+$r_{polea}$ (radio de la polea de pitch) & m & Conversión de torque [N\,m] a fuerza [N]. \\
+\bottomrule
+\end{tabularx}
+\caption{Parámetros a medir en cada motor.}
+\label{tab:parametros}
+\end{table}
+
+\textbf{Por qué medir primero sin la reductora.} La reductora agrega rozamiento con histéresis, juego y un rendimiento que cambia con la carga y con el sentido. Si se mide todo junto, esos efectos se mezclan con los del motor y no se puede saber qué parte es de quién. Medido el motor solo, la reductora se caracteriza después con pocas pruebas, y si en el futuro se cambia la reductora o la transmisión, el modelo del motor sigue sirviendo.
+
+\subsection*{Qué se mide, qué se calcula y qué se verifica}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.20\linewidth}>{\raggedright\arraybackslash}p{0.22\linewidth}X}
+\toprule
+Momento & Qué se hace & Detalle \\
+\midrule
+Ahora, con los motores sueltos & \textbf{Medir} (Etapa~1, obligatoria) & $R$ (resistencia del bobinado), $V_{esc}$ (caída en escobillas), $K_t$ (constante de torque), $K_e$ (constante de fuerza contraelectromotriz), rozamiento, $L$ (inductancia), $J_m$ (inercia del rotor), $I_{cont}$ (corriente continua admisible) de cada motor. Son propiedades del motor: se miden \textbf{una sola vez} y no cambian al agregar la reductora. Solo se repiten si se reemplaza un motor. \\
+Al comprar reductoras y transmisión & \textbf{Calcular} (Etapa~3) & $N$ (relación de reducción) contando dientes; radio de la polea con $r = Z\,p/(2\pi)$, con $r$ (radio de la polea), $Z$ (cantidad de dientes de la polea) y $p$ (paso de la correa); velocidad, f.c.e.m. (fuerza contraelectromotriz) e inercia reflejadas ($N\,\omega_s$, $K_e N$, $J_m N^2$, con $N$ (relación de reducción), $\omega_s$ (velocidad angular del eje de salida), $K_e$ (constante de fuerza contraelectromotriz) y $J_m$ (inercia del rotor)) son exactas. La fuerza por ampere ($K_t N \eta / r$, con $K_t$ (constante de torque), $N$ (relación de reducción), $\eta$ (rendimiento de la reductora) y $r$ (radio de la polea)) es \textbf{aproximada}, porque $\eta$ (rendimiento de la reductora) se supone (0,90--0,95 por etapa planetaria; menos con poca carga): error esperable del orden de $\pm 10$--20\,\%. \\
+Con el yugo armado & \textbf{Verificar} (Sección~\ref{sec:verificacion}, recomendada) & Una prueba corta por eje con la celda en la empuñadura: da la fuerza por ampere real, el rendimiento y el rozamiento total (reductora + correa), que no se pueden calcular. \\
+Solo si hace falta & Medir la reductora en banco (Etapa~2, \textbf{opcional}) & Si la verificación final da algo inesperado, para separar qué parte corresponde a la reductora y qué parte a la correa o al montaje. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+%=====================================================================
+\section{Conceptos mínimos}
+\label{sec:conceptos}
+
+\subsection{El modelo del motor}
+
+Un motor DC de imanes permanentes se describe con dos ecuaciones. La \textbf{eléctrica} dice a qué se reparte la tensión aplicada en los bornes:
+\begin{equation}
+V = \underbrace{R\,i}_{\text{caída en el cobre}} + \underbrace{L\,\frac{di}{dt}}_{\text{solo en cambios}} + \underbrace{V_{esc}}_{\text{escobillas}} + \underbrace{K_e\,\omega_m}_{\text{f.c.e.m.}}
+\label{eq:electrica}
+\end{equation}
+Símbolos: $V$ (tensión en bornes), $R$ (resistencia del bobinado), $i$ (corriente instantánea), $L$ (inductancia), $di/dt$ (variación de la corriente en el tiempo), $V_{esc}$ (caída en escobillas), $K_e$ (constante de fuerza contraelectromotriz) y $\omega_m$ (velocidad angular del motor); f.c.e.m. (fuerza contraelectromotriz).
+La \textbf{mecánica} dice qué hace el torque que produce la corriente:
+\begin{equation}
+\tau_m = K_t\, i, \qquad J_m\,\dot\omega_m = K_t\,i - \tau_f(\omega_m) - \tau_{carga},\qquad \tau_f \approx \tau_c\,\mathrm{sgn}(\omega_m) + b\,\omega_m .
+\label{eq:mecanica}
+\end{equation}
+Símbolos: $\tau_m$ (torque del motor), $K_t$ (constante de torque), $i$ (corriente instantánea), $J_m$ (inercia del rotor), $\dot\omega_m$ (aceleración angular del motor), $\omega_m$ (velocidad angular del motor), $\tau_f$ (torque de rozamiento), $\tau_{carga}$ (torque de la carga), $\tau_c$ (rozamiento de Coulomb), $\mathrm{sgn}(\omega_m)$ (signo de la velocidad del motor) y $b$ (coeficiente de rozamiento viscoso).
+
+Interpretación sencilla:
+\begin{itemize}
+\item Con el eje \textbf{trabado} ($\omega_m$ (velocidad angular del motor) $= 0$) y corriente constante, solo quedan $V = R\,i + V_{esc}$ y $\tau = K_t\,i$, con $V$ (tensión en bornes), $R$ (resistencia del bobinado), $i$ (corriente), $V_{esc}$ (caída en escobillas), $\tau$ (torque) y $K_t$ (constante de torque). De ahí salen $R$ (resistencia del bobinado), $V_{esc}$ (caída en escobillas) y $K_t$ (constante de torque) (Ensayo~\ref{ens:bloqueado}).
+\item Con el motor \textbf{girando como generador} (bornes abiertos, $i$ (corriente) $= 0$) queda $V = K_e\,\omega_m$, con $V$ (tensión en bornes), $K_e$ (constante de fuerza contraelectromotriz) y $\omega_m$ (velocidad angular del motor). De ahí sale $K_e$ (constante de fuerza contraelectromotriz) (Ensayo~\ref{ens:ke}).
+\item Con el motor \textbf{girando libre} (sin carga), toda la corriente se gasta en vencer su propio rozamiento: $K_t\,i_0 = \tau_f(\omega)$, con $K_t$ (constante de torque), $i_0$ (corriente en vacío), $\tau_f$ (torque de rozamiento) y $\omega$ (velocidad angular) (Ensayo~\ref{ens:vacio}).
+\end{itemize}
+
+\textbf{Por qué $K_t$ (constante de torque) es igual a $K_e$ (constante de fuerza contraelectromotriz).} La potencia eléctrica que el motor convierte en mecánica es $K_e\,\omega\, i$ y la potencia mecánica es $\tau\,\omega = K_t\, i\, \omega$, con $K_e$ (constante de fuerza contraelectromotriz), $\omega$ (velocidad angular), $i$ (corriente), $\tau$ (torque) y $K_t$ (constante de torque). Como son la misma potencia, en unidades SI (N\,m/A y V\,s/rad) los dos números son iguales. Medirlos por separado y comprobar que coinciden (diferencia menor que 5--10\,\%) es la mejor verificación de que los ensayos están bien hechos.
+
+\subsection{Conversiones que se usan todo el tiempo}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+De & A \\
+\midrule
+$n$ (velocidad) [rpm] & $\omega$ (velocidad angular) $= 2\pi\,n/60 = 0{,}10472\,n$ [rad/s] \\
+$m$ (masa colgada) [g] & $F$ (fuerza) $= m \cdot 0{,}00981$ [N] \\
+$m$ (masa colgada) [kg] & $F$ (fuerza) $= m \cdot 9{,}81$ [N] \\
+$F$ (fuerza) [N] a $L$ (distancia al eje) [m] & $\tau$ (torque) $= F\,L$ [N\,m] \\
+$f$ (frecuencia del sensor) [Hz] con $k$ (marcas por vuelta) & $n$ (velocidad en rpm) $= 60\,f/k$ [rpm] \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Ajuste por recta (cómo sacar una pendiente)}
+\label{sec:recta}
+
+Casi todos los ensayos terminan en ``medir varios puntos y ajustar una recta''. Nunca se calcula con un solo punto: con varios se promedia el error y se ve si algún punto está mal. En Excel o LibreOffice Calc, con los valores de $x$ (variable independiente) en la columna A y los de $y$ (variable dependiente) en la columna B:
+\begin{itemize}
+\item pendiente: \code{=PENDIENTE(B2:B6;A2:A6)}
+\item ordenada al origen: \code{=INTERSECCION.EJE(B2:B6;A2:A6)}
+\item calidad del ajuste: \code{=COEFICIENTE.R2(B2:B6;A2:A6)}; debe dar mayor que 0,99. Si da menos, graficar los puntos y buscar el que se aparta.
+\end{itemize}
+
+%=====================================================================
+\section{Seguridad}
+\label{sec:seguridad}
+
+\advertencia{\begin{itemize}[leftmargin=*]
+\item \textbf{Nunca aplicar tensión alta con el eje trabado.} Con $R$ (resistencia del bobinado) $\approx 0{,}5~\Omega$, 24~V con el rotor bloqueado darían unos 45~A: se queman el bobinado, los cables o el driver. Con eje trabado se trabaja con la fuente en \textbf{1--4~V} y con el \textbf{límite de corriente} de la fuente ajustado.
+\item Antes de cada ensayo, ajustar el límite de corriente de la fuente: con los bornes de salida en cortocircuito (fuente apagada al conectar), subir la perilla de corriente hasta el valor deseado y recién después conectar el motor. Si la fuente no tiene límite de corriente, poner en serie un fusible del valor máximo del ensayo.
+\item Eje trabado: \textbf{pocos segundos por punto} y pausas. El bobinado se calienta mucho más rápido que la carcasa.
+\item \textbf{Fijar siempre el motor} a la mesa (morsa, sargento o soporte impreso). Un 775 a 24~V gira a varios miles de rpm y su torque de arranque lo hace saltar.
+\item Nada suelto cerca del eje: pelo, mangas, cables. Usar anteojos de protección en los ensayos con taladro o con el motor girando libre.
+\item \textbf{No cortocircuitar los bornes de un motor que gira}: actúa como generador y la corriente de frenado puede ser muy alta.
+\item Cuando el motor es movido por un taladro (Ensayo~\ref{ens:ke}) sus bornes deben estar \textbf{desconectados} de la fuente y del driver: la tensión generada podría retroalimentarlos.
+\item El osciloscopio comparte la masa de su punta con la tierra de la red. Conectar el clip de masa \textbf{solo} al negativo de la fuente del ensayo. Si la fuente regulable tiene su negativo unido a tierra, no poner nunca el clip de masa en otro punto (por ejemplo, en un borne del motor que no sea el negativo), porque se cortocircuita la fuente a través de la tierra.
+\item Fuente de $\pm24$~V: usar \textbf{un solo canal} (0~V a +24~V) entre el borne positivo y el común. No conectar el motor entre $+24$ y $-24$ (serían 48~V).
+\end{itemize}}
+
+%=====================================================================
+\section{Materiales}
+\label{sec:materiales}
+
+\subsection{Lo que ya se tiene}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.30\linewidth}X}
+\toprule
+Elemento & Uso en estos ensayos \\
+\midrule
+Fuente regulable $\pm 24$~V & Alimentación de todos los ensayos. Si muestra la corriente, sirve como amperímetro aproximado (verificarlo una vez contra el multímetro). Si tiene límite de corriente (modo CC), es la protección principal. \\
+Multímetro: V (tensión), A (corriente), $\Omega$ (resistencia) & Tensión en bornes; corriente en serie (entrada de 10~A); resistencias de referencia. \\
+Osciloscopio & Velocidad (frecuencia del sensor óptico o de la tensión generada), inductancia por escalón, desaceleración libre para la inercia. \\
+Medidor LCR & Medición directa de $L$ (inductancia); control de la resistencia del bobinado. \\
+Celda de carga 20~kg + HX711 & Fuerza en el extremo de un brazo de palanca: torque. \\
+BTS7960 & No hace falta para caracterizar el motor (se alimenta directo de la fuente). Se usa en la verificación final en el yugo. \\
+Encoder magnético AS5600 (I2C) & Ángulo y velocidad del eje de salida de la reductora, relación real, juego y radio de la polea de pitch (Sección~\ref{sec:as5600}). No se usa en el eje del motor solo. \\
+Impresora 3D & Soportes, brazo de palanca, disco ranurado, acoples (Sección~\ref{sec:impresion}). \\
+Arduino UNO o Pico & Lectura del HX711 y del tacómetro. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Lo que conviene conseguir (barato)}
+
+\begin{itemize}
+\item \textbf{Sensor óptico de herradura} (``sensor de ranura'' tipo H206/FC-03, con salida digital) o un TCRT5000: tacómetro con un disco impreso.
+\item \textbf{Acople rígido de 5~mm} (o 5 a 6~mm) de aluminio con prisioneros: une el eje del motor al brazo o a otro eje sin que patine. Medir antes el diámetro del eje con calibre (suele ser 5~mm, a veces con plano en D).
+\item Calibre, cinta métrica y una balanza de cocina (para calibrar la celda con masas conocidas).
+\item Termómetro infrarrojo o la termocupla del multímetro si la tiene.
+\item Cables gruesos y cortos (al menos 1~mm$^2$) para la corriente; fichas o terminales firmes.
+\item Taladro de velocidad regulable (para el Ensayo~\ref{ens:ke}).
+\end{itemize}
+
+\subsection{Alternativas generales}
+
+\alternativa{\begin{itemize}[leftmargin=*]
+\item \textbf{Sin fuente con límite de corriente:} fusible en serie, o una resistencia de potencia en serie (por ejemplo 1~$\Omega$ 10~W), o una lámpara de auto de 12~V en serie como limitador. Otra opción barata es un módulo reductor con límite de corriente (XL4015 ``CC-CV'') alimentado desde 24~V.
+\item \textbf{Sin amperímetro confiable:} una resistencia \emph{shunt} conocida en serie (por ejemplo, shunt de 50~A/75~mV, o una resistencia de 0,1~$\Omega$ 5~W). La corriente es $I = V_{shunt}/R_{shunt}$, con $I$ (corriente), $V_{shunt}$ (tensión medida sobre el shunt) y $R_{shunt}$ (resistencia del shunt). Con la de 0,1~$\Omega$, 5~A dan 0,5~V y 2,5~W.
+\item \textbf{Sensores que se pueden usar como amperímetro:} ACS712 (66~mV/A en la versión 30~A, salida centrada en 2,5~V) o el pin IS del BTS7960 (corriente de salida $\approx I/8500$, con $I$ (corriente) del motor, según su hoja de datos, con mucha dispersión entre unidades). Ambos deben calibrarse contra el multímetro.
+\item \textbf{Sin taladro:} usar el otro motor 775 como motor de arrastre, unido eje con eje por un acople (Ensayo~\ref{ens:ke}).
+\item \textbf{Sin tacómetro:} el osciloscopio mide la frecuencia del rizado de la tensión generada (ver Ensayo~\ref{ens:ke}); o se obtiene $K_e$ (constante de fuerza contraelectromotriz) a partir de $K_t$ (constante de torque), porque son iguales.
+\end{itemize}}
+
+%=====================================================================
+\section{Preparación}
+\label{sec:preparacion}
+
+\subsection{Identificar los motores}
+
+Marcar con cinta y marcador: \textbf{motor R} (roll, reductora 3,7) y \textbf{motor P} (pitch, reductora 19,2). Marcar también qué borne es ``+'' (por ejemplo, el que tiene el punto rojo). Convención: con + en el borne marcado, el eje gira en sentido \emph{positivo}; anotar si es horario visto desde el eje. Dos motores del mismo lote pueden diferir $\pm 10$\,\%: cada uno se mide por separado y cada eje usa los datos de \emph{su} motor.
+
+\subsection{Separar la reductora}
+\label{sec:desarme}
+
+\begin{enumerate}
+\item Sacar fotos de cada paso antes de desarmar.
+\item En los 775 con reductora planetaria, la reductora suele estar sujeta al motor por dos o cuatro tornillos de la tapa frontal del motor. Aflojarlos y separar \emph{sin girar} ni forzar.
+\item El piñón ``sol'' de la primera etapa suele quedar \textbf{prensado en el eje del motor}: no sacarlo. Medir el motor con el piñón puesto (su inercia es despreciable frente a la del rotor).
+\item Guardar la reductora boca arriba en una bolsa, para que no pierda la grasa ni junte polvo.
+\item \textbf{Aprovechar para contar dientes} (Sección~\ref{sec:relacion}): sol y corona de cada etapa visibles.
+\end{enumerate}
+
+\alternativa{Si la reductora no se puede separar sin dañarla, se hace todo con la reductora puesta y se refiere al motor: medir $\tau_s$ (torque en el eje de salida), $\omega_s$ (velocidad angular del eje de salida) y usar $\omega_m = N\,\omega_s$, con $\omega_m$ (velocidad angular del motor) y $N$ (relación de reducción); entonces $K_e = V/(N\,\omega_s)$, con $K_e$ (constante de fuerza contraelectromotriz) y $V$ (tensión en bornes), es correcto (la reductora no altera la velocidad), pero lo que se obtiene en torque es $K_t\,N\,\eta$, con $K_t$ (constante de torque) y $\eta$ (rendimiento de la reductora), y no $K_t$ (constante de torque) solo. Usar $K_t$ (constante de torque) $\approx$ $K_e$ (constante de fuerza contraelectromotriz) y deducir $\eta$ (rendimiento de la reductora) de la comparación.}
+
+\subsection{Piezas a imprimir en 3D}
+\label{sec:impresion}
+
+\begin{enumerate}
+\item \textbf{Cuna del motor}: un anillo partido que abrace la carcasa ($\approx 42$~mm de diámetro, medir) con un tornillo de apriete, y una base con agujeros para atornillarla a una tabla. Que el motor quede con el \textbf{eje vertical hacia arriba} (ver motivo en el Ensayo~\ref{ens:bloqueado}). Aflojando el anillo, el motor tiene que poder girarse sobre su eje para cambiar la posición del rotor.
+\item \textbf{Brazo de palanca}: barra de 120~mm con un agujero en un extremo para el acople rígido de 5~mm (o una abrazadera partida con tornillo M3 y tuerca embutida) y, a 100,0~mm del centro del eje, un tornillo vertical cuya punta redondeada (o una bolita) apoya sobre la celda. Imprimir con 100\,\% de relleno o 5 perímetros. Para la etapa con reductora, hacer otro brazo con 150~mm de distancia y agujero para el eje de salida.
+\item \textbf{Base de la celda}: un bloque que se atornille al extremo \emph{fijo} de la celda (el lado del cable) con sus dos tornillos, dejando el extremo \emph{libre} en el aire (separador de 2--3~mm). La celda se monta horizontal, con su cara sensible mirando al brazo (la flecha de la etiqueta indica el sentido de carga).
+\item \textbf{Disco del tacómetro}: disco de 40~mm de diámetro con 2 o 4 ranuras iguales, con buje para el eje de 5~mm; o una aleta. Debe pasar por la herradura del sensor óptico sin rozar.
+\item \textbf{Acople motor--motor} (si no hay taladro): manguito con dos agujeros de 5~mm y prisioneros (o dos acoples rígidos unidos).
+\item \textbf{Porta-imán y soporte del AS5600} (Sección~\ref{sec:as5600}): un capuchón que encaje en la punta del eje de salida con el imán pegado en su centro, y un puente fijado a la carcasa de la reductora que sostenga la placa del AS5600 enfrentada al imán, a 1--2~mm.
+\end{enumerate}
+
+\nota{Si no se quiere imprimir, sirven madera terciada, un perfil de aluminio y una abrazadera de caño. Lo importante: el brazo no debe flexionar y la distancia del eje al punto de contacto debe medirse con calibre.}
+
+\subsection{Calibrar la celda de carga}
+\label{sec:celda}
+
+La celda de 20~kg entrega unos pocos milivolts; el HX711 los amplifica y digitaliza (10 lecturas por segundo en su configuración habitual). La lectura cruda no está en newtons: hay que calibrarla.
+
+\textbf{Conexión} (Arduino UNO): celda al HX711 (rojo E+, negro E$-$, verde A+, blanco A$-$; si la lectura sube al descargar, invertir A+ y A$-$); HX711: VCC a 5~V, GND, DT al pin 4, SCK al pin 5. Si se usa la Pico, alimentar el HX711 con 3,3~V (sus salidas no deben llevar 5~V a la Pico).
+
+\textbf{Procedimiento.}
+\begin{enumerate}
+\item Montar la celda en su base, horizontal, tal como se usará.
+\item Cargar el programa del Anexo~\ref{anexo:programa} con \code{factorCelda = 1.0}. Abrir el monitor serie a 115200. Enviar \code{t} para poner a cero (tara) sin carga.
+\item Preparar 3 o 4 cargas conocidas: botellas de agua o bolsas de arena pesadas en la balanza de cocina (por ejemplo 200~g, 500~g, 1000~g, 2000~g). Colgarlas o apoyarlas exactamente en el punto donde apoyará el brazo.
+\item Anotar $C$ (lectura cruda) para cada carga. Calcular la fuerza de cada una: $F$ (fuerza) $= m \cdot 9{,}81$, con $m$ (masa de la carga).
+\item Ajustar la recta $C$ (lectura cruda) en función de $F$ (fuerza) (Sección~\ref{sec:recta}). La pendiente es \code{factorCelda} [cuentas/N]. Ponerla en el programa y verificar que una carga nueva se lea bien.
+\end{enumerate}
+
+\control{$R^2$ (coeficiente de determinación del ajuste) $> 0{,}999$. Al sacar la carga, la lectura vuelve a cero con menos de 0,02~N de diferencia. Si deriva, esperar 10 minutos con todo encendido (calentamiento) y repetir.}
+
+\subsection{Armar el tacómetro}
+\label{sec:tacometro}
+
+Disco ranurado en el eje y sensor de herradura fijo a la cuna. Hay dos formas de leerlo:
+\begin{itemize}
+\item \textbf{Osciloscopio} (preferida): punta en la salida del sensor (alimentado con 5~V), medir $f$ (frecuencia de la señal). Con $k$ (cantidad de ranuras del disco), $n$ (velocidad en rpm) $= 60\,f/k$ [rpm].
+\item \textbf{Arduino}: salida del sensor al pin 2; el programa del Anexo~\ref{anexo:programa} imprime las rpm cada 0,5~s (configurar \code{RANURAS}).
+\end{itemize}
+
+\control{A una velocidad cualquiera, la lectura del Arduino y la del osciloscopio coinciden. Si la frecuencia sale doble, el sensor detecta los dos flancos de cada ranura o hay rebote: usar un disco con bordes netos y comprobar la forma de onda en el osciloscopio.}
+
+\subsection{Montar el encoder magnético AS5600}
+\label{sec:as5600}
+
+El AS5600 es un sensor de ángulo \emph{absoluto} de una vuelta: un chip mide la dirección del campo de un imán que gira sobre él y entrega un ángulo de 12 bits, es decir, \textbf{4096 posiciones por vuelta} (0,088$^\circ$ por cuenta), por I2C (dirección fija \code{0x36}). Es prácticamente la misma resolución que un encoder de 1000~PPR leído $\times4$ (4000 cuentas). Se usa en la Etapa~2, en el \textbf{eje de salida} de la reductora.
+
+\textbf{Por qué no en el motor solo.} El imán tiene que estar en la \emph{punta} del eje, centrado sobre el chip. En el motor solo, el único eje (el frontal) está ocupado por el brazo, el mandril del taladro o el acople. Por eso la velocidad del motor solo se mide con el tacómetro óptico o con el osciloscopio (Sección~\ref{sec:tacometro}).
+
+\textbf{Montaje.}
+\begin{enumerate}
+\item Usar el imán que trae el módulo: tiene que ser de magnetización \textbf{diametral} (polos norte y sur a los lados, no arriba y abajo). Uno común de 6~mm $\times$ 2,5~mm sirve.
+\item Pegarlo en el centro del capuchón impreso que encaja en la punta del eje de salida. El imán debe quedar \textbf{centrado con el eje de giro} y separado del acero del eje por 1--2~mm de plástico: el acero cercano deforma el campo.
+\item Montar la placa en el puente impreso, con el chip enfrentado al imán, paralelo a su cara, a una distancia de 0,5 a 3~mm (rango de la hoja de datos; empezar con 1,5~mm).
+\item Conexión al Arduino UNO: VCC a 5~V (verificar el puente o jumper de tensión del módulo), GND, SDA a A4, SCL a A5. El pin DIR a GND (el ángulo crece en sentido horario visto desde el imán) o a VCC (sentido contrario). El pin OUT no se usa. Con la Pico, alimentar con 3,3~V.
+\item El programa del Anexo~\ref{anexo:programa} lee el registro de estado: imprime \code{iman=OK}, \code{iman=DEBIL} (acercar el imán) o \code{iman=FUERTE} (alejarlo). No medir hasta ver \code{OK}.
+\end{enumerate}
+
+\textbf{Varias vueltas.} El AS5600 da el ángulo dentro de una vuelta: al pasar de 4095 vuelve a 0. El programa lo lee cada 1~ms y, si el salto entre dos lecturas supera media vuelta, suma o resta una vuelta. Así entrega el ángulo acumulado (varias vueltas) y la velocidad. Para que esto funcione, el eje no debe girar más de media vuelta entre dos lecturas, es decir, menos de 30\,000~rpm: en el eje de salida (a lo sumo unos cientos de rpm) sobra margen.
+
+\control{\begin{itemize}[leftmargin=*]
+\item Con el eje quieto, el ángulo fluctúa como mucho 1 o 2 cuentas.
+\item Girar el eje exactamente una vuelta a mano (marca en el capuchón y otra fija) da $4096 \pm 10$ cuentas. Si da bastante menos o la lectura avanza a saltos desparejos, el imán está descentrado o demasiado lejos.
+\item Con el taladro a velocidad constante, la velocidad del AS5600 y la de un tacómetro óptico coinciden.
+\end{itemize}}
+
+\nota{\textbf{Para el yugo definitivo (no para estos ensayos).} El firmware actual está escrito para encoders de cuadratura (\code{ROLL_ENC_A/B}, \code{PITCH_ENC_A/B} en \code{mis_defines.h}). Usar el AS5600 en el yugo requiere un diseño aparte. Puntos a resolver en ese diseño:
+\begin{itemize}[leftmargin=*]
+\item los dos sensores tienen la misma dirección I2C, así que hacen falta dos buses (la Pico tiene dos, pero uno ya lo usa el LCD y el otro estaba previsto para el sensado de corriente) o un multiplexor I2C (TCA9548A);
+\item el recorrido de pitch ($\pm150$~mm con la polea de 75~mm) es $\approx 1{,}27$ vueltas del eje, más de una vuelta: el ángulo absoluto no alcanza para saber la posición al encender, y hace falta contar vueltas y referenciar al arrancar (por ejemplo, llevar a un tope o al centro);
+\item la latencia de lectura por I2C dentro del lazo de 2~ms.
+\end{itemize}}
+
+\subsection{Conexión eléctrica de los ensayos}
+\label{sec:conexion}
+
+\begin{center}
+\begin{tikzpicture}[font=\small,>=stealth]
+\node[draw,rounded corners,minimum width=2.4cm,minimum height=1.4cm,align=center] (F) at (0,0) {Fuente\\0--24 V\\límite de\\corriente};
+\node[draw,circle,minimum size=1.0cm] (A) at (3.6,0.9) {A};
+\node[draw,circle,minimum size=1.3cm,align=center] (M) at (7.2,0) {M};
+\node[draw,circle,minimum size=1.0cm] (V) at (10.0,0) {V};
+\draw[thick] (1.2,0.5) -- (2.0,0.5) |- (A.west);
+\draw[thick] (A.east) -| (7.2,0.65);
+\draw[thick] (1.2,-0.5) -- (2.0,-0.5) |- (7.2,-1.1) -- (7.2,-0.65);
+\draw (7.75,0.3) -- (8.8,0.3) |- (V.north);
+\draw (7.75,-0.3) -- (8.8,-0.3) |- (V.south);
+\node at (1.5,0.75) {$+$};
+\node at (1.5,-0.25) {$-$};
+\node[align=center] at (3.6,1.8) {multímetro en 10 A\\(o la fuente, o shunt)};
+\node[align=center] at (10.0,1.2) {segundo instrumento\\en los bornes del motor};
+\end{tikzpicture}
+\end{center}
+Referencias del esquema: A (amperímetro), M (motor), V (voltímetro), $+$ (positivo de la fuente) y $-$ (negativo de la fuente).
+
+\textbf{Regla de oro: la tensión se mide en los bornes del motor}, no en la fuente. Los cables y contactos tienen resistencias comparables a la del motor (décimas de ohm) y, si se mide en la fuente, se suman a $R$ (resistencia del bobinado). Si solo se cuenta con un multímetro: usarlo como voltímetro en los bornes y leer la corriente en el display de la fuente (en modo límite de corriente la fuente la mantiene constante). Verificar una vez el display de la fuente con el multímetro en serie a 2 y 4~A.
+
+%=====================================================================
+\section{Etapa 1: el motor solo}
+\label{sec:etapa1}
+
+Todo esta etapa se repite igual para el motor R y para el motor P.
+
+%---------------------------------------------------------------------
+\subsection{Ensayo 1: rotor bloqueado: $R$ (resistencia del bobinado), $V_{esc}$ (caída en escobillas) y $K_t$ (constante de torque) en una sola prueba}
+\label{ens:bloqueado}
+
+\textbf{Objetivo.} Con el eje trabado contra la celda, medir a la vez tensión, corriente y fuerza. De ahí salen $R$ (resistencia del bobinado), $V_{esc}$ (caída en escobillas) y $K_t$ (constante de torque).
+
+\textbf{Montaje.}
+\begin{center}
+\begin{tikzpicture}[font=\small,>=stealth]
+\draw[fill=gray!20] (0,0) circle (1.0);
+\node at (0,-1.35) {motor (visto desde arriba)};
+\fill (0,0) circle (0.08);
+\draw[very thick,fill=blue!10] (-0.15,-0.2) rectangle (4.3,0.2);
+\node at (2.1,0.45) {brazo};
+\draw[<->] (0,-0.5) -- node[below] {$L_b = 100$ mm} (4.0,-0.5);
+\fill[red!60!black] (4.0,0.2) circle (0.09);
+\draw[fill=orange!25] (3.4,0.29) rectangle (7.5,0.75);
+\node at (6.2,1.05) {celda (extremo fijo a la derecha)};
+\draw[fill=gray!50] (6.6,0.75) rectangle (7.5,1.0);
+\draw[->,thick,red!60!black] (4.0,1.6) -- node[right] {$F$} (4.0,0.85);
+\draw[->,thick] (0.7,0.9) arc (40:100:0.9);
+\node at (0.95,1.35) {$\tau$};
+\end{tikzpicture}
+\end{center}
+Referencias del esquema: $L_b$ (largo del brazo), medido del centro del eje al punto de contacto, $F$ (fuerza en la celda) y $\tau$ (torque).
+\begin{enumerate}
+\item Motor en su cuna con el \textbf{eje vertical}. Así el brazo gira en un plano horizontal y su peso no produce torque; la tara del HX711 queda estable.
+\item Brazo fijo al eje (acople rígido o abrazadera bien apretada). La punta del tornillo del brazo, a $L_b$ (largo del brazo) del centro del eje, apoya sobre la cara de la celda cerca de su extremo libre.
+\item El brazo debe quedar \textbf{perpendicular} a la celda (a la línea de la fuerza). Si forma un ángulo $\theta$ (ángulo entre el brazo y la línea de la fuerza) distinto de 90$^\circ$, el torque es $\tau = F\,L_b\,\sin\theta$, con $\tau$ (torque), $F$ (fuerza en la celda) y $L_b$ (largo del brazo).
+\item Medir $L_b$ (largo del brazo) con calibre: del centro del eje al punto de contacto. Un error de 1~mm en 100~mm es un error de 1\,\% en $K_t$ (constante de torque).
+\item Conexión según la Sección~\ref{sec:conexion}. La polaridad debe ser tal que el motor empuje el brazo \emph{contra} la celda.
+\end{enumerate}
+
+\textbf{Paso a paso.}
+\begin{enumerate}
+\item Fuente apagada, límite de corriente en 1~A, tensión en 0. Tarar la celda (\code{t}) con el brazo apenas apoyado.
+\item Encender. Subir la tensión despacio hasta que la fuente entre en límite (luz CC). Esperar 2--3~s a que el HX711 se estabilice y anotar: $V$ (tensión en bornes), $I$ (corriente) y $F$ (fuerza en la celda).
+\item Bajar a 0 y repetir para 2, 3, 4 y 5~A (subiendo solo el límite de corriente). Entre puntos, 10--20~s de pausa.
+\item \textbf{Cambiar la posición del rotor}: aflojar el anillo de la cuna, girar el motor unos 30$^\circ$ sobre su eje (el brazo queda donde está), apretar y repetir. Hacer 4 a 6 posiciones. Las escobillas apoyan en distintos segmentos del colector y $R$ (resistencia del bobinado) y $K_t$ (constante de torque) varían un poco con el ángulo; se usa el promedio.
+\item \textbf{Sentido contrario}: invertir la polaridad y pasar la celda al otro lado del brazo (o unir brazo y celda con un perno que trabaje en los dos sentidos). Repetir en 2 posiciones. Sirve para ver si el motor es simétrico.
+\end{enumerate}
+
+\textbf{Tabla de datos y ejemplo} (valores supuestos, una posición del rotor, $L_b$ (largo del brazo) $= 0{,}100$~m):
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+\enc{$I$ [A]}{(corriente)} & \enc{$V$ [V]}{(tensión en bornes)} & \enc{$F$ [N]}{(fuerza en la celda)} & \enc{$\tau = F\,L_b$ [N\,m]}{(torque)} \\
+\midrule
+1,0 & 1,15 & 0,30 & 0,030 \\
+2,0 & 1,70 & 0,62 & 0,062 \\
+3,0 & 2,25 & 0,95 & 0,095 \\
+4,0 & 2,80 & 1,27 & 0,127 \\
+5,0 & 3,35 & 1,60 & 0,160 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Cálculo.}
+\begin{itemize}
+\item Recta $V$ (tensión en bornes) en función de $I$ (corriente): pendiente $=$ $R$ (resistencia del bobinado) $= 0{,}55~\Omega$; ordenada $=$ $V_{esc}$ (caída en escobillas) $= 0{,}60$~V.
+\item Recta $\tau$ (torque) en función de $I$ (corriente): pendiente $=$ $K_t$ (constante de torque) $= 0{,}0325$~N\,m/A. La ordenada (aquí $-0{,}003$~N\,m) es rozamiento estático o error de tara; si es grande (más del 10\,\% del torque a 5~A), revisar el montaje.
+\item Promediar $R$ (resistencia del bobinado), $V_{esc}$ (caída en escobillas) y $K_t$ (constante de torque) de todas las posiciones; anotar también mínimo y máximo.
+\end{itemize}
+
+\textbf{Temperatura.} Anotar la temperatura ambiente. La resistencia del cobre aumenta con la temperatura:
+\begin{equation}
+R(T) = R_{20}\,\bigl[1 + 0{,}0039\,(T - 20\,^\circ\mathrm{C})\bigr],
+\label{eq:rtemp}
+\end{equation}
+es decir, $+39$\,\% a 120~$^\circ$C, con $R(T)$ (resistencia del bobinado a la temperatura $T$), $R_{20}$ (resistencia del bobinado a 20~$^\circ$C) y $T$ (temperatura del bobinado). Esta ecuación también sirve al revés: midiendo $R$ (resistencia del bobinado) en caliente se estima la temperatura del bobinado (Ensayo~\ref{ens:termico}).
+
+\control{$R^2$ (coeficiente de determinación del ajuste) $> 0{,}99$ en ambas rectas. $R$ (resistencia del bobinado) entre 0,2 y 2~$\Omega$ y $V_{esc}$ (caída en escobillas) entre 0,2 y 2~V (rangos habituales en motores de este tamaño; si sale muy afuera, revisar que la tensión se mida en los bornes). $K_t$ (constante de torque) de este ensayo y $K_e$ (constante de fuerza contraelectromotriz) del Ensayo~\ref{ens:ke} no difieren más de 5--10\,\%.}
+
+\advertencia{La corriente de 5~A en un motor bloqueado disipa $I^2R \approx 14$~W, con $I$ (corriente) y $R$ (resistencia del bobinado). No mantener más de 5~s por punto. Si la carcasa se entibia, esperar.}
+
+\alternativa{\begin{itemize}[leftmargin=*]
+\item \textbf{Medidor LCR o multímetro en ohm:} dan una idea de $R$ (resistencia del bobinado) pero no sirven como valor final: miden con corriente muy chica, donde el contacto de escobillas tiene resistencia alta e inestable, y suman las puntas. Si se usan, medir en 6 posiciones del rotor y tomarlo solo como control.
+\item \textbf{Sin celda (solo $R$ (resistencia del bobinado)):} trabar el eje con el brazo contra un tope rígido.
+\item \textbf{Sin celda (solo $K_t$ (constante de torque)):} colgar masas de un hilo enrollado en una polea impresa de radio conocido fijada al eje, y subir la corriente hasta que el motor apenas levante la masa y luego hasta que apenas la deje bajar; $K_t \approx m\,g\,r / I$ promediando ambas corrientes, con $K_t$ (constante de torque), $m$ (masa colgada), $g$ (aceleración de la gravedad), $r$ (radio de la polea impresa) e $I$ (corriente).
+\end{itemize}}
+
+%---------------------------------------------------------------------
+\subsection{Ensayo 2: $K_e$ (constante de fuerza contraelectromotriz), motor como generador}
+\label{ens:ke}
+
+\textbf{Objetivo.} Medir la tensión que genera el motor al hacerlo girar desde afuera. Con los bornes abiertos no circula corriente, así que $R$ (resistencia del bobinado) y las escobillas no influyen: $V = K_e\,\omega_m$, con $V$ (tensión en bornes), $K_e$ (constante de fuerza contraelectromotriz) y $\omega_m$ (velocidad angular del motor).
+
+\textbf{Montaje.}
+\begin{enumerate}
+\item Motor fijo en la cuna (puede ser con el eje horizontal). Bornes \textbf{desconectados} de todo, salvo del osciloscopio o multímetro.
+\item Taladro de velocidad regulable con el eje del motor en el mandril (o el otro motor 775 como motor de arrastre, unido con el acople). El taladro debe quedar sujeto o sostenido firme y alineado: una desalineación carga los rulemanes.
+\item Tacómetro: disco ranurado en el eje y sensor de herradura (Sección~\ref{sec:tacometro}).
+\end{enumerate}
+
+\textbf{Paso a paso.}
+\begin{enumerate}
+\item Hacer girar a una velocidad estable. Medir la tensión en bornes (osciloscopio: valor medio; o multímetro en V DC) y la velocidad.
+\item Repetir en 4 o 5 velocidades, por ejemplo 1000, 1500, 2000, 2500 y 3000~rpm.
+\item Repetir en sentido contrario (la tensión cambia de signo; el valor absoluto debe coincidir).
+\end{enumerate}
+
+\textbf{Ejemplo} (supuesto):
+\begin{center}
+\begin{tabular}{ccc}
+\toprule
+\enc{$n$ [rpm]}{(velocidad)} & \enc{$\omega_m$ [rad/s]}{(velocidad angular del motor)} & \enc{$V$ [V]}{(tensión generada)} \\
+\midrule
+1000 & 104,7 & 3,37 \\
+2000 & 209,4 & 6,74 \\
+3000 & 314,2 & 10,12 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{Cálculo.} Recta $V$ (tensión en bornes) en función de $\omega_m$ (velocidad angular del motor): pendiente $K_e$ (constante de fuerza contraelectromotriz) $= 0{,}0322$~V\,s/rad. La ordenada debe ser casi cero.
+
+\textbf{Dato extra del osciloscopio.} Con el osciloscopio en acoplamiento AC y escala de pocos mV, la tensión generada muestra un rizado de $f_r$ (frecuencia del rizado) $= z\,n/60$, con $z$ (número entero ligado a la cantidad de delgas del colector, o el doble) y $n$ (velocidad en rpm). Calcular $z$ (número entero de rizados por vuelta) $= 60\,f_r/n$ con el tacómetro; una vez conocido $z$ (número entero de rizados por vuelta), la frecuencia del rizado sirve como tacómetro sin disco (útil para el Ensayo~\ref{ens:vacio}). Esto es una comprobación a hacer, no un dato conocido del 775.
+
+\control{$K_e$ (constante de fuerza contraelectromotriz) coincide con $K_t$ (constante de torque) del Ensayo~\ref{ens:bloqueado} dentro de 5--10\,\%. En el ejemplo: $0{,}0322$ frente a $0{,}0325$ (0,9\,\%).}
+
+\advertencia{No superar 3000--4000~rpm con el taladro (la tensión generada crece con la velocidad). Si se usa el otro motor como arrastre, alimentarlo de a poco y nunca conectar entre sí los bornes de los dos motores.}
+
+\alternativa{\begin{itemize}[leftmargin=*]
+\item \textbf{Sin taladro ni segundo motor:} usar el Ensayo~\ref{ens:vacio}: $K_e = (V - R\,I_0 - V_{esc})/\omega_m$, con $K_e$ (constante de fuerza contraelectromotriz), $V$ (tensión en bornes), $R$ (resistencia del bobinado), $I_0$ (corriente en vacío), $V_{esc}$ (caída en escobillas) y $\omega_m$ (velocidad angular del motor). Depende de $R$ (resistencia del bobinado) y $V_{esc}$ (caída en escobillas), por eso es menos directo.
+\item \textbf{Sin tacómetro:} tomar $K_e$ (constante de fuerza contraelectromotriz) igual a $K_t$ (constante de torque) del Ensayo~\ref{ens:bloqueado}; o medir $K_e$ (constante de fuerza contraelectromotriz) con la reductora puesta usando el AS5600 en el eje de salida (gira $N$ (relación de reducción) veces más lento y el sensor lo lee sin problema, Sección~\ref{sec:as5600}), con $\omega_m = N\,\omega_s$, siendo $\omega_m$ (velocidad angular del motor) y $\omega_s$ (velocidad angular del eje de salida); para eso $N$ (relación de reducción) tiene que conocerse bien (Sección~\ref{sec:relacion}).
+\end{itemize}}
+
+%---------------------------------------------------------------------
+\subsection{Ensayo 3: giro en vacío y rozamiento}
+\label{ens:vacio}
+
+\textbf{Objetivo.} Medir $I_0$ (corriente en vacío) a distintas velocidades. Esa corriente produce exactamente el torque que se pierde por rozamiento: $\tau_f(\omega) = K_t\,I_0$, con $\tau_f$ (torque de rozamiento), $\omega$ (velocidad angular), $K_t$ (constante de torque) e $I_0$ (corriente en vacío).
+
+\textbf{Montaje.} Motor fijo en la cuna, eje libre (solo con el disco del tacómetro), alimentado directo de la fuente. Amperímetro en serie y voltímetro en bornes.
+
+\textbf{Paso a paso.}
+\begin{enumerate}
+\item Límite de corriente en 3~A (el arranque pide un pico).
+\item Aplicar 6, 12, 18 y 24~V. En cada tensión esperar 30~s a que la velocidad se estabilice y anotar $V$ (tensión en bornes), $I_0$ (corriente en vacío) y $n$ (velocidad en rpm).
+\item Hacerlo primero con el motor recién desarmado y repetir después de 10 minutos girando a 12~V: el rozamiento baja cuando las escobillas y los rulemanes se calientan. Usar el valor ``tibio''.
+\item Repetir en sentido contrario.
+\end{enumerate}
+
+\textbf{Ejemplo} (supuesto, $K_t$ (constante de torque) $= 0{,}0325$):
+\begin{center}
+\begin{tabular}{ccccc}
+\toprule
+\enc{$V$ [V]}{(tensión)} & \enc{$I_0$ [A]}{(corriente en vacío)} & \enc{$n$ [rpm]}{(velocidad)} & \enc{$\omega_m$ [rad/s]}{(veloc. del motor)} & \enc{$\tau_f = K_t\,I_0$ [N\,m]}{(torque de rozamiento)} \\
+\midrule
+6 & 0,55 & 1512 & 158,3 & 0,0179 \\
+12 & 0,70 & 3267 & 342,1 & 0,0228 \\
+18 & 0,82 & 5027 & 526,4 & 0,0267 \\
+24 & 0,95 & 6785 & 710,5 & 0,0309 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Cálculo.} Recta $\tau_f$ (torque de rozamiento) en función de $\omega_m$ (velocidad angular del motor):
+\begin{itemize}
+\item ordenada $=$ $\tau_c$ (rozamiento de Coulomb) $\approx 0{,}014$~N\,m: es constante y aparece apenas gira. Equivale a $\tau_c/K_t \approx 0{,}43$~A, con $\tau_c$ (rozamiento de Coulomb) y $K_t$ (constante de torque).
+\item pendiente $=$ $b$ (coeficiente de rozamiento viscoso) $\approx 2{,}4\times10^{-5}$~N\,m\,s/rad: crece con la velocidad.
+\end{itemize}
+Con la tabla también se verifica $K_e$ (constante de fuerza contraelectromotriz): $K_e = (V - R\,I_0 - V_{esc})/\omega_m$, con $V$ (tensión en bornes), $R$ (resistencia del bobinado), $I_0$ (corriente en vacío), $V_{esc}$ (caída en escobillas) y $\omega_m$ (velocidad angular del motor), debe dar el valor del Ensayo~\ref{ens:ke}. Y se obtienen $I_0$ (corriente en vacío) y $n_0$ (velocidad en vacío en rpm) a 24~V, que se comparan con el dato del vendedor ($I_0$ (corriente en vacío) $\approx 1$~A).
+
+\control{La velocidad medida a 24~V coincide con la predicha $\omega_0 = (24 - R\,I_0 - V_{esc})/K_e$ dentro de 5\,\%, con $\omega_0$ (velocidad angular en vacío), $R$ (resistencia del bobinado), $I_0$ (corriente en vacío), $V_{esc}$ (caída en escobillas) y $K_e$ (constante de fuerza contraelectromotriz).}
+
+\alternativa{Sin tacómetro: calcular $\omega_m = (V - R\,I_0 - V_{esc})/K_e$ con los valores ya medidos ($\omega_m$ (velocidad angular del motor), $V$ (tensión en bornes), $R$ (resistencia del bobinado), $I_0$ (corriente en vacío), $V_{esc}$ (caída en escobillas) y $K_e$ (constante de fuerza contraelectromotriz)); o medir la frecuencia del rizado de la corriente con el osciloscopio (sobre un shunt en serie, del lado negativo) usando $z$ (número entero de rizados por vuelta) hallado en el Ensayo~\ref{ens:ke}.}
+
+%---------------------------------------------------------------------
+\subsection{Ensayo 4: $L$ (inductancia)}
+\label{ens:l}
+
+\textbf{Objetivo.} $L$ (inductancia) fija cuán rápido puede cambiar la corriente: $\tau_e$ (constante de tiempo eléctrica) $= L/R$, con $L$ (inductancia) y $R$ (resistencia del bobinado). Se usa para sintonizar el PI y para elegir la frecuencia de PWM.
+
+\textbf{Método A: medidor LCR (el más simple).}
+\begin{enumerate}
+\item Motor desconectado de todo y quieto.
+\item Medir $L$ (inductancia) a 1~kHz (y a 10~kHz si el medidor lo permite) en 6 posiciones del rotor (girar el eje a mano entre medición y medición).
+\item Anotar mínimo, máximo y promedio.
+\end{enumerate}
+El LCR mide con corriente muy chica; el valor real con corriente puede ser algo menor. Por eso conviene confirmarlo con el método B.
+
+\textbf{Método B: escalón con osciloscopio.}
+\begin{enumerate}
+\item Eje trabado (montaje del Ensayo~\ref{ens:bloqueado}).
+\item En serie con el motor, del lado negativo, una resistencia shunt conocida de 0,1~$\Omega$ (o un shunt de amperímetro). La punta del osciloscopio sobre el shunt y su masa en el negativo de la fuente: la tensión del shunt es la corriente ($V = 0{,}1\,I$, con $V$ (tensión sobre el shunt) e $I$ (corriente)).
+\item Fuente a 2~V con límite de 5~A. Cerrar el circuito de golpe con un interruptor o tocando un cable (el osciloscopio en disparo único, flanco de subida, base de tiempo 0,2~ms/div).
+\item La corriente sube como $i(t) = I_f\,(1 - e^{-t/\tau})$, con $i(t)$ (corriente en el tiempo $t$), $I_f$ (corriente final) y $\tau$ (constante de tiempo medida). Medir $\tau$ (constante de tiempo medida) que tarda en llegar al 63\,\% del valor final.
+\item $L = \tau \cdot R_{total}$, con $L$ (inductancia), $\tau$ (constante de tiempo medida) y $R_{total}$ (resistencia total del circuito) $= R + R_{shunt} + $ resistencia de cables, siendo $R$ (resistencia del bobinado) y $R_{shunt}$ (resistencia del shunt). Más simple: $R_{total}$ (resistencia total del circuito) $= V_{fuente}/I_f$, con $V_{fuente}$ (tensión de la fuente) e $I_f$ (corriente final), medidos en el mismo ensayo.
+\item Repetir en varias posiciones del rotor.
+\end{enumerate}
+
+\textbf{Ejemplo:} $\tau$ (constante de tiempo medida) $= 0{,}26$~ms y $R_{total}$ (resistencia total del circuito) $= 0{,}65~\Omega$ dan $L$ (inductancia) $= 0{,}17$~mH.
+
+\control{Los métodos A y B coinciden dentro de 20--30\,\%. $\tau_e$ (constante de tiempo eléctrica) resulta de décimas de milisegundo a pocos milisegundos.}
+
+\nota{Si la fuente tarda en responder al cerrar el circuito, el escalón no es limpio. Mejor: un capacitor electrolítico grande (por ejemplo 4700~$\mu$F 35~V) en paralelo con la salida de la fuente, cerca del interruptor.}
+
+%---------------------------------------------------------------------
+\subsection{Ensayo 5: $J_m$ (inercia del rotor), opcional, importa en pitch}
+\label{ens:inercia}
+
+\textbf{Idea.} Si se corta la alimentación de un motor girando, solo el rozamiento lo frena: $J_m\,\dot\omega = -\tau_f(\omega)$, con $J_m$ (inercia del rotor), $\dot\omega$ (aceleración angular), $\tau_f$ (torque de rozamiento) y $\omega$ (velocidad angular). Y como con los bornes abiertos el motor genera $V = K_e\,\omega$, con $V$ (tensión en bornes) y $K_e$ (constante de fuerza contraelectromotriz), \textbf{la tensión en bornes es directamente la velocidad}: el osciloscopio registra la desaceleración sin tacómetro.
+
+\textbf{Paso a paso.}
+\begin{enumerate}
+\item Motor girando libre a 24~V. Osciloscopio en los bornes, disparo único por flanco de bajada, 50--100~ms/div.
+\item Desconectar el cable positivo de la fuente (no apagar la fuente: su salida puede descargar el motor). La traza muestra la tensión cayendo hasta cero.
+\item Pasar la traza a velocidad: $\omega(t) = V(t)/K_e$, con $\omega(t)$ (velocidad angular en el tiempo $t$), $V(t)$ (tensión en bornes en el tiempo $t$) y $K_e$ (constante de fuerza contraelectromotriz).
+\item En un punto cualquiera, medir $\dot\omega$ (aceleración angular), que es la pendiente de la tangente a la curva, y $\omega$ (velocidad angular):
+\begin{equation}
+J_m = \frac{\tau_c + b\,\omega}{|\dot\omega|}.
+\end{equation}
+Símbolos: $J_m$ (inercia del rotor), $\tau_c$ (rozamiento de Coulomb), $b$ (coeficiente de rozamiento viscoso), $\omega$ (velocidad angular) y $|\dot\omega|$ (valor absoluto de la aceleración angular). Hacerlo en 3 puntos y promediar.
+\end{enumerate}
+
+\textbf{Variante sin depender del modelo de rozamiento (recomendada).} Repetir con un \textbf{volante} de $J_v$ (inercia del volante) conocida en el eje (un buje impreso con arandelas de acero; $J_v$ (inercia del volante) $= \tfrac12\,m\,(r_e^2 + r_i^2)$, con $m$ (masa del volante, pesada en la balanza), $r_e$ (radio exterior) y $r_i$ (radio interior)). A una misma $\omega$ (velocidad angular), el rozamiento es el mismo, así que con $a_1$ (desaceleración sin volante) y $a_2$ (desaceleración con volante):
+\begin{equation}
+J_m = J_v\,\frac{a_2}{a_1 - a_2}.
+\end{equation}
+Símbolos: $J_m$ (inercia del rotor), $J_v$ (inercia del volante), $a_1$ (desaceleración sin volante) y $a_2$ (desaceleración con volante).
+
+\textbf{Ejemplo:} a $\omega$ (velocidad angular) $= 500$~rad/s, $|\dot\omega|$ (valor absoluto de la aceleración angular) $= 1350$~rad/s$^2$; $J_m$ (inercia del rotor) $= (0{,}014 + 2{,}4\times10^{-5}\cdot 500)/1350 = 1{,}9\times10^{-5}$~kg\,m$^2$.
+
+\control{Los dos métodos coinciden dentro de 20\,\%.}
+
+%---------------------------------------------------------------------
+\subsection{Ensayo 6: límite térmico, $I_{cont}$ (corriente continua admisible)}
+\label{ens:termico}
+
+\textbf{Objetivo.} Saber qué corriente puede circular \emph{indefinidamente} sin dañar el motor. Es importante en este proyecto porque el centrado del force feedback mantiene corriente durante mucho tiempo con el eje casi quieto, sin la ventilación que da el giro.
+
+\textbf{Paso a paso.}
+\begin{enumerate}
+\item Eje trabado contra un tope (no hace falta la celda), motor en la posición en que quedará en el yugo.
+\item Corriente constante con el límite de la fuente: empezar por 2~A.
+\item Cada 2 minutos anotar: temperatura de carcasa y tensión en bornes. Con $R = (V - V_{esc})/I$, siendo $R$ (resistencia del bobinado), $V$ (tensión en bornes), $V_{esc}$ (caída en escobillas) e $I$ (corriente), y la ecuación~\eqref{eq:rtemp}, calcular la temperatura \emph{del bobinado}:
+\[
+T_{bob} = 20 + \frac{R/R_{20} - 1}{0{,}0039}.
+\]
+Símbolos: $T_{bob}$ (temperatura del bobinado), $R$ (resistencia del bobinado) en caliente y $R_{20}$ (resistencia del bobinado a 20~$^\circ$C).
+\item Seguir hasta que la temperatura deje de subir (20--40~min) o hasta que el bobinado llegue a 100~$^\circ$C.
+\item Dejar enfriar y repetir con 3, 4~A\ldots
+\end{enumerate}
+
+\textbf{Criterio práctico} (sin hoja de datos del fabricante): $I_{cont}$ (corriente continua admisible) es la mayor corriente que estabiliza el bobinado por debajo de unos 100~$^\circ$C y la carcasa por debajo de 60--70~$^\circ$C. Si se consigue hoja de datos, usar su valor.
+
+\advertencia{Cortar si aparece olor a barniz o humo. La tensión en bornes sube a medida que el motor se calienta: la fuente con límite de corriente lo compensa sola; sin límite, la corriente bajaría y el ensayo sería falso.}
+
+\nota{En el motor de roll este ensayo no dio resultados confiables: la temperatura del bobinado no se pudo obtener por el método de la resistencia. Se reemplazó por el Ensayo~\ref{ens:termico_b}, que estima $I_{cont}$ (corriente continua admisible) con la temperatura de la carcasa.}
+
+%---------------------------------------------------------------------
+\subsection{Ensayo 6b: $I_{cont}$ (corriente continua admisible) por temperatura de carcasa}
+\label{ens:termico_b}
+
+\textbf{Por qué no se pudo hacer el Ensayo~\ref{ens:termico}.} El método de la resistencia necesita medir cambios chicos de $R$ (resistencia del bobinado): el cobre aumenta solo un 0,39\,\% por cada $^\circ$C, de modo que un calentamiento de 10~$^\circ$C cambia $R$ apenas un 4\,\%. En el banco del proyecto hubo tres causas que tapan ese cambio:
+\begin{enumerate}
+\item \textbf{La tensión en bornes se mide sobre PWM.} El driver BTS7960 alimenta el motor con pulsos, y el multímetro sin un filtro RC (resistencia y capacitor) delante no da una lectura estable de la tensión media. Con esas lecturas, $R_0$ (resistencia del bobinado en frío) salió 1,18~$\Omega$, contra 0,69~$\Omega$ del Ensayo~\ref{ens:bloqueado}.
+\item \textbf{$V_{esc}$ (caída en escobillas) no es constante.} Depende de la posición del rotor y del estado del contacto, y cambia mientras las escobillas se calientan y se asientan. Como $R$ se calcula con $R = (V - V_{esc})/I$, siendo $V$ (tensión en bornes) e $I$ (corriente), cualquier variación de $V_{esc}$ aparece como un cambio falso de temperatura. El Ensayo~\ref{ens:bloqueado} dio $V_{esc} \approx 0$ con una dispersión de $\pm 0{,}03$~V, del mismo orden que el cambio que se quería medir.
+\item \textbf{El registro mostró la tendencia contraria a la esperada.} Con 1~A sostenido durante 20~min, el ciclo de trabajo (duty) que el driver necesitó para mantener la corriente \emph{bajó} un 4,7\,\% mientras la carcasa se calentaba unos 6~$^\circ$C. Si dominara el cobre, tendría que haber subido alrededor de un 2\,\%. La variación del contacto de las escobillas y del driver fue mayor que la del bobinado.
+\end{enumerate}
+Con esos datos la temperatura del bobinado calculada no tiene sentido físico, y el Ensayo~\ref{ens:termico} no permite obtener $I_{cont}$ (corriente continua admisible) en este banco.
+
+\textbf{Idea del Ensayo 6b.} Medir directamente la temperatura de la \emph{carcasa} con una termocupla, sin usar la tensión en bornes. Con la corriente sostenida y la carcasa estabilizada se obtiene la resistencia térmica entre la carcasa y el aire, y con ella se calcula qué corriente lleva la carcasa a una temperatura límite. Es un criterio conservador: el bobinado queda más caliente que la carcasa (se estima entre 10 y 30~$^\circ$C más, sin medir), y por eso el límite de carcasa se elige bajo.
+
+\textbf{Material.}
+\begin{itemize}
+\item Motor con el rotor trabado, como en el Ensayo~\ref{ens:bloqueado}, en la posición en que quedará en el yugo. Se ensaya con el rotor quieto porque es el peor caso del force feedback: el centrado mantiene corriente con el eje casi quieto, sin la ventilación que da el giro.
+\item Driver con control de corriente (Pro Micro, ACS712 y BTS7960).
+\item Programa \code{registrar_ensayo.py}, con el comando \code{termico <A>}.
+\item Termómetro con termocupla tipo K (UT89X). La punta va pegada a mitad de la carcasa con cinta de aluminio y tapada por fuera, para que mida la carcasa y no el aire.
+\item $R_0$ (resistencia del bobinado en frío) medida con un filtro RC en la medición de tensión, y la temperatura a la que se midió, $T_{R0}$ (temperatura de medición de $R_0$). En el motor de roll: $R_0 = 0{,}92~\Omega$ a $T_{R0} = 25~^\circ$C.
+\item Planilla \code{Mediciones MOTOR ROLL.xlsx}, hoja \code{Ensayo6_b-Etapa1}: tiene un bloque por corriente con las mismas fórmulas.
+\end{itemize}
+
+\textbf{Paso a paso.}
+\begin{enumerate}
+\item Empezar con el motor frío: la carcasa no debe estar más de 2~$^\circ$C por encima de $T_a$ (temperatura del aire). La columna \emph{Motor frío} de la hoja lo indica (OK o ESPERAR).
+\item Anotar la corriente de ensayo, $T_a$ (temperatura del aire), la marca de posición del rotor y la temperatura de la carcasa al inicio.
+\item Iniciar \code{termico <A>} en el registrador (por ejemplo \code{termico 1}). El programa mantiene la corriente constante hasta que se escribe \code{s} y pita cada 2~min.
+\item En cada aviso (t = 0, 2, 4\ldots~min) anotar en la hoja $I$ (corriente, la muestra el aviso) y la temperatura de la carcasa. La hoja calcula la velocidad de subida, la subida de los últimos 10~min, la potencia aproximada y el estado.
+\item Terminar con \code{s} cuando el estado diga \textbf{ESTABLE} (la carcasa sube 0,5~$^\circ$C o menos en 10~min) o \textbf{CORTAR}.
+\item Dejar enfriar hasta la temperatura ambiente y repetir con la corriente siguiente. Orden sugerido: 1~A, 1,5 o 2~A, y una corriente mayor (3~A) solo si las anteriores quedan lejos del límite.
+\end{enumerate}
+
+\textbf{Criterios de corte} (celdas de la hoja): cortar si la carcasa llega a 55~$^\circ$C o si sube más de 2~$^\circ$C/min. Con corrientes altas la subida inicial puede superar los 2~$^\circ$C/min aunque la carcasa esté lejos del límite; en ese caso se puede subir ese criterio a 3~$^\circ$C/min, sin tocar el de 55~$^\circ$C.
+
+\textbf{Cálculo.} Con $T_f$ (temperatura final de la carcasa) e $I$ (corriente media del ensayo):
+\begin{enumerate}
+\item Potencia disipada en el bobinado, con la resistencia corregida por temperatura (IEC 60034-1, $k = 234{,}5~^\circ$C para el cobre):
+\[
+P = I^2\,R_0\,\frac{k + T_f}{k + T_{R0}},
+\]
+con $P$ (potencia disipada), $R_0$ (resistencia del bobinado en frío), $k$ (constante del cobre, equivale a 0,00393/$^\circ$C a 20~$^\circ$C, como en la ecuación~\eqref{eq:rtemp}) y $T_{R0}$ (temperatura de medición de $R_0$). Se usa la temperatura de la carcasa: como el bobinado está más caliente, $P$ sale algo menor que la real y el resultado queda del lado seguro.
+\item Resistencia térmica entre la carcasa y el aire:
+\[
+R_{th} = \frac{T_f - T_a}{P},
+\]
+con $R_{th}$ (resistencia térmica carcasa--aire, en $^\circ$C/W) y $T_a$ (temperatura del aire).
+\item Corriente continua admisible para una temperatura límite de carcasa $T_{lim}$ (temperatura límite de carcasa, 55~$^\circ$C):
+\[
+I_{cont} = \sqrt{\frac{T_{lim} - T_a}{R_{th}\,R_0\,\dfrac{k + T_{lim}}{k + T_{R0}}}}.
+\]
+Para $T_a$ (temperatura del aire) conviene usar la temperatura ambiente de uso del yugo en el peor caso (por ejemplo, una sala en verano), no la del día del ensayo. La hoja la toma de la celda \emph{Ta de uso del yoke}; si está vacía, usa la del ensayo.
+\item Repetir con cada corriente ensayada. Como $I_{cont}$ (corriente continua admisible) se adopta la \textbf{menor} de las estimadas.
+\end{enumerate}
+
+\textbf{Si el ensayo se corta antes de estabilizarse}, $T_f$ (temperatura final de la carcasa) se extrapola suponiendo una subida exponencial. Con tres lecturas separadas por el mismo intervalo $\Delta$ (separación entre lecturas, en min), $T_1$ en $t_1$, $T_2$ en $t_1 + \Delta$ y $T_3$ en $t_1 + 2\Delta$:
+\[
+T_f = T_1 + \frac{T_2 - T_1}{1 - \dfrac{T_3 - T_2}{T_2 - T_1}},
+\qquad
+\tau_{th} = \frac{-\Delta}{\ln\!\left(\dfrac{T_3 - T_2}{T_2 - T_1}\right)},
+\]
+con $T_1$, $T_2$, $T_3$ (temperaturas de carcasa en esos tres instantes) y $\tau_{th}$ (constante de tiempo térmica). Solo vale si la carcasa sigue subiendo pero cada vez más despacio ($T_2 > T_1$ y $0 \le T_3 - T_2 < T_2 - T_1$). La hoja usa $t_1 = 4$~min y, si $\Delta$ (separación entre lecturas) queda vacío, elige el mayor $\Delta$ par que llega a la última lectura: cuanto más separados los puntos, más precisa la extrapolación.
+
+\textbf{Resultados del motor de roll.} Se ensayó con 1, 1,5 y 2~A. Cuenta completa para 1~A ($T_a = 24~^\circ$C, carcasa estable en $T_f = 31~^\circ$C):
+\[
+P = 1^2 \cdot 0{,}92 \cdot \frac{234{,}5 + 31}{234{,}5 + 25} = 0{,}94~\text{W},
+\qquad
+R_{th} = \frac{31 - 24}{0{,}94} = 7{,}4~^\circ\text{C/W}.
+\]
+El ensayo de 2~A se cortó a los 44~min porque se soltó el brazo que traba el rotor, con la carcasa todavía subiendo, y se extrapoló con las lecturas de 4, 24 y 44~min ($T_1 = 26{,}5$, $T_2 = 39{,}0$ y $T_3 = 45{,}5~^\circ$C, $\Delta = 20$~min):
+\[
+T_f = 26{,}5 + \frac{12{,}5}{1 - 6{,}5/12{,}5} = 52{,}5~^\circ\text{C},
+\qquad
+\tau_{th} = \frac{-20}{\ln(6{,}5/12{,}5)} = 30{,}6~\text{min}.
+\]
+Como verificación, un ajuste exponencial por mínimos cuadrados con todas las lecturas de 0 a 44~min da $T_f = 54~^\circ$C y $\tau_{th} = 34$~min (constante de tiempo térmica), con un residuo de 0,2~$^\circ$C.
+
+\begin{center}
+\begin{tabular}{ccccc}
+\toprule
+$I$ [A] & $T_a$ [$^\circ$C] & $T_f$ [$^\circ$C] & $P$ [W] & $R_{th}$ [$^\circ$C/W] \\
+\midrule
+1   & 24 & 31 (medida)            & 0,94 & 7,4 \\
+1,5 & 20 & 34 (medida)            & 2,14 & 6,5 \\
+2   & 24 & 52,5--54 (extrapolada) & 4,07 & 7,0--7,3 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Las tres corrientes dan $R_{th} \approx 7{,}0~^\circ$C/W (resistencia térmica carcasa--aire) con una dispersión de $\pm 7$\,\%, del orden de la resolución del termómetro (0,5~$^\circ$C) en los ensayos de corriente baja. Con $T_{lim} = 55~^\circ$C (temperatura límite de carcasa):
+
+\begin{center}
+\begin{tabular}{cc}
+\toprule
+$T_a$ (temperatura del aire de uso) & $I_{cont}$ (corriente continua admisible) \\
+\midrule
+24~$^\circ$C (la del ensayo) & $\approx 2{,}05$~A \\
+30~$^\circ$C & $\approx 1{,}85$~A \\
+35~$^\circ$C & $\approx 1{,}65$~A \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Se adopta $I_{cont} \approx 1{,}8$~A para $T_a = 30~^\circ$C, la menor de las estimaciones de la planilla (1,81~A). Con $\tau_{th} \approx 30$--35~min (constante de tiempo térmica), una clase de 2~h dura unas 3,5 constantes de tiempo y la carcasa llega al 97\,\% de su temperatura final: para una clase vale el régimen permanente, y $I_{cont}$ se aplica completa al valor eficaz (RMS) de la corriente.
+
+No se ensayó 3~A: con $R_{th} \approx 7~^\circ$C/W la carcasa tendería a unos 90~$^\circ$C y habría que cortar a los 15~min, demasiado pronto para extrapolar con precisión. $R_{th}$ ya queda confirmada con tres corrientes. Si se quiere una confirmación adicional, conviene repetir el ensayo de 2~A completo, con el rotor bien trabado y la temperatura del aire registrada durante todo el ensayo.
+
+\control{\begin{itemize}[leftmargin=*]
+\item $R_{th}$ (resistencia térmica carcasa--aire) parecida en todas las corrientes. Puede bajar un poco al aumentar la temperatura, porque mejora la convección, pero diferencias mayores al 20\,\% indican un problema de medición.
+\item $\tau_{th}$ (constante de tiempo térmica) parecida en todas las corrientes: es una propiedad del motor y su montaje, no depende de la corriente.
+\item La curva de la carcasa sube rápido al principio y se frena de a poco. Una subida en línea recta que se detiene de golpe sugiere que se movió la termocupla o que cambió la temperatura del aire.
+\item La fila de control de la hoja, $I\sqrt{(T_{lim} - T_a)/(T_f - T_a)}$, da un valor algo mayor que $I_{cont}$ (corriente continua admisible), porque no corrige $R$ (resistencia del bobinado) con la temperatura.
+\end{itemize}}
+
+\nota{Conviene registrar la temperatura del aire durante todo el ensayo, por ejemplo con una segunda termocupla al aire cerca del motor, y no solo al inicio. Si el aire de la sala cambia 1 o 2~$^\circ$C en una hora, el error en $R_{th}$ (resistencia térmica carcasa--aire) es del mismo orden que con las corrientes bajas.}
+
+\advertencia{$I_{cont}$ (corriente continua admisible) limita el valor eficaz (RMS) de la corriente en ventanas de varios minutos, no el valor instantáneo: el force feedback puede pedir picos mayores durante segundos. El resultado vale para el montaje ensayado. Dentro del gabinete del yugo, la carcasa se enfría distinto y conviene confirmarlo con el motor montado.}
+
+%---------------------------------------------------------------------
+\subsection{Resumen del modelo del motor}
+\label{sec:resumen_motor}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}Xcc}
+\toprule
+Parámetro & Ejemplo (supuesto) & Ensayo \\
+\midrule
+$R$ (resistencia del bobinado) a 20~$^\circ$C & 0,55~$\Omega$ & 1 \\
+$V_{esc}$ (caída en escobillas) & 0,60~V & 1 \\
+$K_t$ (constante de torque) & 0,0325~N\,m/A & 1 \\
+$K_e$ (constante de fuerza contraelectromotriz) & 0,0322~V\,s/rad & 2 \\
+$\tau_c$ (rozamiento de Coulomb) / $b$ (coeficiente de rozamiento viscoso) & 0,014~N\,m / $2{,}4\times10^{-5}$~N\,m\,s/rad & 3 \\
+$I_0$ (corriente en vacío) / $n_0$ (velocidad en vacío en rpm) a 24~V & 0,95~A / 6785~rpm & 3 \\
+$L$ (inductancia) & 0,17~mH ($\tau_e$ (constante de tiempo eléctrica) $= 0{,}3$~ms) & 4 \\
+$J_m$ (inercia del rotor) & $1{,}9\times10^{-5}$~kg\,m$^2$ & 5 \\
+$I_{cont}$ (corriente continua admisible) & \pendiente & 6b \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Comprobaciones cruzadas antes de seguir: $K_t$ (constante de torque) $\approx$ $K_e$ (constante de fuerza contraelectromotriz); la velocidad en vacío predicha coincide con la medida; $R$ (resistencia del bobinado) del LCR y del ensayo 1 son del mismo orden. Si alguna falla, repetir el ensayo dudoso antes de pasar a la reductora.
+
+%=====================================================================
+\section{Etapa 2 (opcional): la reductora en banco}
+\label{sec:reductora}
+
+\nota{Esta etapa es \textbf{opcional}. Para el control alcanza con los datos del motor (Etapa~1), el cálculo de la Etapa~3 con $N$ (relación de reducción) obtenido contando dientes (Sección~\ref{sec:relacion}, método 1) y un rendimiento supuesto, y la verificación final en el yugo (Sección~\ref{sec:verificacion}), que mide el rendimiento y el rozamiento reales de toda la cadena. Los ensayos de esta etapa sirven si esa verificación da valores inesperados y hace falta saber si el problema está en la reductora o en la transmisión. Las fórmulas de las primeras subsecciones (transformación ideal, rendimiento directo e inverso) se usan igual en la Etapa~3.}
+
+Volver a montar la reductora en el motor (mismas posiciones y tornillos). Las magnitudes del eje de salida se indican con subíndice $s$ (salida).
+
+\subsection{Cómo se transforma cada magnitud (caso ideal)}
+
+Una reductora de $N$ (relación de reducción) hace que el eje de salida gire $N$ (relación de reducción) veces más lento y, sin pérdidas, entregue $N$ (relación de reducción) veces más torque:
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Magnitud & En el eje de salida \\
+\midrule
+Velocidad & $\omega_s = \omega_m / N$ \\
+Torque por ampere & $K_s = K_t\,N\,\eta$ \quad [N\,m/A] \\
+Tensión generada por velocidad de salida & $K_e\,N$ \quad [V\,s/rad] \\
+Inercia del rotor vista desde la salida & $J_m\,N^2$ \\
+Rozamiento del motor visto desde la salida & $\approx \tau_c\,N$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Símbolos de la tabla: $\omega_s$ (velocidad angular del eje de salida), $\omega_m$ (velocidad angular del motor), $N$ (relación de reducción), $K_s$ (torque por ampere en el eje de salida), $K_t$ (constante de torque), $\eta$ (rendimiento de la reductora), $K_e$ (constante de fuerza contraelectromotriz), $J_m$ (inercia del rotor) y $\tau_c$ (rozamiento de Coulomb).
+
+La inercia se multiplica por $N^2$ (cuadrado de la relación de reducción): en pitch ($N$ (relación de reducción) $= 19{,}2$) es $\approx 369$ veces la del rotor. Por eso en pitch el motor ``pesa'' en la mano aunque el motor sea liviano.
+
+\subsection{Rendimiento directo e inverso}
+
+La reductora pierde parte del torque en el engrane, y la pérdida depende de \emph{quién empuja}:
+\begin{itemize}
+\item \textbf{Directo} (el motor mueve la mano, o la mano cede): $\tau_s = \eta_d\,N\,K_t\,I$, con $\tau_s$ (torque en el eje de salida), $\eta_d$ (rendimiento directo), $N$ (relación de reducción), $K_t$ (constante de torque) e $I$ (corriente).
+\item \textbf{Inverso} (la mano vence al motor): para mantener el equilibrio la mano necesita $\tau_s = N\,K_t\,I / \eta_i$, con $\tau_s$ (torque en el eje de salida), $N$ (relación de reducción), $K_t$ (constante de torque), $I$ (corriente) y $\eta_i$ (rendimiento inverso).
+\end{itemize}
+La diferencia entre ambos se siente como un rozamiento que cambia de signo con el sentido del movimiento (histéresis). Además hay un rozamiento propio de la reductora sin carga: $\tau_{f,red}$ (rozamiento propio de la reductora).
+
+\subsection{Relación real: $N$ (relación de reducción)}
+\label{sec:relacion}
+
+``3,7'' y ``19,2'' son valores nominales redondeados. Formas de medir la relación real:
+\begin{enumerate}
+\item \textbf{Contar dientes} (con la reductora separada). En cada etapa planetaria con corona fija, sol de $Z_s$ (dientes del sol) y corona de $Z_c$ (dientes de la corona): $N_{etapa}$ (relación de la etapa) $= 1 + Z_c/Z_s$. Por ejemplo, $Z_s$ (dientes del sol) $= 10$, $Z_c$ (dientes de la corona) $= 27$ da 3,7. Con dos etapas, $N$ (relación de reducción) $= N_1\,N_2$, con $N_1$ (relación de la primera etapa) y $N_2$ (relación de la segunda etapa). Es exacto.
+\item \textbf{Con $K_e$ (constante de fuerza contraelectromotriz) ya medido}: hacer girar el eje de salida con el taladro (lento: $n_s$ (velocidad del eje de salida en rpm) $\le 150$~rpm en pitch), medir $V$ (tensión en bornes) y $\omega_s$ (velocidad angular del eje de salida) con el AS5600 en el eje de salida; $N = V/(K_e\,\omega_s)$, con $N$ (relación de reducción), $V$ (tensión en bornes), $K_e$ (constante de fuerza contraelectromotriz) y $\omega_s$ (velocidad angular del eje de salida).
+\item \textbf{Con el AS5600 en la salida y el tacómetro en el motor}: solo si el motor tiene eje trasero accesible.
+\end{enumerate}
+
+\subsection{Ensayo 7: torque de salida y rendimiento}
+\label{ens:reductora}
+
+\textbf{Montaje.} Igual que el Ensayo~\ref{ens:bloqueado}, pero con el brazo de $L_b$ (largo del brazo) $= 150$~mm en el eje de salida. Con la reductora el torque es 3,7 o 19,2 veces mayor: la celda de 20~kg (196~N) admite hasta $\approx 29$~N\,m con ese brazo, sobra.
+
+\textbf{Paso a paso.}
+\begin{enumerate}
+\item Para cada corriente (1, 2, 3 y 4~A con límite de la fuente), medir \textbf{dos} fuerzas:
+\begin{itemize}
+\item $F_d$ (fuerza en sentido directo): apoyar la celda, subir la corriente y dejar que el motor ``empuje'' la celda hasta asentarse. Si la celda está montada en un carro o tornillo de ajuste, retroceder la celda muy despacio unos décimos de milímetro y leer.
+\item $F_i$ (fuerza en sentido inverso): avanzar la celda muy despacio contra el motor (que el motor ``pierda'') y leer en movimiento lento.
+\end{itemize}
+Una forma simple de lograr ese movimiento lento es montar la base de la celda sobre una varilla roscada (M8) que se gira a mano.
+\item Repetir en 4 posiciones angulares del eje de salida y en ambos sentidos.
+\end{enumerate}
+
+\textbf{Ejemplo pitch} (supuesto, $L_b$ (largo del brazo) $= 0{,}150$~m, $N\,K_t = 19{,}2 \cdot 0{,}0325 = 0{,}624$~N\,m/A, con $N$ (relación de reducción) y $K_t$ (constante de torque)):
+\begin{center}
+\begin{tabular}{ccc}
+\toprule
+\enc{$I$ [A]}{(corriente)} & \enc{$F_d$ [N]}{(fuerza en sentido directo)} & \enc{$F_i$ [N]}{(fuerza en sentido inverso)} \\
+\midrule
+1 & 3,1 & 5,3 \\
+2 & 6,6 & 10,1 \\
+3 & 10,0 & 15,0 \\
+4 & 13,5 & 19,9 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Cálculo.}
+\begin{itemize}
+\item Pendiente de $F_d$ (fuerza en sentido directo): 3,47~N/A, por $L_b$ (largo del brazo): $K_{s,d}$ (torque por ampere en sentido directo) $= 0{,}520$~N\,m/A. $\eta_d$ (rendimiento directo) $= K_{s,d}/(N\,K_t) = 0{,}520/0{,}624 = 0{,}83$, con $N$ (relación de reducción) y $K_t$ (constante de torque).
+\item Pendiente de $F_i$ (fuerza en sentido inverso): 4,87~N/A, por $L_b$ (largo del brazo): $K_{s,i}$ (torque por ampere en sentido inverso) $= 0{,}730$~N\,m/A. $\eta_i$ (rendimiento inverso) $= N\,K_t/K_{s,i} = 0{,}624/0{,}730 = 0{,}85$, con $N$ (relación de reducción) y $K_t$ (constante de torque).
+\item Valores habituales de referencia: 0,90--0,95 por etapa planetaria a carga nominal (menor con poca carga). Si $\eta$ (rendimiento de la reductora) da mucho menor (por ejemplo 0,5), revisar grasa, alineación o montaje.
+\end{itemize}
+
+\subsection{Ensayo 8: rozamiento de la reductora}
+
+Giro en vacío como en el Ensayo~\ref{ens:vacio}, ahora con la reductora. La corriente sube de $I_0$ (corriente en vacío) a $I_{0,red}$ (corriente en vacío con la reductora). El rozamiento agregado por la reductora, referido a su salida, es aproximadamente:
+\[
+\tau_{f,red} \approx K_t\,(I_{0,red} - I_0)\,N\,\eta_d .
+\]
+Símbolos: $\tau_{f,red}$ (rozamiento propio de la reductora), $K_t$ (constante de torque), $I_{0,red}$ (corriente en vacío con la reductora), $I_0$ (corriente en vacío), $N$ (relación de reducción) y $\eta_d$ (rendimiento directo). Además, \textbf{a mano}: con el motor desconectado, girar el eje de salida con el brazo y la celda (moverlo despacio empujando con la celda) y leer la fuerza mínima para que gire en cada sentido. Ese es el rozamiento total que siente la mano con el motor apagado (motor + reductora, reflejados).
+
+\subsection{Ensayo 9: juego (backlash)}
+
+\begin{enumerate}
+\item Motor desconectado. AS5600 en el eje de salida (o un puntero largo y una regla).
+\item Mover el eje de salida a mano suavemente en un sentido hasta que ``tome'' (empieza a arrastrar el motor), anotar la posición; luego en el otro sentido hasta que tome.
+\item La diferencia es el juego. Con el AS5600 (4096 cuentas/vuelta), cada cuenta es 0,088$^\circ$; repetir 5 veces y promediar, porque el juego típico es de pocas cuentas. Para esta medición conviene que la histéresis interna del AS5600 (registro CONF) esté desactivada, que es su valor de fábrica. Con un puntero de 150~mm, 1~mm en la regla es 0,38$^\circ$.
+\end{enumerate}
+El juego produce un pequeño ``escalón'' al invertir la fuerza; en pitch se traduce en milímetros en la empuñadura ($\Delta x = r_{polea}\,\Delta\theta$, con $\Delta x$ (desplazamiento en la empuñadura), $r_{polea}$ (radio de la polea) y $\Delta\theta$ (juego angular)).
+
+%=====================================================================
+\section{Etapa 3: de N\,m a lo que siente la mano}
+\label{sec:mano}
+
+\nota{Si no se hizo la Etapa~2, en esta etapa se usan $N$ (relación de reducción) contado por dientes y un rendimiento \textbf{supuesto}: por ejemplo $\eta_d$ (rendimiento directo) $\approx 0{,}90$ para roll (una etapa planetaria) y $\eta_d$ (rendimiento directo) $\approx 0{,}81$ para pitch (dos etapas, $0{,}9^2$). Los resultados son una primera estimación para arrancar; los valores definitivos de fuerza por ampere y rozamiento salen de la verificación final (Sección~\ref{sec:verificacion}). En los ejemplos que siguen se usan los rendimientos del ejemplo de la Etapa~2.}
+
+\subsection{Roll: torque en el eje}
+
+En roll la reductora mueve directamente el eje del yugo, así que la magnitud natural es el \textbf{torque en el eje del yugo}:
+\begin{equation}
+K_{roll} = K_t\,N_r\,\eta_d \quad [\mathrm{N\,m/A}], \qquad I = \frac{\tau_{pedido}}{K_{roll}}.
+\end{equation}
+Símbolos: $K_{roll}$ (torque por ampere en el eje de roll), $K_t$ (constante de torque), $N_r$ (relación de reducción de roll), $\eta_d$ (rendimiento directo), $I$ (corriente) y $\tau_{pedido}$ (torque pedido en el eje del yugo).
+Si se quiere expresar como fuerza en la empuñadura, medir $r_{emp}$ (radio de la empuñadura) desde el eje de roll hasta el centro de la mano: $F = \tau/r_{emp}$, con $F$ (fuerza) y $\tau$ (torque).
+
+\textbf{Ejemplo} (supuesto, $\eta_d$ (rendimiento directo) $= 0{,}91$, $r_{emp}$ (radio de la empuñadura) $= 0{,}15$~m): $K_{roll}$ (torque por ampere en el eje de roll) $= 0{,}0325\cdot3{,}7\cdot0{,}91 = 0{,}109$~N\,m/A $\Rightarrow$ 0,73~N/A en la empuñadura. Para 2~N\,m (13~N en la mano) harían falta 18~A. Si el Ensayo~\ref{ens:termico} diera, por ejemplo, $I_{cont}$ (corriente continua admisible) $= 4$~A, el torque sostenido en roll quedaría limitado a $\approx 0{,}44$~N\,m: es el dato que decide si la reducción de roll alcanza.
+
+\subsection{Pitch: conversión de torque a fuerza}
+\label{sec:pitch}
+
+En pitch el eje de salida mueve una polea de $r$ (radio de la polea) que arrastra la correa (o cable) del carro de la empuñadura. Torque y fuerza se relacionan por:
+\begin{equation}
+F = \frac{\tau_s\,\eta_t}{r},
+\end{equation}
+con $F$ (fuerza en la empuñadura), $\tau_s$ (torque en el eje de salida), $r$ (radio de la polea) y $\eta_t$ (rendimiento de la transmisión por correa), cercano a 1 para una correa dentada bien tensada; se confirma en la Sección~\ref{sec:verificacion}.
+
+\textbf{Medir $r$ (radio efectivo de la polea)}: no el diámetro exterior de la polea, sino el radio sobre el que trabaja la correa:
+\begin{enumerate}
+\item Con la transmisión armada, mover el carro $s$ (distancia recorrida por el carro) medida con regla (por ejemplo 200~mm) y leer $c$ (cambio de ángulo acumulado del AS5600), en cuentas (4096 por vuelta; el programa del anexo ya suma las vueltas, porque 200~mm son casi una vuelta completa).
+\item $r$ (radio de la polea) $= \dfrac{s}{2\pi\,c/4096}$, con $s$ (distancia recorrida por el carro) y $c$ (cambio de ángulo acumulado). Repetir 3 veces en cada sentido y promediar.
+\end{enumerate}
+Para una polea dentada, $r$ (radio de la polea) coincide con el radio primitivo: $r = Z\,p/(2\pi)$, con $Z$ (cantidad de dientes de la polea) y $p$ (paso de la correa). Con la polea de 75~mm de diámetro indicada en \code{mis_defines.h}, $r$ (radio de la polea) $= 0{,}0375$~m. Este mismo dato servirá para fijar los límites de recorrido de pitch en el firmware, cuando se adapte al AS5600.
+
+\textbf{Todas las magnitudes de pitch en la empuñadura:}
+\begin{center}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.33\linewidth}>{\raggedright\arraybackslash}p{0.26\linewidth}X}
+\toprule
+Magnitud & Fórmula & Ejemplo ($N$ (relación de reducción) $= 19{,}2$, $r$ (radio de la polea) $= 0{,}0375$~m, $\eta_t$ (rendimiento de la transmisión por correa) $= 1$) \\
+\midrule
+Fuerza por ampere (motor empuja) & $K_F = K_t\,N\,\eta_d/r$ & $0{,}520/0{,}0375 = 13{,}9$~N/A \\
+Fuerza por ampere (mano vence) & $K_t\,N/(\eta_i\,r)$ & $0{,}730/0{,}0375 = 19{,}5$~N/A \\
+Corriente para una fuerza $F$ & $I = F/K_F$ & 50~N $\Rightarrow$ 3,6~A \\
+Velocidad del motor & $\omega_m = N\,v/r$ & 1~m/s $\Rightarrow$ 512~rad/s (4890~rpm) \\
+Tensión generada por velocidad & $K_e\,N/r$ & 16,5~V por m/s \\
+Velocidad máxima del carro sin fuerza & $(24 - V_{esc} - R I_0)/(K_e N/r)$ & $\approx 1{,}4$~m/s \\
+Masa equivalente del rotor & $m_{eq} = J_m\,N^2/r^2$ & $\approx 5$~kg \\
+Rozamiento del motor en la mano & $\approx \tau_c\,N/r$ & $\approx 7$~N (más la reductora) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Símbolos de la tabla: $K_F$ (fuerza por ampere en la empuñadura), $K_t$ (constante de torque), $N$ (relación de reducción), $\eta_d$ (rendimiento directo), $\eta_i$ (rendimiento inverso), $r$ (radio de la polea), $I$ (corriente), $F$ (fuerza), $\omega_m$ (velocidad angular del motor), $v$ (velocidad del carro), $K_e$ (constante de fuerza contraelectromotriz), $V_{esc}$ (caída en escobillas), $R$ (resistencia del bobinado), $I_0$ (corriente en vacío), $m_{eq}$ (masa equivalente del rotor), $J_m$ (inercia del rotor) y $\tau_c$ (rozamiento de Coulomb).
+
+Lectura del ejemplo: a pitch le sobra fuerza por ampere, pero la mano siente $\approx 5$~kg de masa extra y $\approx 7$~N de rozamiento solo por el motor. Eso justifica compensar rozamiento (y, si hace falta, inercia) en el control. Además, al mover rápido la tensión generada se acerca a los 24~V y queda poco margen para imponer la corriente: el PI necesita la prealimentación de la f.c.e.m. (fuerza contraelectromotriz; Sección~\ref{sec:control}).
+
+\subsection{Verificación final en el yugo}
+\label{sec:verificacion}
+
+Cuando los motores estén montados en el yugo, se repite una sola prueba para validar toda la cadena:
+\begin{enumerate}
+\item Celda de carga en la empuñadura, perpendicular al movimiento, sujeta a una base fija. Yugo cerca del centro.
+\item Con el BTS7960 y PWM bajo (Anexo~\ref{anexo:programa}), imponer 1, 2, 3~A medidos con el multímetro en serie (o con el sensor de corriente ya calibrado), en ambos sentidos, midiendo $F_d$ (fuerza en sentido directo) y $F_i$ (fuerza en sentido inverso) como en el Ensayo~\ref{ens:reductora}.
+\item Con el motor desconectado, medir también la fuerza necesaria para mover la empuñadura despacio en cada sentido: es el \textbf{rozamiento total} que siente la mano (motor + reductora + correa).
+\item Ajustar las rectas $F_d$ (fuerza en sentido directo) e $F_i$ (fuerza en sentido inverso) en función de $I$ (corriente) (Sección~\ref{sec:recta}). Sus pendientes son la fuerza por ampere real en cada sentido: $K_{F,d}$ (fuerza por ampere en sentido directo) y $K_{F,i}$ (fuerza por ampere en sentido inverso) en pitch [N/A]; en roll, multiplicadas por el radio de la empuñadura, $K_{roll,d}$ (torque por ampere en sentido directo) y $K_{roll,i}$ (torque por ampere en sentido inverso) [N\,m/A].
+\item \textbf{Rendimiento real de toda la cadena}, con $K_t$ (constante de torque) de la Etapa~1 y $N$ (relación de reducción) contado:
+\[
+\text{pitch: } \eta_{d,total} = \frac{K_{F,d}\,r}{K_t\,N},\quad \eta_{i,total} = \frac{K_t\,N}{K_{F,i}\,r};\qquad
+\text{roll: } \eta_{d,total} = \frac{K_{roll,d}}{K_t\,N},\quad \eta_{i,total} = \frac{K_t\,N}{K_{roll,i}}.
+\]
+Símbolos: $\eta_{d,total}$ (rendimiento directo de toda la cadena), $\eta_{i,total}$ (rendimiento inverso de toda la cadena), $K_{F,d}$ (fuerza por ampere en sentido directo), $K_{F,i}$ (fuerza por ampere en sentido inverso), $r$ (radio de la polea), $K_t$ (constante de torque), $N$ (relación de reducción), $K_{roll,d}$ (torque por ampere en sentido directo) y $K_{roll,i}$ (torque por ampere en sentido inverso). En pitch incluye reductora y correa ($\eta_d\,\eta_t$, con $\eta_d$ (rendimiento directo) y $\eta_t$ (rendimiento de la transmisión por correa)). Si da menos de 0,6--0,7, revisar tensión de la correa, alineación y lubricación; ahí es donde la Etapa~2 ayuda a ubicar la pérdida.
+\item Reemplazar en el cálculo de la Etapa~3 el rendimiento supuesto por el medido. Los valores medidos en el yugo son los que se usan en el firmware; el modelo del motor (Etapa~1) sigue valiendo para la prealimentación ($R$ (resistencia del bobinado), $V_{esc}$ (caída en escobillas), $K_e$ (constante de fuerza contraelectromotriz)) y para los límites térmicos.
+\end{enumerate}
+
+%=====================================================================
+\section{Cómo se usa todo esto en el control de corriente}
+\label{sec:control}
+
+\begin{enumerate}
+\item \textbf{Corriente de referencia} a partir de lo que pide el modelo de efectos:
+\[
+I_{ref} = \frac{F_{ref}}{K_F}\ \text{(pitch)}, \qquad I_{ref} = \frac{\tau_{ref}}{K_{roll}}\ \text{(roll)},
+\]
+con $I_{ref}$ (corriente de referencia), $F_{ref}$ (fuerza pedida por el modelo de efectos), $K_F$ (fuerza por ampere en la empuñadura), $\tau_{ref}$ (torque pedido por el modelo de efectos) y $K_{roll}$ (torque por ampere en el eje de roll); limitada a $I_{\max}$ (corriente máxima permitida) = menor entre el requisito de fuerza, $I_{cont}$ (corriente continua admisible) para corriente sostenida, la capacidad del driver y la fuente, y la seguridad de la mano.
+\item \textbf{Compensación de rozamiento} (opcional): sumar $\mathrm{sgn}(v)\,(\tau_c N + \tau_{f,red})/K_{s}$, con $\mathrm{sgn}(v)$ (signo de la velocidad del eje), $\tau_c$ (rozamiento de Coulomb), $N$ (relación de reducción), $\tau_{f,red}$ (rozamiento propio de la reductora) y $K_s$ (torque por ampere en el eje de salida), a $I_{ref}$ (corriente de referencia) cuando el eje se mueve, con una banda muerta en velocidad para no oscilar en reposo.
+\item \textbf{Prealimentación de tensión}: a partir de la ecuación~\eqref{eq:electrica}, la tensión que haría circular $I_{ref}$ (corriente de referencia) es
+\[
+V_{ff} = R\,I_{ref} + V_{esc}\,\mathrm{sgn}(I_{ref}) + K_e\,N\,\omega_s,
+\qquad \text{ciclo útil} = V_{ff}/V_{bus},
+\]
+con $V_{ff}$ (tensión de prealimentación), $R$ (resistencia del bobinado), $I_{ref}$ (corriente de referencia), $V_{esc}$ (caída en escobillas), $K_e$ (constante de fuerza contraelectromotriz), $N$ (relación de reducción), $V_{bus}$ (tensión de alimentación del driver) y $\omega_s$ (velocidad angular del eje de salida) obtenida del sensor de posición del eje. El PI corrige solo el error restante (temperatura, variaciones de $R$ (resistencia del bobinado), etc.).
+\item \textbf{Ganancias del PI}: con $L$ (inductancia) y $R$ (resistencia del bobinado) medidos (planta $1/(Ls + R)$, con $s$ (variable de Laplace)), un punto de partida habitual es $K_p$ (ganancia proporcional) $= L\,\omega_c$ y $K_i$ (ganancia integral) $= R\,\omega_c$, con $\omega_c$ (frecuencia angular de corte del lazo) bastante menor que la frecuencia de muestreo del lazo. El desarrollo está en \code{procedimiento_control_corriente.tex}.
+\end{enumerate}
+
+%=====================================================================
+\section{Hoja de registro}
+\label{sec:registro}
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}Xcc}
+\toprule
+Parámetro & Motor R (roll) & Motor P (pitch) \\
+\midrule
+Temperatura ambiente [$^\circ$C] & \pendiente & \pendiente \\
+$R$ (resistencia del bobinado) a 20~$^\circ$C [$\Omega$] (mín./prom./máx.) & \pendiente & \pendiente \\
+$V_{esc}$ (caída en escobillas) [V] & \pendiente & \pendiente \\
+$K_t$ (constante de torque) [N\,m/A] (+ / $-$) & \pendiente & \pendiente \\
+$K_e$ (constante de fuerza contraelectromotriz) [V\,s/rad] & \pendiente & \pendiente \\
+Diferencia $K_t$ (constante de torque) -- $K_e$ (constante de fuerza contraelectromotriz) [\%] & \pendiente & \pendiente \\
+$I_0$ (corriente en vacío) y $n_0$ (velocidad en vacío en rpm) a 24~V & \pendiente & \pendiente \\
+$\tau_c$ (rozamiento de Coulomb) [N\,m] / $b$ (coeficiente de rozamiento viscoso) [N\,m\,s/rad] & \pendiente & \pendiente \\
+$L$ (inductancia) LCR / escalón [mH] & \pendiente & \pendiente \\
+$J_m$ (inercia del rotor) [kg\,m$^2$] & \pendiente & \pendiente \\
+$I_{cont}$ (corriente continua admisible) [A] y temperatura alcanzada & \pendiente & \pendiente \\
+\midrule
+$N$ (relación de reducción) real (dientes) & \pendiente & \pendiente \\
+$\eta_d$ (rendimiento directo) / $\eta_i$ (rendimiento inverso) & \pendiente & \pendiente \\
+$I_{0,red}$ (corriente en vacío con la reductora) [A] y $\tau_{f,red}$ (rozamiento propio de la reductora) [N\,m] & \pendiente & \pendiente \\
+Juego [$^\circ$] & \pendiente & \pendiente \\
+\midrule
+$r_{emp}$ (radio de la empuñadura) en roll / $r$ (radio de la polea) en pitch [m] & \pendiente & \pendiente \\
+$K_{roll}$ (torque por ampere en el eje de roll) [N\,m/A] / $K_F$ (fuerza por ampere en la empuñadura) [N/A] predicho & \pendiente & \pendiente \\
+Ídem medido en el yugo & \pendiente & \pendiente \\
+$I_{\max}$ (corriente máxima permitida) elegida [A] & \pendiente & \pendiente \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+%=====================================================================
+\appendix
+\section{Programa de banco para Arduino UNO}
+\label{anexo:programa}
+
+Lee la celda (HX711), el tacómetro óptico y el AS5600, y además permite manejar el BTS7960 con PWM a $\approx 31$~kHz para la verificación en el yugo. Para la Etapa~1 el motor se alimenta directo de la fuente y el BTS7960 no se conecta. Requiere la biblioteca \code{HX711} de Bogdan Necula (gestor de bibliotecas del IDE de Arduino); el AS5600 se lee directamente con \code{Wire}, sin biblioteca. Los sensores que no estén conectados simplemente leen cero (el AS5600 informa \code{iman=SIN_SENSOR}).
+
+Uso por el monitor serie (115200, ``nueva línea''): enviar un número entre $-$\code{MAX_DUTY} y \code{MAX_DUTY} para fijar el ciclo útil (sube en rampa); \code{0} para detener; \code{t} para tarar la celda; \code{z} para poner a cero el ángulo acumulado del AS5600. Cada 0,5~s imprime \code{duty,fuerza_N,rpm,cuentas_AS,rpm_salida,iman}: \code{cuentas_AS} es el ángulo acumulado del eje de salida (4096 por vuelta, con signo y varias vueltas) y \code{rpm_salida} su velocidad.
+
+\begin{lstlisting}[language=C++]
+#include "HX711.h"
+#include <Wire.h>
+// Conexiones (Arduino UNO):
+//  BTS7960: RPWM->9, LPWM->10, R_EN y L_EN->5V, VCC->5V, GND->GND (comun con la fuente)
+//  HX711:   DT->4, SCK->5, VCC->5V, GND->GND
+//  Sensor optico (salida digital): OUT->2, VCC->5V, GND->GND
+//  AS5600:  SDA->A4, SCL->A5, VCC->5V, GND->GND, DIR->GND
+const int RPWM = 9, LPWM = 10, HX_DT = 4, HX_SCK = 5, TACO = 2;
+const int MAX_DUTY = 25;      // limite de seguridad (25/255 de 24 V = 2,4 V)
+const int RANURAS = 2;        // ranuras del disco del tacometro
+float factorCelda = 1.0;      // cuentas por newton (ver calibracion)
+const byte AS5600_DIR = 0x36; // direccion I2C fija del AS5600
+
+HX711 celda;
+volatile unsigned long pulsos = 0;
+int duty = 0, objetivo = 0;
+float fuerza = 0;
+unsigned long tRampa = 0, tInforme = 0, tAS = 0;
+int anguloPrev = -1;          // ultima lectura 0..4095 (-1 = sin lectura)
+long vueltas = 0, acumPrev = 0, cero = 0;
+
+void contarPulso() { pulsos++; }
+
+int leerRegistro(byte reg, byte n) {        // devuelve -1 si el sensor no responde
+  Wire.beginTransmission(AS5600_DIR);
+  Wire.write(reg);
+  if (Wire.endTransmission(false) != 0) return -1;
+  if (Wire.requestFrom(AS5600_DIR, n) != n) return -1;
+  int v = Wire.read();
+  if (n == 2) v = (v << 8) | Wire.read();
+  return v;
+}
+
+long anguloAcumulado() { return vueltas * 4096L + anguloPrev - cero; }
+
+void setup() {
+  pinMode(RPWM, OUTPUT); pinMode(LPWM, OUTPUT);
+  TCCR1B = (TCCR1B & 0b11111000) | 0x01;   // PWM de los pines 9 y 10 a ~31 kHz
+  Serial.begin(115200);
+  Wire.begin();
+  Wire.setClock(400000);
+  Wire.setWireTimeout(3000, true);          // no colgarse si el AS5600 se desconecta
+  celda.begin(HX_DT, HX_SCK);
+  celda.set_scale(factorCelda);
+  celda.tare(20);
+  pinMode(TACO, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(TACO), contarPulso, FALLING);
+  Serial.println("duty,fuerza_N,rpm,cuentas_AS,rpm_salida,iman");
+}
+
+void loop() {
+  if (Serial.available()) {
+    char c = Serial.peek();
+    if (c == 't') { Serial.read(); celda.tare(20); }
+    else if (c == 'z') { Serial.read(); vueltas = 0; cero = anguloPrev; acumPrev = 0; }
+    else objetivo = constrain(Serial.parseInt(), -MAX_DUTY, MAX_DUTY);
+    while (Serial.available()) Serial.read();
+  }
+  if (millis() - tRampa >= 10) {             // rampa: 1 paso cada 10 ms
+    tRampa = millis();
+    if (duty < objetivo) duty++; else if (duty > objetivo) duty--;
+    analogWrite(RPWM, duty > 0 ? duty : 0);
+    analogWrite(LPWM, duty < 0 ? -duty : 0);
+  }
+  if (millis() - tAS >= 1) {                 // AS5600 cada 1 ms: cuenta vueltas
+    tAS = millis();
+    int a = leerRegistro(0x0C, 2);           // RAW ANGLE (12 bits)
+    if (a >= 0) {
+      a &= 0x0FFF;
+      if (anguloPrev >= 0) {
+        int d = a - anguloPrev;
+        if (d > 2048) vueltas--;             // paso de 0 a 4095: vuelta atras
+        else if (d < -2048) vueltas++;       // paso de 4095 a 0: vuelta adelante
+      }
+      anguloPrev = a;
+    }
+  }
+  if (celda.is_ready()) fuerza = celda.get_units(1);
+  if (millis() - tInforme >= 500) {          // informe cada 0,5 s
+    tInforme = millis();
+    noInterrupts(); unsigned long p = pulsos; pulsos = 0; interrupts();
+    float rpm = p * 120.0 / RANURAS;         // pulsos en 0,5 s -> rpm
+    long acum = anguloPrev >= 0 ? anguloAcumulado() : 0;
+    float rpmSalida = (acum - acumPrev) * 120.0 / 4096.0;
+    acumPrev = acum;
+    int st = leerRegistro(0x0B, 1);          // STATUS: MD=0x20, ML=0x10, MH=0x08
+    const char *iman = st < 0 ? "SIN_SENSOR" : (st & 0x08) ? "FUERTE"
+                     : (st & 0x10) ? "DEBIL" : (st & 0x20) ? "OK" : "SIN_IMAN";
+    Serial.print(duty); Serial.print(',');
+    Serial.print(fuerza, 3); Serial.print(',');
+    Serial.print(rpm, 0); Serial.print(',');
+    Serial.print(acum); Serial.print(',');
+    Serial.print(rpmSalida, 1); Serial.print(',');
+    Serial.println(iman);
+  }
+}
+\end{lstlisting}
+
+\advertencia{\code{MAX_DUTY} limita la tensión media a $\text{MAX\_DUTY}/255 \cdot V_{bus}$, con $V_{bus}$ (tensión de alimentación del driver). Con el eje trabado, la corriente será $\approx (D\,V_{bus} - V_{esc})/R$, con $D$ (ciclo útil), $V_{bus}$ (tensión de alimentación del driver), $V_{esc}$ (caída en escobillas) y $R$ (resistencia del bobinado). Subir \code{MAX_DUTY} solo después de conocer $R$ (resistencia del bobinado) y calcular la corriente que resulta. Con PWM conviene igual el límite de corriente de la fuente.}
+
+\nota{Los pines de la Pico son de 3,3~V. Si se usa la Pico en lugar del UNO, alimentar la lógica del módulo BTS7960 (VCC), el HX711 y el AS5600 con 3,3~V.}
+
+%=====================================================================
+\section{Referencias}
+
+\begin{itemize}
+\item Hughes, A., Drury, B., \textit{Electric Motors and Drives}, 5.ª ed., Newnes, 2019, cap.~3 (motor DC: $K_t$ (constante de torque) igual a $K_e$ (constante de fuerza contraelectromotriz), circuito equivalente, caída en escobillas).
+\item Krishnan, R., \textit{Electric Motor Drives: Modeling, Analysis, and Control}, Prentice Hall, 2001, cap.~3 (modelo dinámico y medición de parámetros de motores DC).
+\item IEC 60028, \textit{International standard of resistance for copper} (coeficiente de temperatura 0,00393/$^\circ$C a 20~$^\circ$C).
+\item Infineon Technologies, \textit{BTS7960 High Current PN Half Bridge}, hoja de datos (PWM hasta $\approx 25$~kHz, salida IS).
+\item Avia Semiconductor, \textit{HX711 24-bit ADC for weigh scales}, hoja de datos (10/80 muestras por segundo).
+\item ams OSRAM, \textit{AS5600: 12-bit programmable contactless potentiometer}, hoja de datos (4096 posiciones, I2C dirección 0x36, distancia al imán 0,5--3~mm, registros RAW ANGLE 0x0C--0x0D y STATUS 0x0B).
+\item Allegro MicroSystems, \textit{ACS712}, hoja de datos (66~mV/A en la versión de 30~A).
+\item \code{procedimiento_control_corriente.tex} (esta carpeta): PI de corriente y medición de torque con celda.
+\end{itemize}
+
+\end{document}

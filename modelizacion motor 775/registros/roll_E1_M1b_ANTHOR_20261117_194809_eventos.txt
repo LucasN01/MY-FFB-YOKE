@@ -1,0 +1,13 @@
+19:48:09.674	0.026	PC	inicio del registro: Pro Micro COM20, UNO COM15, archivos D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\modelizacion motor 775\registros\roll_E1_M1b_ANTHOR_20261117_194809_*
+19:48:09.763	0.115	PC	UNO con celda: se registra la fuerza
+19:48:21.316	11.667	PC	comando a MICRO: t
+19:48:21.318	11.670	MICRO	# error: usar t <s> entre 1 y 8
+19:48:23.566	13.918	PC	comando a UNO: t
+19:48:23.589	13.941	CELDA	# tara hecha
+19:48:23.592	13.944	CELDA	# factor=106733.429 cuentas/kg, tara=419429
+19:48:23.595	13.947	CELDA	# patron 1: 0.187 kg, 20144 cuentas
+19:48:23.600	13.952	CELDA	# patron 2: 0.345 kg, 36653 cuentas
+19:48:23.603	13.955	CELDA	# patron 3: 0.187 kg, 20088 cuentas
+19:48:34.228	24.580	PC	comando a MICRO: s (al salir)
+19:48:34.228	24.580	MICRO	# driver apagado
+19:48:34.831	25.182	PC	fin del registro

@@ -1,0 +1,70 @@
+00:45:42.811	0.044	PC	inicio del registro: Pro Micro COM20, UNO no usado, archivos D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\modelizacion motor 775\registros\roll_E6_1.5A_20261117_004542_*
+00:45:45.528	2.761	PC	comando a MICRO: r
+00:45:48.213	5.445	PC	comando a MICRO: z
+00:45:48.713	5.946	MICRO	# cero ACS712: 493.4 cuentas (2.409 V)
+00:45:55.381	12.614	TERMICO	inicio: 1.5 A constantes hasta 's'. SIN corte automatico por temperatura: cortar con 's' si la carcasa llega a 70 C o la hoja marca CORTAR.
+00:45:55.382	12.614	PC	comando a MICRO: c 1.5
+00:45:55.385	12.617	MICRO	# sostenido: I=1.50 A, t=3600.0 s, techo de duty 19.6 %
+00:45:55.834	13.066	MICRO	# cero ACS712: 492.7 cuentas (2.406 V)
+00:45:56.952	14.184	TERMICO	>>> LECTURA t=0 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=16.17 %  duty/duty0=1.000
+00:45:58.868	16.100	MICRO	# techo de duty ajustado a 19.6 % (estable 16.01 %)
+00:47:56.958	134.190	TERMICO	>>> LECTURA t=2 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.498 A  duty=16.29 %  duty/duty0=1.007
+00:49:56.986	254.219	TERMICO	>>> LECTURA t=4 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=16.66 %  duty/duty0=1.030
+00:51:57.036	374.269	TERMICO	>>> LECTURA t=6 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=16.17 %  duty/duty0=1.000
+00:53:56.973	494.206	TERMICO	>>> LECTURA t=8 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.94 %  duty/duty0=0.986
+00:55:56.969	614.202	TERMICO	>>> LECTURA t=10 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.81 %  duty/duty0=0.978
+00:57:56.992	734.224	TERMICO	>>> LECTURA t=12 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=14.96 %  duty/duty0=0.925
+00:59:56.959	854.192	TERMICO	>>> LECTURA t=14 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.69 %  duty/duty0=0.970
+01:01:57.007	974.240	TERMICO	>>> LECTURA t=16 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.60 %  duty/duty0=0.965
+01:03:57.018	1094.251	TERMICO	>>> LECTURA t=18 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.58 %  duty/duty0=0.963
+01:05:56.972	1214.204	TERMICO	>>> LECTURA t=20 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.92 %  duty/duty0=0.985
+01:07:57.021	1334.254	TERMICO	>>> LECTURA t=22 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=16.27 %  duty/duty0=1.006
+01:09:57.032	1454.265	TERMICO	>>> LECTURA t=24 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.94 %  duty/duty0=0.986
+01:11:57.025	1574.258	TERMICO	>>> LECTURA t=26 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=16.31 %  duty/duty0=1.009
+01:13:56.977	1694.210	TERMICO	>>> LECTURA t=28 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=16.06 %  duty/duty0=0.993
+01:15:57.006	1814.239	TERMICO	>>> LECTURA t=30 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.93 %  duty/duty0=0.985
+01:17:56.991	1934.224	TERMICO	>>> LECTURA t=32 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.81 %  duty/duty0=0.978
+01:19:57.028	2054.261	TERMICO	>>> LECTURA t=34 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.81 %  duty/duty0=0.978
+01:21:57.027	2174.260	TERMICO	>>> LECTURA t=36 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.92 %  duty/duty0=0.984
+01:23:57.019	2294.252	TERMICO	>>> LECTURA t=38 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.82 %  duty/duty0=0.978
+01:25:56.978	2414.211	TERMICO	>>> LECTURA t=40 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.98 %  duty/duty0=0.988
+01:27:57.014	2534.247	TERMICO	>>> LECTURA t=42 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.93 %  duty/duty0=0.985
+01:29:56.989	2654.222	TERMICO	>>> LECTURA t=44 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.81 %  duty/duty0=0.978
+01:31:57.038	2774.271	TERMICO	>>> LECTURA t=46 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.94 %  duty/duty0=0.986
+01:33:56.961	2894.194	TERMICO	>>> LECTURA t=48 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.94 %  duty/duty0=0.986
+01:35:57.028	3014.261	TERMICO	>>> LECTURA t=50 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.69 %  duty/duty0=0.970
+01:37:56.957	3134.189	TERMICO	>>> LECTURA t=52 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=15.59 %  duty/duty0=0.964
+01:39:56.985	3254.217	TERMICO	>>> LECTURA t=54 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=17.24 %  duty/duty0=1.066
+01:41:57.017	3374.249	TERMICO	>>> LECTURA t=56 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=18.13 %  duty/duty0=1.121
+01:43:57.002	3494.235	TERMICO	>>> LECTURA t=58 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=18.57 %  duty/duty0=1.148
+01:45:55.773	3613.006	MICRO	# fin de punto (tiempo maximo del modo sostenido): I_obj=1.50 A, I_media=1.500 A, duty_medio=16.08 %, V_est=2.66 V, tramo estable=3599.0 s
+01:45:55.775	3613.008	MICRO	# pausa de 10 s antes del proximo punto
+01:45:55.841	3613.074	PC	comando a MICRO: s
+01:45:55.842	3613.074	TERMICO	ensayo interrumpido: el Pro Micro termino el punto: fin de punto (tiempo maximo del modo sostenido): I_obj=1.50 A, I_media=1.500 A, duty_medio=16.08 %, V_est=2.66 V, tramo estable=3599.0 s
+01:45:55.844	3613.076	TERMICO	tabla guardada en D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\modelizacion motor 775\registros\roll_E6_1.5A_20261117_004542_termico.csv (columna i_A -> columna I de la hoja)
+01:45:55.844	3613.076	MICRO	# driver apagado
+01:45:55.874	3613.107	MICRO	# aviso: el ACS712 marca corriente con el driver apagado; revisar el cero (z) o el cableado
+01:46:05.770	3623.003	MICRO	# listo para el proximo punto
+01:46:17.411	3634.643	PC	comando a MICRO: s
+01:46:17.412	3634.644	MICRO	# driver apagado
+01:46:19.235	3636.468	PC	comando a MICRO: r
+01:46:22.532	3639.764	PC	comando a MICRO: z
+01:46:23.032	3640.265	MICRO	# cero ACS712: 508.3 cuentas (2.482 V)
+01:46:28.250	3645.482	TERMICO	inicio: 1.5 A constantes hasta 's'. SIN corte automatico por temperatura: cortar con 's' si la carcasa llega a 70 C o la hoja marca CORTAR.
+01:46:28.250	3645.483	PC	comando a MICRO: c 1.5
+01:46:28.254	3645.486	MICRO	# sostenido: I=1.50 A, t=3600.0 s, techo de duty 19.6 %
+01:46:28.703	3645.936	MICRO	# cero ACS712: 508.4 cuentas (2.482 V)
+01:46:29.821	3647.054	TERMICO	>>> LECTURA t=0 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=17.21 %  duty/duty0=1.000
+01:46:31.714	3648.946	MICRO	# techo de duty ajustado a 19.6 % (estable 17.09 %)
+01:48:29.914	3767.147	TERMICO	>>> LECTURA t=2 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=17.43 %  duty/duty0=1.013
+01:50:29.914	3887.147	TERMICO	>>> LECTURA t=4 min: anotar V en bornes y T carcasa en el Excel <<<  I=1.500 A  duty=17.32 %  duty/duty0=1.006
+01:51:07.213	3924.446	PC	comando a MICRO: s
+01:51:07.218	3924.450	MICRO	# fin de punto (parado a mano): I_obj=1.50 A, I_media=1.500 A, duty_medio=17.35 %, V_est=2.96 V, tramo estable=277.5 s
+01:51:07.219	3924.451	MICRO	# pausa de 10 s antes del proximo punto
+01:51:07.226	3924.459	PC	comando a MICRO: s
+01:51:07.227	3924.459	TERMICO	ensayo terminado con 's', driver apagado
+01:51:07.228	3924.460	MICRO	# driver apagado
+01:51:07.228	3924.461	TERMICO	tabla guardada en D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\modelizacion motor 775\registros\roll_E6_1.5A_20261117_004542_termico.csv (columna i_A -> columna I de la hoja)
+01:51:08.122	3925.354	PC	comando a MICRO: s (al salir)
+01:51:08.124	3925.356	MICRO	# driver apagado
+01:51:08.725	3925.958	PC	fin del registro

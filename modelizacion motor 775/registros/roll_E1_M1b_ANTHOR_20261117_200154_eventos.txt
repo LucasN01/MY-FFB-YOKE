@@ -1,0 +1,80 @@
+20:01:54.509	0.042	PC	inicio del registro: Pro Micro COM20, UNO COM15, archivos D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\modelizacion motor 775\registros\roll_E1_M1b_ANTHOR_20261117_200154_*
+20:01:54.562	0.094	PC	UNO con celda: se registra la fuerza
+20:01:58.570	4.103	PC	comando a MICRO: r
+20:02:00.038	5.571	PC	comando a MICRO: z
+20:02:00.538	6.071	MICRO	# cero ACS712: 526.9 cuentas (2.573 V)
+20:02:05.078	10.611	PC	comando a UNO: t
+20:02:06.804	12.337	CELDA	# tara hecha
+20:02:06.809	12.342	CELDA	# factor=106733.429 cuentas/kg (por defecto), tara=-326988
+20:02:06.811	12.344	CELDA	# patron por defecto 1: 0.187 kg, 20144 cuentas
+20:02:06.826	12.358	CELDA	# patron por defecto 2: 0.345 kg, 36653 cuentas
+20:02:06.827	12.359	CELDA	# patron por defecto 3: 0.187 kg, 20088 cuentas
+20:02:06.827	12.360	CELDA	# patron 1: sin registrar
+20:02:06.828	12.360	CELDA	# patron 2: sin registrar
+20:02:06.828	12.361	CELDA	# patron 3: sin registrar
+20:02:12.117	17.650	PUNTO	inicio: -0.5 A durante 30 s (modo sostenido; 's' lo corta antes)
+20:02:12.118	17.650	PC	comando a MICRO: c -0.5
+20:02:12.121	17.653	MICRO	# sostenido: I=-0.50 A, t=3600.0 s, techo de duty 15.4 %
+20:02:12.570	18.103	MICRO	# cero ACS712: 525.4 cuentas (2.566 V)
+20:02:13.204	18.737	MICRO	# FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+20:02:13.206	18.739	MICRO	# corriente medida -0.24 A. Driver apagado. Revisar y enviar r para rearmar.
+20:02:13.231	18.764	PUNTO	punto interrumpido: el Pro Micro paso a FALLA: FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+20:02:13.232	18.765	PC	comando a MICRO: s
+20:02:13.233	18.766	MICRO	# driver apagado
+20:02:21.505	27.038	PC	comando a MICRO: r
+20:02:21.506	27.039	MICRO	# rearmado
+20:02:23.825	29.358	PC	comando a MICRO: z
+20:02:24.326	29.858	MICRO	# cero ACS712: 525.0 cuentas (2.564 V)
+20:02:34.276	39.809	PUNTO	inicio: -2 A durante 30 s (modo sostenido; 's' lo corta antes)
+20:02:34.277	39.809	PC	comando a MICRO: c -2
+20:02:34.280	39.813	MICRO	# sostenido: I=-2.00 A, t=3600.0 s, techo de duty 21.7 %
+20:02:34.729	40.261	MICRO	# cero ACS712: 524.7 cuentas (2.562 V)
+20:02:35.363	40.895	MICRO	# FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+20:02:35.366	40.898	MICRO	# corriente medida -0.23 A. Driver apagado. Revisar y enviar r para rearmar.
+20:02:35.393	40.925	PUNTO	punto interrumpido: el Pro Micro paso a FALLA: FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+20:02:35.393	40.926	PC	comando a MICRO: s
+20:02:35.394	40.927	MICRO	# driver apagado
+20:02:40.603	46.136	PC	comando a MICRO: r
+20:02:40.604	46.137	MICRO	# rearmado
+20:02:44.068	49.601	PC	comando a MICRO: z
+20:02:44.569	50.101	MICRO	# cero ACS712: 524.5 cuentas (2.561 V)
+20:02:52.342	57.875	TERMICO	inicio: -2 A constantes hasta 's'. SIN corte automatico por temperatura: cortar con 's' si la carcasa llega a 70 C o la hoja marca CORTAR.
+20:02:52.343	57.875	PC	comando a MICRO: c -2
+20:02:52.346	57.878	MICRO	# sostenido: I=-2.00 A, t=3600.0 s, techo de duty 21.7 %
+20:02:52.795	58.327	MICRO	# cero ACS712: 524.4 cuentas (2.561 V)
+20:02:53.437	58.970	MICRO	# FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+20:02:53.440	58.972	MICRO	# corriente medida -0.25 A. Driver apagado. Revisar y enviar r para rearmar.
+20:02:53.457	58.989	PC	comando a MICRO: s
+20:02:53.457	58.990	TERMICO	ensayo interrumpido: el Pro Micro paso a FALLA: FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+20:02:53.458	58.990	MICRO	# driver apagado
+20:05:09.681	195.214	PC	comando a MICRO: r
+20:05:09.682	195.214	MICRO	# rearmado
+20:05:12.605	198.137	PC	comando a MICRO: z
+20:05:13.105	198.637	MICRO	# cero ACS712: 517.1 cuentas (2.525 V)
+20:05:22.810	208.343	PUNTO	inicio: -1 A durante 30 s (modo sostenido; 's' lo corta antes)
+20:05:22.811	208.344	PC	comando a MICRO: c -1
+20:05:22.814	208.347	MICRO	# sostenido: I=-1.00 A, t=3600.0 s, techo de duty 17.5 %
+20:05:23.263	208.796	MICRO	# cero ACS712: 517.0 cuentas (2.524 V)
+20:05:23.899	209.431	MICRO	# FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+20:05:23.900	209.433	MICRO	# corriente medida -0.26 A. Driver apagado. Revisar y enviar r para rearmar.
+20:05:23.923	209.456	PUNTO	punto interrumpido: el Pro Micro paso a FALLA: FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+20:05:23.924	209.456	PC	comando a MICRO: s
+20:05:23.925	209.458	MICRO	# driver apagado
+20:05:32.796	218.329	PC	comando a MICRO: r
+20:05:32.797	218.330	MICRO	# rearmado
+20:05:34.202	219.735	PC	comando a MICRO: z
+20:05:34.703	220.235	MICRO	# cero ACS712: 513.0 cuentas (2.505 V)
+20:05:39.724	225.257	PUNTO	inicio: 1 A durante 30 s (modo sostenido; 's' lo corta antes)
+20:05:39.725	225.257	PC	comando a MICRO: c 1
+20:05:39.727	225.260	MICRO	# sostenido: I=1.00 A, t=3600.0 s, techo de duty 17.5 %
+20:05:40.178	225.710	MICRO	# cero ACS712: 513.8 cuentas (2.509 V)
+20:05:46.383	231.916	MICRO	# techo de duty ajustado a 17.5 % (estable 14.86 %)
+20:06:07.396	252.929	PC	comando a MICRO: s
+20:06:07.401	252.933	MICRO	# fin de punto (parado a mano): I_obj=1.00 A, I_media=1.000 A, duty_medio=14.82 %, V_est=2.36 V, tramo estable=23.0 s
+20:06:07.402	252.935	MICRO	# pausa de 10 s antes del proximo punto
+20:06:07.417	252.950	PUNTO	punto cortado con 's' antes de tiempo
+20:06:07.418	252.951	PC	comando a MICRO: s
+20:06:07.420	252.952	MICRO	# driver apagado
+20:06:08.928	254.461	PC	comando a MICRO: s (al salir)
+20:06:08.929	254.462	MICRO	# driver apagado
+20:06:09.532	255.065	PC	fin del registro

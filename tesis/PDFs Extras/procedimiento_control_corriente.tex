@@ -1,0 +1,488 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,array,tabularx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tikz}
+% Compatibilidad con los caracteres activos de babel en español.
+\usetikzlibrary{babel,arrows.meta,positioning}
+\usepackage{listings}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!45!black,urlcolor=blue!45!black}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlist{itemsep=3pt,topsep=4pt}
+\renewcommand{\arraystretch}{1.18}
+\newcommand{\sat}{\operatorname{sat}}
+\newcommand{\pendiente}{\textit{Por medir o documentar}}
+\lstset{basicstyle=\ttfamily\small,breaklines=true,frame=single,columns=fullflexible,keepspaces=true}
+\title{Procedimiento para implementar control de corriente\newline en un yugo con force feedback}
+\author{Guía de diseño y validación experimental\\Proyecto MiYoke PD V2.3}
+\date{5 de octubre de 2026}
+\begin{document}
+\maketitle
+
+\begin{center}
+\fbox{\parbox{0.9\textwidth}{\textbf{Idea principal.} Medir el torque de roll y pitch con el mismo método: brazo de palanca y celda de carga con HX711. Identificar cuánto torque entrega cada conjunto por ampere. Convertir el torque de pitch en fuerza mediante el radio efectivo de su polea. Finalmente, usar un PI y un sensor de corriente independiente para que el motor siga la corriente solicitada.}}
+\end{center}
+
+\textbf{Alcance.} Este documento propone un procedimiento; no constituye un ensayo realizado ni una modificación del firmware. Las ganancias del PI, los límites de corriente y las capacidades de los sensores quedan sujetos a medición. Los valores de ejemplo son ficticios y no son especificaciones del motor comprado.
+
+\textbf{Resultado esperado.} Obtener, para cada eje, una conversión verificable entre comando normalizado y corriente, un rango de operación validado y un controlador que regule corriente sin imponer una posición rígida al usuario.
+
+\tableofcontents
+\newpage
+
+\section{Sistema de partida y datos pendientes}
+Se consideran motores DC con escobillas e imanes permanentes, tipo comercial 775, y puentes con BTS7960. Se debe confirmar la identificación del motor antes de asignarle parámetros de catálogo. Las relaciones de reducción fueron informadas por el usuario:
+\begin{center}
+\begin{tabularx}{\textwidth}{lXl}
+\toprule
+Elemento & Dato disponible & Estado\\
+\midrule
+Motor & Comercial 775, anunciado para 12--24 V & Sin ficha completa\\
+Reductora roll & $N_R=3{,}7$ & Dato del usuario\\
+Reductora pitch & $N_P=19{,}2$ & Dato del usuario\\
+Polea pitch & Radio primitivo $r_P$ & Por medir\\
+Alimentación real & Tensión del bus $V_{bus}$ & Por confirmar\\
+Torque admisible de reductoras & Continuo y transitorio & Por documentar\\
+Corriente continua del motor & Condiciones térmicas incluidas & Por documentar\\
+\bottomrule
+\end{tabularx}
+\end{center}
+La relación se define como $N=\omega_m/\omega_s$: velocidad del motor dividida por velocidad de salida. No se supone ninguna relación adicional entre la salida y el yugo; si existe, debe incluirse.
+
+\subsection{Qué hay actualmente en el código}
+En el código revisado, los encoders pueden proporcionar posición y velocidad continuamente al modelo de resorte, damper y fricción. La selección predeterminada es \texttt{YOKE\_USE\_SIMULATION=1}; el modo local se selecciona con valor 0. El centro del encoder se toma al encender.
+
+La salida de efectos se convierte directamente a PWM. No hay PI de corriente. En Pico, la configuración inspeccionada utiliza PWM de 490 Hz, ciclo de efectos de 2 ms y techo de PWM de 220 sobre 255. \textbf{Ese techo no equivale a un límite de amperes.} Estas observaciones corresponden al código fuente, no a una comprobación del firmware cargado en la placa.
+
+\section{Tres mediciones con trabajos diferentes}
+\begin{center}
+\begin{tabularx}{\textwidth}{lXX}
+\toprule
+Medición & Para qué se usa & Dónde interviene\\
+\midrule
+Celda de carga + HX711 & Fuerza de reacción para calcular torque & Banco de calibración estática\\
+Sensor de corriente & Corriente instantánea y estimaciones media/RMS & Lazo rápido y protección\\
+Encoders & Posición y velocidad del yugo & Modelo de efectos y supervisión\\
+\bottomrule
+\end{tabularx}
+\end{center}
+\textbf{El HX711 no mide corriente y no cierra el PI de corriente.} Permite determinar si una corriente dada produce el torque esperado. Luego puede retirarse del banco; no es obligatorio dejar una celda instalada en el yugo.
+
+El HX711 admite tasas de salida de 10 u 80 muestras por segundo según su configuración y la placa utilizada \cite{hx}. Es apropiado para mediciones estáticas o lentas. No se considera suficiente para regular el lazo eléctrico ni para caracterizar con precisión todas las vibraciones rápidas.
+
+\section{Arquitectura propuesta}
+\begin{center}
+\begin{tikzpicture}[>=Latex,node distance=7mm,
+ box/.style={draw,rounded corners,align=center,text width=3.8cm,minimum height=10mm,font=\small}]
+\node[box] (modelo) {Modelo de efectos\\Simulador + encoders};
+\node[box,below=of modelo] (map) {Torque o fuerza deseados\\Conversión a amperes};
+\node[box,below=of map] (lim) {Límite de referencia\\$I^* = \sat(I_{pedido})$};
+\node[box,below=of lim] (pi) {PI de corriente\\Error $I^*-I_{med}$};
+\node[box,below=of pi] (motor) {PWM + BTS7960\\Motor + reductora};
+\node[box,right=12mm of motor,text width=3cm] (sensor) {Sensor de corriente\\ADC rápido};
+\draw[->] (modelo)--(map);
+\draw[->] (map)--(lim);
+\draw[->] (lim)--(pi);
+\draw[->] (pi)--(motor);
+\draw[->] (motor)--(sensor);
+\draw[->] (sensor.north)|-(pi.east);
+\end{tikzpicture}
+\end{center}
+El PI actúa antes de generar el PWM. La medición de corriente vuelve desde el circuito del motor. El modelo mecánico solicita la fuerza; el PI intenta producir la corriente necesaria. El control de posición no reemplaza esta función.
+
+\section{Instrumentos y preparación del banco}
+\begin{enumerate}
+\item Celda de carga con capacidad y montaje adecuados, más HX711. Una celda de barra requiere su fijación específica; no debe utilizarse como un eslabón axial sin comprobar su diseño. Una celda tipo S especificada para tracción y compresión simplifica algunos montajes \cite{montaje}.
+\item Brazo rígido con longitud medible, unión firme al eje de salida, base y soporte de reacción.
+\item Sensor bidireccional de corriente, adquisición compatible con PWM y medición de tensión del bus.
+\item Masas de referencia, instrumento para medir longitudes y, si está disponible, instrumento de corriente de referencia.
+\item Medición de temperatura y registro temporal. La temperatura superficial no representa directamente la del devanado.
+\end{enumerate}
+
+Si el torque máximo de ensayo previsto es $\tau_{ens}$ y el brazo mide $L_b$, la fuerza esperada es:
+\begin{equation}
+F_{ens}=\frac{\tau_{ens}}{L_b}.
+\end{equation}
+La celda debe cubrir esa fuerza con margen para transitorios, conservando resolución útil. No seleccionar capacidad solamente por disponibilidad. Un brazo más largo reduce la fuerza necesaria para medir el mismo torque, pero exige rigidez y mayor espacio.
+
+\textbf{Protección del ensayo.} Fijar motor, reductora, brazo y soporte; no retenerlos con la mano. Preparar corte accesible y protección de sobrecorriente. No aplicar tensión nominal sostenida con eje bloqueado. Los pulsos retenidos deben tener duración limitada y pausas térmicas. No se usa la protección interna del BTS7960 como límite nominal del motor.
+
+\section{Calibración de la celda y del HX711}
+\subsection{Montaje, cero y escala}
+Montar la celda siguiendo su geometría de carga, con separadores cuando corresponda y sin apoyos que desvíen fuerza. Mantener cables sin tracción sobre el sensor. Comprobar compatibilidad de niveles lógicos con la Pico: no conectar una salida de 5 V directamente a un GPIO de 3,3 V.
+
+Registrar la salida digital cruda $C$. Después del asentamiento térmico, medir el cero $C_0$ sin carga adicional. Aplicar varias masas conocidas $m_j$, incluyendo el rango de uso:
+\begin{equation}
+F_j=m_jg,\qquad g\simeq9{,}80665\ \mathrm{m/s^2}.
+\end{equation}
+La masa se expresa en kg y la fuerza en N. Para trabajo de mayor precisión, considerar gravedad local e incertidumbre de las masas. Una balanza que indica ``kg'' no está mostrando newtons.
+
+Ajustar, por ejemplo, la recta:
+\begin{equation}
+F=a(C-C_0)+b.
+\end{equation}
+Aquí $a$ tiene unidades de N/cuenta. No forzar $b=0$ si los residuos muestran un desplazamiento significativo. Repetir carga y descarga al menos tres veces como protocolo inicial, registrando dispersión e histéresis. Comprobar también después de retirar las masas que el cero se recupera.
+
+\subsection{Qué anotar}
+Documentar capacidad, identificación del sensor, tasa del HX711, masas, montaje, temperatura, recta de calibración, residuos y repetibilidad. Los 24 bits del ADC no equivalen a 24 bits de exactitud útil. La tara elimina el offset inicial, no corrige cargas parásitas que cambian durante el ensayo.
+
+\section{Medición de torque: mismo procedimiento para ambos ejes}
+\subsection{Dónde se mide}
+Instalar el brazo \textbf{después de la reductora}. Para pitch, usar el mismo eje que impulsa la polea. Para roll, usar la salida que transmite torque al yugo; cualquier relación posterior debe documentarse.
+
+Desacoplar la correa de pitch durante esta identificación, o asegurar que no exista otro camino de reacción. Si parte del torque se transmite a la correa y otra parte a la celda, el brazo no mide el torque total.
+
+\begin{center}
+\begin{tikzpicture}[>=Latex]
+\draw[thick] (0,0) circle (0.18);
+\node[above] at (0,0.25) {Eje de salida};
+\draw[very thick] (0,0)--(5,0);
+\draw[<->] (0,-0.55)--node[below] {$L_b$} (5,-0.55);
+\draw[->,thick] (5,0)--(5,1.2) node[right] {$F_c$};
+\draw (4.45,1.2) rectangle (5.55,1.9);
+\node at (5,1.55) {Celda};
+\draw[thick] (5,1.9)--(5,2.4);
+\draw[thick] (4.1,2.4)--(5.9,2.4);
+\node[right] at (5.9,2.4) {Soporte fijo};
+\end{tikzpicture}
+\end{center}
+
+\subsection{Fórmula y ejemplo}
+Con fuerza perpendicular al brazo:
+\begin{equation}
+\boxed{\tau_s=F_cL_b.}
+\end{equation}
+Para un ángulo $\theta$ entre brazo y fuerza:
+\begin{equation}
+\tau_s=F_cL_b\sin\theta.
+\end{equation}
+Usar una convención de signo coherente para fuerza, corriente y torque. El brazo debe permanecer prácticamente inmóvil durante la lectura. Corregir o evitar el torque del peso propio del brazo: una tara en una posición no lo compensa si se cambia el ángulo.
+
+\textbf{Ejemplo ficticio:} $F_c=5\ \mathrm{N}$ y $L_b=0{,}20\ \mathrm{m}$ producen $\tau_s=1\ \mathrm{N\,m}$. Esta medición ya incorpora el efecto de la reductora: \textbf{no multiplicar nuevamente por 3,7 ni por 19,2}.
+
+\subsection{Secuencia de adquisición}
+\begin{enumerate}
+\item Con el motor deshabilitado, verificar cero, montaje y lectura de corriente.
+\item Aplicar un pulso pequeño de PWM con protección activa. En esta etapa se registra corriente; todavía no se exige una referencia de amperes mediante PI.
+\item Esperar el asentamiento del sensor dentro de la duración térmica permitida. Si el HX711 no alcanza a asentarse, reducir el esfuerzo o revisar el ensayo; no interpretar la lectura transitoria como torque estático.
+\item Registrar promedio de corriente con signo, corriente RMS, fuerza, posición, tensión y temperatura en la misma ventana temporal estable.
+\item Quitar el mando, comprobar el retorno del cero y dejar enfriar cuando corresponda.
+\item Repetir en varios niveles, al subir y bajar, en ambos sentidos y en distintas posiciones. Como protocolo inicial, usar al menos cinco niveles por sentido y tres repeticiones; adaptar según dispersión.
+\end{enumerate}
+Si la celda solo admite carga en un sentido, reubicar el anclaje para el sentido contrario. No atribuirle capacidad de compresión o tracción inversa sin especificación.
+
+\section{Conversión de torque a fuerza de pitch}
+Para una polea de radio efectivo $r_P$ y transmisión directa del carro por correa:
+\begin{equation}
+\boxed{F_{P,ideal}=\frac{\tau_{s,P}}{r_P}.}
+\end{equation}
+En una polea dentada, utilizar radio primitivo. Con paso $p$ en metros y $z$ dientes:
+\begin{equation}
+r_P=\frac{zp}{2\pi}.
+\end{equation}
+En una correa de dos ramales, $\tau_{s,P}/r_P=T_1-T_2$: es la diferencia de tensiones. No es la tensión total de cada ramal; la pretensión no se suma directamente a la fuerza útil.
+
+\textbf{Ejemplo ficticio:} $\tau_{s,P}=1\ \mathrm{N\,m}$ y $r_P=0{,}025\ \mathrm{m}$ dan $F_{P,ideal}=40\ \mathrm{N}$.
+
+En movimiento, una representación simplificada es:
+\begin{equation}
+F_{usuario}\approx\frac{\tau_{s,P}}{r_P}-F_{perdidas}-m_{eq}\ddot{x}.
+\end{equation}
+Los términos son algebraicos según la convención elegida. Las pérdidas de guías, poleas y correa, y la inercia equivalente, explican diferencias con la fuerza estática ideal. Si hay otra relación mecánica, modificar la conversión. Validar algunos puntos midiendo fuerza directamente en el carro permite evaluar esta aproximación.
+
+\section{Identificar la relación corriente--torque}
+\subsection{Modelo teórico y modelo experimental}
+Para un motor DC de imanes permanentes, el torque electromagnético se relaciona con la corriente por $\tau_m=K_tI$ \cite{nidec}. Una aproximación de transmisión, en régimen cuasiestático y motor impulsando la carga, es $\tau_s\approx\eta NK_tI$. La eficiencia no se supone constante en todos los sentidos y velocidades.
+
+En lugar de asignar un $K_t$ de otro motor 775, ajustar el conjunto real:
+\begin{equation}
+\tau_{s,R}\approx k_R I_R+b_R,\qquad
+\tau_{s,P}\approx k_P I_P+b_P.
+\end{equation}
+Ambas pendientes $k_R$ y $k_P$ se expresan en N\,m/A porque \textbf{ambos ensayos miden torque}. Para pitch, la pendiente equivalente de fuerza ideal es:
+\begin{equation}
+k_{F,P}=\frac{k_P}{r_P}\quad[\mathrm{N/A}].
+\end{equation}
+Si ambos motores fueran iguales, $k_P/k_R$ sería aproximadamente $(\eta_P/\eta_R)(19{,}2/3{,}7)$. Es una comprobación orientativa, no una restricción del ajuste.
+
+\subsection{Ajuste sencillo}
+Para pares $(I_j,\tau_j)$, una regresión lineal inicial es:
+\begin{equation}
+k=\frac{\sum_j(I_j-\bar I)(\tau_j-\bar\tau)}{\sum_j(I_j-\bar I)^2},
+\qquad b=\bar\tau-k\bar I.
+\end{equation}
+Graficar puntos y residuos. Si la incertidumbre de corriente es relevante, usar un ajuste que considere error en ambos ejes. Separar sentidos si hay asimetría e informar el rango de validez. Una pendiente estática no demuestra que el mismo modelo sea exacto a alta velocidad.
+
+\textbf{No compensar automáticamente el término $b$ cerca de cero.} Puede incluir rozamiento, precarga y errores de montaje. Invertir la recta completa puede introducir saltos o corriente no nula cuando se pide fuerza cero. Para la primera implementación, corregir el cero del instrumento y usar una pendiente representativa con referencia cero igual a cero. Agregar compensación de pérdidas solamente tras identificarla y validarla.
+
+\section{Convertir los efectos normalizados a amperes}
+Definir requisitos físicos: torque de referencia de roll $\tau_{R,ref}$ y fuerza de referencia de pitch $F_{P,ref}$. Deben proceder de requisitos del prototipo, mediciones o datos del mando que se desea representar. No se obtienen únicamente de la capacidad del motor.
+
+Para comandos $u_R,u_P\in[-1,1]$, y utilizando el modelo lineal sin compensación de offset:
+\begin{align}
+\tau_R^*&=u_R\tau_{R,ref}, & I_{R,pedido}&=\frac{u_R\tau_{R,ref}}{k_R},\\
+F_P^*&=u_PF_{P,ref}, & I_{P,pedido}&=\frac{u_PF_{P,ref}r_P}{k_P}.
+\end{align}
+\textbf{Interpretación:} primero se decide qué esfuerzo significa el número normalizado; luego se calcula la corriente para producirlo. Cada eje puede tener una escala diferente.
+
+En el firmware actual, comprobar también la saturación existente de la suma de efectos: si $u$ no alcanza $\pm1$ por los límites configurados, tampoco alcanzará toda la referencia física. No eliminar esos límites sin revisar su función.
+
+\subsection{Ejemplo numérico completo, solo didáctico}
+Suponer que los ensayos entregaron $k_R=0{,}20\ \mathrm{N\,m/A}$ y $k_P=0{,}80\ \mathrm{N\,m/A}$, con $r_P=0{,}025\ \mathrm{m}$. Elegir como requisitos ilustrativos $\tau_{R,ref}=0{,}30\ \mathrm{N\,m}$ y $F_{P,ref}=40\ \mathrm{N}$:
+\begin{align}
+I_{R,pedido}&=1{,}50u_R\ \mathrm{A},\\
+I_{P,pedido}&=1{,}25u_P\ \mathrm{A}.
+\end{align}
+Con $u=0{,}5$, resultan 0,75 A para roll y 0,625 A para pitch. Estos valores no son recomendaciones para el hardware real.
+
+\section{Elegir y aplicar los límites de corriente}
+\subsection{Requerimiento, regulación y protección}
+\begin{itemize}
+\item \textbf{Corriente requerida:} resulta de la fuerza deseada y de la identificación.
+\item \textbf{Límite operativo:} lo permiten motor, transmisión, electrónica y condiciones térmicas validadas.
+\item \textbf{Umbral de disparo:} protección ante exceso, con tiempos y tolerancias determinados. No se confunde con la referencia máxima normal.
+\end{itemize}
+Al principio utilizar un único límite operativo conservador, sin habilitar sobrecargas temporales no caracterizadas:
+\begin{equation}
+I^*=\sat(I_{pedido},-I_{op},+I_{op}).
+\end{equation}
+Si la corriente requerida supera ese límite, la fuerza no se alcanza. Registrar la saturación y el esfuerzo alcanzable, en lugar de ocultarla ajustando escalas.
+
+\subsection{Fundamento térmico}
+El calentamiento por cobre depende de la corriente RMS:
+\begin{equation}
+I_{RMS}=\sqrt{\frac1T\int_0^T i^2(t)\,dt},\qquad
+P_{Cu}=I_{RMS}^2R(T).
+\end{equation}
+Un modelo térmico concentrado inicial es:
+\begin{equation}
+C_\theta\frac{dT_w}{dt}=P_{perdidas}-\frac{T_w-T_a}{R_\theta}.
+\end{equation}
+$T_w$ representa temperatura del devanado; $T_a$, ambiente. En equilibrio, considerando únicamente cobre:
+\begin{equation}
+I_{cont}\approx\sqrt{\frac{T_{w,max}-T_a}{R(T_w)R_\theta}}.
+\end{equation}
+Esta ecuación explica el criterio, pero \textbf{no da un límite numérico si faltan $R_\theta$, $T_{w,max}$ y las condiciones de refrigeración}. Obtener datos del fabricante o identificar y validar un modelo térmico. La carcasa no basta para certificar la temperatura interna.
+
+Evaluar especialmente el sostenimiento de esfuerzo a velocidad casi cero. Una vibración puede tener corriente media cero y corriente RMS elevada. Como primera fase, no utilizar el ensayo de torque breve para justificar servicio continuo.
+
+\section{Medición de corriente para el controlador}
+\subsection{Sensor y calibración}
+Usar un sensor bidireccional de ancho de banda adecuado: efecto Hall o shunt con amplificador apto para medir en el puente. Si se coloca en un conductor del motor, debe soportar el modo común y los transitorios presentes. No conectar ese conductor directamente al ADC.
+
+Para un sensor con salida analógica:
+\begin{equation}
+I_{med}=\frac{V_{ADC}-V_0}{S},
+\end{equation}
+con $S$ en V/A. Calibrar cero y escala en ambos sentidos frente a una referencia adecuada. Elegir rango que cubra corriente operativa y transitorios medibles sin perder excesiva resolución. Si el ADC tiene paso $\Delta V$, su contribución ideal a resolución de corriente es $\Delta I=\Delta V/S$; añadir ruido y error de offset.
+
+Medir en el circuito del motor: la corriente de la fuente no equivale a la del devanado durante la recirculación PWM \cite{maxon}. Las salidas IS del BTS7960 dependen del estado del dispositivo y cumplen también funciones de diagnóstico; su uso exige revisar el módulo y las condiciones de la hoja de datos \cite{bts}.
+
+\subsection{Muestreo y filtrado}
+\begin{itemize}
+\item Sincronizar adquisición con PWM y evitar los instantes de conmutación.
+\item Para corriente media, usar muestras representativas del ciclo o una reconstrucción validada. Una muestra en un instante fijo no siempre representa el promedio.
+\item Conservar una vía de detección rápida para sobrecorriente; no depender de un promedio lento.
+\item Para RMS, adquirir el rizado con ancho de banda suficiente. La tasa lenta de un archivo CSV no reemplaza esa adquisición.
+\item Filtrar solo lo necesario: todo filtrado añade retardo al lazo.
+\end{itemize}
+No copiar los promedios lentos del HX711 al lazo de corriente. Los registros de fuerza se asocian con ventanas de corriente del mismo intervalo temporal.
+
+\section{Modelo eléctrico e identificación para el PI}
+\subsection{Ecuación del motor}
+\begin{equation}
+v_m=R_ai+L_a\frac{di}{dt}+K_e\omega_m+v_{esc}.
+\end{equation}
+$R_a$ es resistencia efectiva, $L_a$ inductancia, $K_e\omega_m$ fuerza contraelectromotriz y $v_{esc}$ representa la caída de escobillas. Por eso un PWM fijo no produce siempre la misma corriente.
+
+En pequeños incrementos, con eje retenido, velocidad cero y caídas aproximadamente constantes:
+\begin{equation}
+G_i(s)=\frac{\Delta I(s)}{\Delta V_m(s)}\approx\frac{1}{L_as+R_a}.
+\end{equation}
+Este modelo no incluye explícitamente retardos del ADC, filtros y PWM; deben considerarse al seleccionar la rapidez del control.
+
+\subsection{Cómo estimar $R_a$ y $L_a$}
+\begin{enumerate}
+\item Aplicar pequeños escalones eléctricos, breves y protegidos, con rotor retenido. Registrar corriente rápida y tensión efectiva en bornes, usando instrumentación apropiada para un puente H.
+\item Entre dos puntos estables cercanos, estimar $R_a\approx\Delta V_m/\Delta I$. Repetir en posiciones distintas del rotor y sentidos; escobillas y temperatura producen variaciones.
+\item Ajustar la respuesta de corriente al modelo exponencial:
+\[
+i(t)=I_f+(I_0-I_f)e^{-t/\tau_e}.
+\]
+El cambio alcanza 63,2\% en $t=\tau_e$, para un primer orden ideal. Entonces $L_a\approx R_a\tau_e$.
+\item Si la respuesta es más rápida que la adquisición, no inferir $L_a$ del CSV lento. Mejorar el instrumento o identificar un modelo equivalente con resolución suficiente.
+\end{enumerate}
+Una medición común de resistencia con dos puntas puede incluir resistencias de cables y contactos comparables a las del motor. El método incremental debe documentar esas limitaciones. El HX711 no interviene en esta identificación eléctrica.
+
+\section{Diseño sencillo del PI de corriente}
+\subsection{Controlador en unidades de tensión}
+Definir $e=I^*-I_{med}$. El PI produce una tensión solicitada:
+\begin{equation}
+v_{PI}=K_pe+K_i\int e\,dt.
+\end{equation}
+$K_p$ se expresa en V/A y $K_i$ en V/(A\,s). Para la planta eléctrica ideal anterior, una elección inicial es:
+\begin{equation}
+\boxed{K_p=L_a\omega_c,\qquad K_i=R_a\omega_c,\qquad \omega_c=2\pi f_c.}
+\end{equation}
+La relación $K_i/K_p=R_a/L_a$ cancela idealmente el polo eléctrico y deja una respuesta de primer orden con rapidez $\omega_c$. Es un punto de partida, no una garantía de estabilidad para el sistema real.
+
+\subsection{Elección de rapidez}
+Elegir inicialmente $f_c$ bastante menor que las frecuencias de PWM y muestreo, y que el ancho de banda útil del sensor. Como criterio inicial conservador puede usarse $f_c\leq\min(f_{PWM},f_s)/10$, revisando además retardos y márgenes. No es un teorema de estabilidad. El lazo interno debe ser suficientemente más rápido que las perturbaciones y la dinámica que se quiere reproducir.
+
+Los 490 Hz de PWM y 500 Hz del ciclo actual no deben reutilizarse automáticamente. El BTS7960 especifica capacidad PWM hasta 25 kHz bajo sus condiciones \cite{bts}; eso no demuestra que un módulo comercial, su refrigeración y su motor puedan operar de cualquier manera a esa frecuencia. Seleccionar PWM, muestreo y filtros conjuntamente y verificar pérdidas y rizado.
+
+\subsection{Ejemplo didáctico de ganancias}
+Si se hubieran medido $R_a=1\ \Omega$ y $L_a=1\ \mathrm{mH}$, y el hardware permitiera elegir $f_c=100\ \mathrm{Hz}$:
+\begin{equation}
+K_p=0{,}628\ \mathrm{V/A},\qquad
+K_i=628\ \mathrm{V/(A\,s)}.
+\end{equation}
+\textbf{No cargar estas ganancias en el motor real.} No corresponden a parámetros medidos ni a una validación del PWM de 490 Hz.
+
+\section{Implementación digital, saturación y salida PWM}
+\subsection{PI discreto con anti-windup}
+Con período fijo $T_s$, estado integral $z$ en voltios y tensión opcional de anticipación $v_{ff}$:
+\begin{align}
+e_k&=I_k^*-I_{med,k},\\
+v_{libre,k}&=K_pe_k+z_k+v_{ff,k},\\
+v_{ap,k}&=\sat(v_{libre,k},-v_{lim,k},+v_{lim,k}),\\
+z_{k+1}&=z_k+T_s\left[K_ie_k+K_{aw}(v_{ap,k}-v_{libre,k})\right].
+\end{align}
+$K_{aw}$ tiene unidades de $1/\mathrm{s}$; su ajuste determina la recuperación de saturación. El término de retorno evita acumular integral cuando el puente no puede aplicar la tensión pedida. Comenzar con $v_{ff}=0$; una compensación de resistencia y velocidad es opcional, después de validar el PI.
+
+Para un puente con modelo promedio bipolar equivalente:
+\begin{equation}
+d_k=\frac{v_{ap,k}}{V_{bus,k}},\qquad
+|d_k|\leq d_{max}.
+\end{equation}
+El signo selecciona polaridad y el módulo, ciclo útil. Esta equivalencia debe verificarse con la estrategia real de conmutación y recirculación, especialmente cerca de cero y durante frenado.
+
+Si se conserva la escala actual de PWM, el límite efectivo sería como máximo $d_{max}=220/255$, salvo un límite inferior adicional. El PI debe conocer la saturación real: no saturar primero en el PI y después en una capa oculta diferente. Considerar también resolución y caídas del puente.
+
+\subsection{Estados y sentido de la acción}
+\textbf{Corriente de referencia cero no significa necesariamente PWM cero.} Con el motor girando, el PI puede necesitar tensión para mantener corriente cercana a cero. Además, poner ambas entradas PWM en cero con el puente habilitado puede producir frenado eléctrico, según el circuito; no equivale automáticamente a desconectar el motor.
+
+Separar el estado \textit{habilitado con referencia cero} del estado \textit{deshabilitado por parada o falla}. En una falla, usar la secuencia de inhibición del puente comprobada en el hardware y reiniciar la integral. La salida actual \texttt{stop()} solo pone PWM a cero; hay que revisar la inhibición antes de usarla como desconexión.
+
+Durante frenado, el motor puede devolver energía al bus. Verificar la respuesta de la alimentación y la gestión de sobretensión antes de validar inversiones rápidas. No imponer al signo de la salida del PI el signo de la referencia: puede requerirse tensión opuesta para reducir rápidamente la corriente.
+
+\subsection{Pseudocódigo conceptual}
+\begin{lstlisting}
+Cada Ts, en una tarea de tiempo determinista:
+  adquirir corriente y tension del bus
+  si falla, sensor invalido o sistema deshabilitado:
+      inhibir puente segun circuito validado
+      integral = 0
+      salir
+
+  Iref = limitar(Ipedido, -Ioperativa, +Ioperativa)
+  error = Iref - Imedida
+  vLibre = Kp * error + integral
+  vAplicada = limitar(vLibre, -vLimite, +vLimite)
+  integral += Ts * (Ki * error + Kaw * (vAplicada-vLibre))
+  duty = vAplicada / Vbus
+  aplicarDutyFirmado(duty)
+
+En una tarea mas lenta:
+  calcular efectos con simulador y encoders
+  convertir torque/fuerza a Ipedido
+  actualizar supervision termica y registros
+\end{lstlisting}
+Es pseudocódigo de arquitectura, no firmware listo para conectar. Añadir validación de tensión antes de dividir, supervisión temporal, protección rápida independiente, adquisición sincronizada y manejo de estados. No bloquear el lazo esperando el HX711, USB o LCD.
+
+\section{Puesta en marcha y validación}
+\begin{enumerate}
+\item \textbf{Validar signos sin PI.} Con pulsos pequeños comprobar que PWM positivo genera corriente positiva y torque positivo según la convención. Verificar aparte el signo del encoder. Un error de signo puede convertir la realimentación en positiva.
+\item \textbf{Validar sensores.} Cero, escala, ruido, recorte del ADC, rizado y pérdida de muestras. Confirmar corte por exceso antes de aumentar energía.
+\item \textbf{Cerrar el lazo con referencias pequeñas.} Usar las ganancias calculadas de parámetros medidos y una banda conservadora. Probar escalones breves en un sentido y luego en el otro.
+\item \textbf{Comprobar transitorios.} Registrar referencia, corriente, PWM y bus. Si aparece oscilación, revisar signo, retardo y muestreo, y reducir banda; no aumentar ganancias a ciegas.
+\item \textbf{Probar saturación y retorno a cero.} Verificar que la integral se recupera, que no hay impulsos al habilitar y que desconectar telemetría lleva al estado definido.
+\item \textbf{Repetir medición de torque con HX711.} Con referencias de corriente conocidas, contrastar torque real y calculado. Esto valida toda la cadena estática.
+\item \textbf{Probar movimiento.} Con el mecanismo libre, medir seguimiento de corriente a distintas velocidades y signos, incluida corriente de frenado.
+\item \textbf{Activar efectos por etapas.} Resorte suave, luego damper/fricción, luego perturbaciones. Ajustar la mecánica virtual; el PI no garantiza por sí solo un retorno sin oscilación.
+\end{enumerate}
+
+Definir antes del ensayo los criterios de aceptación según los requisitos, sin presentar porcentajes arbitrarios como norma. Medir error estacionario $\bar I-I^*$, tiempo de establecimiento, sobrepaso, rizado, temperatura y error de torque/fuerza. Para referencias distintas de cero puede informarse error relativo; cerca de cero utilizar error absoluto en A.
+
+\section{Registro, incertidumbre y resultados de tesis}
+\subsection{Formato de registro recomendado}
+\begin{lstlisting}
+ensayo,eje,tiempo_s,modo,duty,Vbus_V,I_media_A,I_rms_A,
+HX_crudo,F_celda_N,L_brazo_m,angulo_rad,torque_Nm,
+posicion,temperatura_C,duracion_pulso_s,saturado
+\end{lstlisting}
+Conservar además capturas rápidas de corriente para identificar la dinámica eléctrica. Un CSV lento puede contener sus estadísticas, pero no sustituye la señal original.
+
+\subsection{Propagación básica de incertidumbre}
+Para torque $\tau=FL_b\sin\theta$, suponiendo variables independientes:
+\begin{equation}
+u_\tau^2=(L_b\sin\theta\,u_F)^2+
+(F\sin\theta\,u_{L_b})^2+(FL_b\cos\theta\,u_\theta)^2.
+\end{equation}
+Para pitch, con radio independiente:
+\begin{equation}
+u_{F_P}^2=\left(\frac{u_{\tau_P}}{r_P}\right)^2+
+\left(\frac{\tau_P}{r_P^2}u_{r_P}\right)^2.
+\end{equation}
+Estas expresiones no incluyen por sí solas errores de modelo, histéresis o rozamiento: informarlos aparte o incorporarlos justificadamente. Distinguir incertidumbre estándar de expandida e indicar el factor de cobertura si se usa. Las masas domésticas sin verificación permiten una calibración aproximada; para trazabilidad metrológica utilizar referencias verificadas.
+
+\subsection{Resultados mínimos que debe entregar el trabajo}
+\begin{enumerate}
+\item Planos o fotografías del banco, longitudes, geometría de polea y procedimiento de calibración.
+\item Curvas torque--corriente de ambos ejes, repeticiones, residuos e incertidumbre.
+\item Conversión de pitch a fuerza ideal y comprobaciones directas del mecanismo si se realizan.
+\item Parámetros eléctricos identificados y justificación de ganancias, PWM, muestreo y filtros.
+\item Rango de corriente operativo y evidencia térmica, con límites de lo que se pudo verificar.
+\item Respuesta del PI, saturación, inversiones y comportamiento de parada.
+\item Distinción entre calibración estática, validación dinámica y realismo respecto de un avión.
+\end{enumerate}
+
+\section{Hoja de parámetros para completar}
+\begin{center}
+\begin{tabularx}{\textwidth}{Xll}
+\toprule
+Parámetro & Roll & Pitch\\
+\midrule
+Relación de reducción & 3,7 & 19,2\\
+Tensión real del bus (V) & \rule{2cm}{0.3pt} & \rule{2cm}{0.3pt}\\
+Longitud del brazo (m) & \rule{2cm}{0.3pt} & \rule{2cm}{0.3pt}\\
+Radio primitivo de polea (m) & No aplica & \rule{2cm}{0.3pt}\\
+Pendiente torque/corriente (N\,m/A) & \rule{2cm}{0.3pt} & \rule{2cm}{0.3pt}\\
+Requisito máximo de salida & \rule{1.4cm}{0.3pt} N\,m & \rule{1.4cm}{0.3pt} N\\
+Corriente operativa validada (A) & \rule{2cm}{0.3pt} & \rule{2cm}{0.3pt}\\
+Umbral y retardo de protección & \rule{2cm}{0.3pt} & \rule{2cm}{0.3pt}\\
+$R_a$ ($\Omega$) / $L_a$ (H) & \rule{2cm}{0.3pt} & \rule{2cm}{0.3pt}\\
+$f_{PWM}$ / $f_s$ / $f_c$ (Hz) & \rule{2cm}{0.3pt} & \rule{2cm}{0.3pt}\\
+$K_p$ / $K_i$ / $K_{aw}$ & \rule{2cm}{0.3pt} & \rule{2cm}{0.3pt}\\
+Rango térmico validado & \rule{2cm}{0.3pt} & \rule{2cm}{0.3pt}\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Orden práctico de trabajo}
+\begin{enumerate}
+\item Completar geometría y datos disponibles del hardware.
+\item Montar y calibrar celda + HX711 y sensor de corriente.
+\item Medir torque de ambos ejes con brazo, bajo protección y en pulsos limitados.
+\item Identificar $k_R$, $k_P$ y calcular fuerza ideal de pitch con $r_P$.
+\item Definir requisitos físicos y rango operativo fundamentado.
+\item Identificar la respuesta eléctrica, elegir frecuencias y calcular PI inicial.
+\item Validar la regulación de corriente y luego conectarla al modelo de efectos.
+\end{enumerate}
+La fuerza normalizada adquiere significado físico mediante la calibración. El límite de corriente se fundamenta por separado. Los encoders siguen definiendo la respuesta mecánica del yugo, mientras el PI hace que el motor siga la corriente pedida.
+
+\begin{thebibliography}{9}
+\bibitem{nidec} Nidec Corporation. \textit{Rotating Speed of DC Motor and Counter-electromotive Force}. Fundamentos de corriente, torque y velocidad. \href{https://www.nidec.com/en/technology/motor/basic/00013/}{Documento del fabricante}.
+\bibitem{maxon} maxon Support. \textit{Motor current measurement in case of a PWM power amplifier}. Medición de corriente del motor y diferencia respecto de la alimentación. \href{https://support.maxongroup.com/hc/en-us/articles/360012273994-Motor-current-measurement-in-case-of-a-PWM-power-amplifier}{Nota técnica}.
+\bibitem{bts} Infineon Technologies. \textit{BTS7960 Datasheet}, revisión 1.1, diciembre de 2004. Tabla de estados, diagnóstico, sensado y conmutación. \href{https://www.infineon.com/assets/row/public/documents/10/57/infineon-bts7960-ds-en.pdf}{Hoja de datos}.
+\bibitem{montaje} SparkFun. \textit{Load Cell Amplifier HX711 Breakout Hookup Guide}. Montaje y conexión de celdas de carga. \href{https://learn.sparkfun.com/tutorials/load-cell-amplifier-hx711-breakout-hookup-guide/all}{Guía de montaje}.
+\bibitem{hx} SparkFun. \textit{Load Cell Amplifier HX711}. Tasas de salida y características del módulo. \href{https://www.sparkfun.com/sparkfun-load-cell-amplifier-hx711.html}{Página técnica}.
+\end{thebibliography}
+\textit{Los enlaces respaldan principios y características generales. No constituyen una ficha técnica del motor 775 ni de las reductoras compradas. Las ecuaciones de diseño y el procedimiento propuesto deben verificarse con los ensayos descritos.}
+\end{document}

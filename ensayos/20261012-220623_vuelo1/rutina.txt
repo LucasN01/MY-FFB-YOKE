@@ -1,0 +1,19 @@
+﻿Primera sesion: fuente de potencia de motores apagada. Con motores, solo despues de instalar el pull-down de EN.
+Preparacion: INICIAR SIMULADOR V3.cmd, C182RG o habitual, cabecera, motor en marcha, frenos, sin turbulencia, potes centrados.
+Seguir el orden y los tiempos. Las fases se detectan automaticamente; no hace falta volver a la consola.
+| Fase | Duracion | Que hacer | Que deberia verse |
+| --- | --- | --- | --- |
+| F1 Pausa | 15 s | Pausar (P). | armed=0, cmd=0, pwm=0 (B6). |
+| F2 Menu | 30 s | En pausa, recorrer 2-3 pantallas con pulsadores; salir sin guardar. | Menu activo, cmd=0 (B2); ganancias vigentes. |
+| F3 Parado | 20 s | Quitar pausa, quieto con frenos. | gs<=0,5: env=0, suelo=0 (B5). |
+| F4 Potes parado | 30 s | Roll a tope izq/der y pitch adelante/atras despacio, dos veces. | Centrado opuesto a posicion (C); q~0, rigidez de reposo. |
+| F5 Rodaje | 60 s | Soltar frenos; rodar 10 a 30 kt en recta. | env crece, suelo distinto de cero; peak por suelo roll<=40, pitch<=4. |
+| F6 Despegue | ~60 s | Potencia maxima, rotar a ~60 kt, subir a 1000 ft. | on_ground=0: suelo=0 inmediato (B4). |
+| F7 Crucero | 60 s | Nivelado a 100-120 kt, potes quietos. | pressure~(ias/ref)^2; buffet=0, gust=0 sin turbulencia. |
+| F8 Potes en vuelo | 30 s | Repetir F4. | Rigidez de centrado mayor que F4. |
+| F9 Tren y flaps | 60 s | Bajar por etapas dentro de limites y luego subir. | buffet_gear>0 con tren extendido y velocidad; cero retraido. |
+| F10 Perdida | 60 s | Potencia baja, levantar nariz hasta bocina/perdida, recuperar. | buffet_stall crece cerca de stall_alpha. |
+| F11 Pausa en vuelo | 10 s | Pausar (P) y quitar. | cmd=0 en <=150 ms (B6), luego retoma. |
+| F12 Slew | 10 s | Activar Y durante 5 s y desactivar. | Modelos reiniciados y cmd=0 durante slew. |
+| F13 Turbulencia (opcional) | 60 s | Clima con turbulencia moderada. | gust distinto de cero; lanzador ya incluye --gusts. |
+| F14 Aterrizaje | libre | Aterrizar y rodar hasta parar. | Suelo vuelve al tocar, cero al detenerse. |

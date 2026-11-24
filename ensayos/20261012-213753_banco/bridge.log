@@ -1,0 +1,4 @@
+Yoke SimConnect SC8: transporte de telemetria; todos los modelos en Pico 2 | SOLO MONITOR
+Ajustes enviados: referencia 120.0 kt, gustGain 1.00, longitudinal 0.25, gusts=0 buffets=1
+REPLAY D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\ensayos\20261012-213753_banco\entrada.csv: 4478 filas enviadas, 225.2 s | SOLO MONITOR
+Fin: muestras=4478 error=0 reconexiones=0 lineas_pico=2297 lineas_pico_malas=0

@@ -1,0 +1,4 @@
+﻿.elf: D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\build-pico2-prueba-falla\MiYoke_PD.ino.elf (fecha 2026-10-13 18:47:54)
+El .elf debe ser de la misma compilacion que el UF2 cargado
+PC 0x10007d06 -> loop (D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD/MiYoke_PD.ino:568)
+LR 0x100060bc -> YokeHealth::StageTimer::enter(unsigned char, unsigned long) (D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD/LoopSupervisor.h:17) (LR = linea siguiente a la llamada)

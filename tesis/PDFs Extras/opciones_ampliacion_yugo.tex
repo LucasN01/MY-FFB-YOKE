@@ -1,0 +1,449 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,tabularx,array}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Propuestas de ampliación del yugo FFB}
+\fancyhead[R]{Proyecto Final}
+\fancyfoot[C]{\thepage}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5em}
+\setlist[itemize]{itemsep=2pt,topsep=4pt}
+\setlist[enumerate]{itemsep=2pt,topsep=4pt}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\title{Propuestas de ampliación y validación experimental\\
+de un yugo con realimentación de fuerza}
+\author{Proyecto Final de Ingeniería Electrónica\\
+Universidad Tecnológica Nacional --- Facultad Regional Córdoba}
+\date{Plan de estudios 2023}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Se presentan cinco líneas de trabajo complementarias para un yugo de dos ejes
+con realimentación de fuerza: medición del esfuerzo aplicado al usuario,
+instrumentación de corriente, estimación de velocidad, caracterización
+electromecánica y supervisión de fallas con integración electrónica.
+Se conserva la numeración de las opciones originalmente propuestas: 1, 2, 3,
+4 y 7. Cada opción identifica su relación con la carrera, el desarrollo
+previsto y los resultados experimentales necesarios para justificarla.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section*{Alcance y criterios generales}
+\addcontentsline{toc}{section}{Alcance y criterios generales}
+
+El sistema considerado reproduce efectos de fuerza constante y sinusoidal en
+los ejes de alabeo (\textit{roll}) y cabeceo (\textit{pitch}). La posición puede
+obtenerse mediante potenciómetros o encoders incrementales A/B. Se contempla
+la incorporación de un lazo PI de corriente y una contribución de
+amortiguación calculada a partir de la velocidad medida.
+
+Las propuestas se vinculan con asignaturas incluidas en el Plan 2023 de
+Ingeniería Electrónica de la UTN FRC~\cite{plan2023}. Esta vinculación es una
+propuesta de integración académica; el alcance definitivo deberá acordarse
+con la dirección del Proyecto Final.
+
+Este documento describe actividades por desarrollar y validar. No acredita
+que el control de corriente, las protecciones o los ensayos aquí planteados
+se encuentren implementados. Las magnitudes de fuerza, corriente, velocidad
+y temperatura admisibles deberán definirse a partir del hardware definitivo.
+Los criterios de aceptación se establecerán antes de realizar los ensayos,
+evitando seleccionarlos a posteriori para ajustarlos a los resultados.
+
+\section{Medición de la fuerza real aplicada al piloto}
+\label{sec:fuerza}
+
+\subsection{Objetivo y vinculación curricular}
+Determinar la relación entre el comando solicitado, la corriente del motor
+y el esfuerzo efectivamente aplicado al yugo. Esta actividad permite integrar
+Medidas Electrónicas I y II, Electrónica Aplicada, Física I y Probabilidad y
+Estadística.
+
+El PWM representa una acción de mando eléctrica y no constituye por sí mismo
+una medición de fuerza. Incluso con corriente regulada, la transmisión,
+fricción y geometría pueden introducir diferencias entre el torque del motor
+y el esfuerzo que percibe el usuario.
+
+\subsection{Instrumentación propuesta}
+Se propone utilizar una celda de carga con acondicionamiento y adquisición
+adecuados. Puede integrarse a un banco de ensayo desmontable, sin incorporarse
+obligatoriamente al lazo de control final.
+
+En \textit{pitch}, la celda deberá medir la componente de fuerza longitudinal
+en la dirección de desplazamiento. En \textit{roll}, se aplicará una fuerza
+a una distancia conocida del eje. El torque se calculará mediante
+\begin{equation}
+    \tau_r = F\,\ell\,\sin\alpha,
+\end{equation}
+donde $F$ es la fuerza medida, $\ell$ es la distancia al eje y $\alpha$ el
+ángulo entre el brazo y la fuerza. Si el montaje garantiza perpendicularidad,
+la expresión se reduce a $\tau_r=F\ell$.
+
+La calibración inicial podrá representarse mediante
+\begin{equation}
+    \widehat F = a\,n+b,
+\end{equation}
+donde $n$ es la lectura digital y $a$, $b$ se obtienen con cargas de referencia.
+Se verificará experimentalmente si el modelo lineal resulta suficiente.
+
+\subsection{Metodología experimental}
+\begin{enumerate}
+    \item Calibrar cero y sensibilidad del sistema de medición, verificando
+    ambos sentidos de carga y distintos puntos del rango.
+    \item Aplicar referencias escalonadas de corriente dentro del rango
+    autorizado para el banco. Registrar corriente, fuerza, posición y tiempo.
+    \item Repetir el ensayo en diferentes posiciones del recorrido y con
+    secuencias ascendentes y descendentes para evaluar histéresis.
+    \item Realizar repeticiones en condiciones comparables de temperatura
+    y montaje para estimar dispersión.
+    \item Incorporar ensayos dinámicos solamente si la celda, el
+    acondicionamiento y la adquisición poseen ancho de banda suficiente.
+\end{enumerate}
+
+Para una referencia física de fuerza $F^*[k]$ y $N$ muestras, podrá utilizarse
+\begin{equation}
+    \operatorname{RMSE}_F =
+    \sqrt{\frac{1}{N}\sum_{k=1}^{N}
+    \left(\widehat F[k]-F^*[k]\right)^2}.
+\end{equation}
+La referencia deberá expresarse en newtons mediante una conversión
+documentada; los valores abstractos del protocolo FFB no equivalen
+directamente a una fuerza física.
+
+Para el caso perpendicular y despreciando correlaciones, una aproximación
+de la incertidumbre estándar combinada del torque es
+\begin{equation}
+    u_c(\tau_r)=\sqrt{\ell^2u^2(F)+F^2u^2(\ell)}.
+\end{equation}
+Si la alineación no es suficientemente precisa, se incluirá también la
+contribución angular y cualquier correlación relevante.
+
+\subsection{Resultados esperados}
+Se obtendrán curvas corriente--fuerza y corriente--torque, estimaciones de
+histéresis y repetibilidad, y un presupuesto de incertidumbre. El resultado
+permitirá evaluar con unidades físicas el desempeño del yugo y contrastar
+el modelo desarrollado en la opción~\ref{sec:modelo}.
+
+\section{Diseño y calibración de la medición de corriente}
+
+\subsection{Objetivo y vinculación curricular}
+Diseñar una cadena de medición que permita realimentar el PI de corriente
+con resolución, ancho de banda y error conocidos. Se relaciona con
+Electrónica Aplicada I y II, Teoría de los Circuitos, Medidas Electrónicas
+y Electrónica de Potencia. La medición de corriente es un elemento central
+de las aplicaciones de control de torque de motores DC~\cite{tiBDC}.
+
+\subsection{Alternativas de implementación}
+\begin{tabularx}{\textwidth}{@{}p{0.25\textwidth}YY@{}}
+\toprule
+Alternativa & Aspectos a evaluar & Limitaciones a verificar \\
+\midrule
+Shunt y amplificador & Sensibilidad, ganancia, costo y ancho de banda &
+Disipación, tensión de modo común y ubicación del shunt \\
+Sensor Hall & Medición bidireccional y aislamiento, si el modelo lo ofrece &
+Offset, deriva térmica, ruido y sensibilidad \\
+Salida de medición del driver & Integración y cantidad de componentes &
+Escala, estados de validez, ancho de banda y error especificado \\
+\bottomrule
+\end{tabularx}
+
+Para un shunt $R_s$ y un amplificador de ganancia $G$, el modelo ideal es
+\begin{equation}
+    V_o=V_0+G R_s i,
+    \qquad
+    \widehat i=\frac{V_o-V_0}{G R_s},
+\end{equation}
+donde $V_0$ es el nivel de salida correspondiente a corriente nula.
+La disipación del shunt se estima mediante
+\begin{equation}
+    P_s=I_{\mathrm{rms}}^2R_s.
+\end{equation}
+Para un ADC ideal de $b$ bits y referencia $V_{\mathrm{ref}}$, el incremento
+aproximado de corriente por cuenta es
+\begin{equation}
+    \Delta i \approx \frac{V_{\mathrm{ref}}}{2^bG R_s}.
+\end{equation}
+Esta resolución nominal no contempla ruido, no linealidad ni incertidumbre
+de la referencia.
+
+\subsection{Desarrollo propuesto}
+\begin{enumerate}
+    \item Definir corriente máxima, polaridad, resolución requerida y
+    ancho de banda compatible con el control.
+    \item Seleccionar el sensor y dimensionar ganancia, offset y margen
+    frente a saturación del amplificador y del ADC.
+    \item Diseñar el filtro analógico y analizar su atenuación y retardo.
+    Para un RC de primer orden, $f_c=1/(2\pi RC)$; su suficiencia deberá
+    evaluarse frente al espectro de ruido y a la frecuencia de muestreo.
+    \item Calibrar la cadena completa con una referencia adecuada en
+    varios puntos y, cuando corresponda, en ambos sentidos de corriente.
+    \item Observar la señal con PWM activo y verificar qué se mide durante
+    conducción, recirculación y frenado. La corriente tomada de la fuente
+    no representa necesariamente la corriente del devanado en todo instante.
+    \item Evaluar adquisición sincronizada con PWM cuando la topología y
+    el microcontrolador lo permitan. El instante de muestreo debe justificarse
+    según los intervalos válidos de medición~\cite{microchipSync}.
+\end{enumerate}
+
+\subsection{Resultados esperados}
+El desarrollo entregará esquemático, cálculos, curva de calibración,
+resolución efectiva, error y deriva observados. Deberá quedar documentada
+la función de transferencia de la medición y su influencia sobre el PI.
+
+\section{Estimación de velocidad y procesamiento de señales}
+
+\subsection{Objetivo y vinculación curricular}
+Obtener una estimación de velocidad adecuada para la amortiguación local,
+reduciendo ruido sin introducir un retardo excesivo. Se aplican Análisis de
+Señales y Sistemas, Teoría de los Circuitos II y Técnicas Digitales.
+
+\subsection{Fundamentos}
+Tanto los potenciómetros como los encoders permiten estimar el sentido de
+movimiento a partir de la variación temporal de posición. Una aproximación
+por diferencias finitas es
+\begin{equation}
+    \widehat v[k]=\frac{x[k]-x[k-1]}{t[k]-t[k-1]}.
+\end{equation}
+La diferenciación hace más visible el ruido y la cuantización de posición.
+Por ello, se propone comparar esta estimación con una versión filtrada y
+con una estimación realizada sobre una ventana de muestras.
+
+Un filtro de primer orden puede implementarse mediante
+\begin{align}
+    v_f[k]&=\alpha_k v_f[k-1]+(1-\alpha_k)\widehat v[k],\\
+    \alpha_k&=\frac{\tau_f}{\tau_f+\Delta t_k},
+\end{align}
+donde $\tau_f$ es la constante de tiempo y $\Delta t_k=t[k]-t[k-1]$.
+Esta forma corresponde a una discretización por Euler hacia atrás del
+filtro continuo $H(s)=1/(1+\tau_f s)$. Permite explicitar el compromiso entre
+atenuación de ruido y retardo.
+
+Para una coordenada lineal, la fuerza de amortiguación ideal es
+\begin{equation}
+    F_d=-B_v v_f,
+    \qquad [B_v]=\mathrm{N\,s/m}.
+\end{equation}
+Para una coordenada angular, se utilizará
+\begin{equation}
+    \tau_d=-B_\omega\omega_f,
+    \qquad [B_\omega]=\mathrm{N\,m\,s/rad}.
+\end{equation}
+Si el firmware utiliza posición y comando normalizados, sus coeficientes
+de amortiguación no tienen directamente estas unidades físicas. La
+conversión deberá documentarse antes de comparar ambos modelos.
+
+\subsection{Metodología experimental}
+\begin{itemize}
+    \item Registrar señales en reposo y durante movimientos lentos y rápidos,
+    manteniendo la misma calibración física para cada comparación.
+    \item Comparar potenciómetros y encoders considerando resolución,
+    repetibilidad, ruido y respuesta ante cambios de sentido.
+    \item Medir desviación estándar de velocidad en reposo, retardo y
+    respuesta dinámica de cada estimador. Para cuantificar error de
+    velocidad se necesitará una referencia independiente o una trayectoria
+    de banco conocida; no basta con comparar dos estimadores entre sí.
+    \item Registrar intervalos de adquisición reales y evaluar su variación.
+    La frecuencia nominal del lazo no garantiza muestreo uniforme.
+    \item Comparar el retorno del yugo con y sin amortiguación, utilizando
+    condiciones iniciales y referencias de fuerza reproducibles.
+\end{itemize}
+
+\subsection{Resultados esperados}
+Se justificarán la frecuencia de adquisición, el estimador de velocidad y
+los parámetros del filtro mediante curvas temporales y métricas. También
+se cuantificará el efecto de la amortiguación sobre el sobrepaso y las
+oscilaciones, sin asumir que una mejora subjetiva demuestra estabilidad.
+
+\section{Caracterización del motor y de la transmisión}
+\label{sec:modelo}
+
+\subsection{Objetivo y vinculación curricular}
+Construir y validar un modelo electromecánico para explicar la conversión
+entre corriente, torque y fuerza en el yugo. Esta opción integra Física I
+y II, Máquinas e Instalaciones Eléctricas, Análisis de Señales y Sistemas
+y Sistemas de Control.
+
+\subsection{Modelo inicial}
+Suponiendo un motor DC de imanes permanentes con escobillas, se plantea
+\begin{align}
+    v_a &= R_a i_a + L_a\frac{di_a}{dt}+K_e\omega_m,\\
+    \tau_m &= K_t i_a,\\
+    J_{\mathrm{eq}}\frac{d\omega_m}{dt}
+        &= \tau_m-B_{\mathrm{eq}}\omega_m-\tau_f-\tau_{L,m}.
+\end{align}
+Aquí $v_a$ es la tensión en bornes del motor, $R_a$ y $L_a$ son los parámetros
+eléctricos, $K_e$ y $K_t$ sus constantes electromecánicas,
+$J_{\mathrm{eq}}$ y $B_{\mathrm{eq}}$ representan parámetros referidos al eje
+motor, $\tau_f$ agrupa fricción no viscosa y $\tau_{L,m}$ es el torque de carga
+referido a ese eje. La validez del modelo se comprobará para el motor utilizado.
+
+Definiendo una reducción $n=\omega_m/\omega_p$, para operación motriz
+cuasiestática puede aproximarse
+\begin{equation}
+    \tau_p \approx \eta n\tau_m,
+    \qquad
+    F_p\approx\frac{\tau_p}{r_p},
+\end{equation}
+donde $\eta$ es la eficiencia y $r_p$ el radio efectivo de la polea de pitch.
+La operación inversa, cuando el usuario mueve el motor, puede requerir
+otro modelo de pérdidas. No se supondrá la misma eficiencia en todos los
+sentidos, velocidades y cargas sin contrastación experimental.
+
+Para una polea dentada con $z$ dientes y paso $p$, el avance ideal de correa
+por vuelta es $zp$. Si un encoder de $P$ pulsos por vuelta se encuentra
+solidario a dicha polea y se decodifica en cuadratura $\times4$,
+\begin{equation}
+    x=\frac{q}{4P}\,zp,
+\end{equation}
+donde $q$ es el desplazamiento acumulado en cuentas. Si existe otra relación
+entre encoder y polea, deberá incorporarse explícitamente.
+
+\subsection{Procedimiento de identificación}
+\begin{enumerate}
+    \item Registrar datos de placa, geometría, relación de transmisión y
+    condiciones de los instrumentos utilizados.
+    \item Estimar resistencia e inductancia mediante ensayos eléctricos
+    limitados en corriente y duración, registrando la temperatura.
+    \item Estimar las constantes electromecánicas a partir de mediciones
+    de velocidad, tensión, corriente y esfuerzo, según la instrumentación
+    disponible y las condiciones del ensayo.
+    \item Caracterizar fricción, holgura y elasticidad mediante movimientos
+    en ambos sentidos y diferentes niveles de carga.
+    \item Ajustar los parámetros y validar el modelo con registros distintos
+    de los empleados para identificarlo.
+\end{enumerate}
+
+\subsection{Resultados esperados}
+Se obtendrán parámetros con unidades e incertidumbres o intervalos estimados,
+curvas medidas y simuladas, y un dominio de validez del modelo. Estos
+resultados permitirán fundamentar la elección de motor, transmisión y
+geometría, y explicar las diferencias entre roll y pitch.
+
+\setcounter{section}{6}
+\section{Supervisión de fallas e integración electrónica}
+
+\subsection{Objetivo y vinculación curricular}
+Definir el comportamiento del sistema ante condiciones anómalas y desarrollar
+una interconexión electrónica reproducible. Se vincula con Seguridad,
+Higiene y Medio Ambiente, Técnicas Digitales y Tecnología Electrónica.
+
+La supervisión por software se complementará con las medidas de hardware
+que correspondan al riesgo del equipo. Un microcontrolador bloqueado no
+puede garantizar la ejecución de su propia rutina de parada.
+
+\subsection{Máquina de estados propuesta}
+\begin{tabularx}{\textwidth}{@{}p{0.23\textwidth}Y@{}}
+\toprule
+Estado & Comportamiento previsto \\
+\midrule
+Inicialización & Salidas de potencia deshabilitadas y comprobación inicial
+de sensores y configuración. \\
+Calibración & Obtención de referencias de posición y de cero de corriente;
+las maniobras deberán definirse para el montaje. \\
+Preparado & Mediciones disponibles y potencia aún no habilitada. \\
+Habilitado & Ejecución del control con límites y supervisión activos. \\
+Falla & Aplicación de la respuesta definida y registro de la causa.
+La reactivación requiere eliminar la causa y un rearme explícito. \\
+\bottomrule
+\end{tabularx}
+
+\subsection{Condiciones a supervisar}
+\begin{itemize}
+    \item Sobrecorriente: umbral instantáneo y, si se justifica, criterio
+    temporal asociado al calentamiento.
+    \item Sobretemperatura del driver o motor, con histéresis para evitar
+    conmutaciones repetidas alrededor del umbral.
+    \item Valores de posición o corriente fuera de rango y comprobaciones
+    de plausibilidad. Un encoder inmóvil no demuestra por sí solo una falla,
+    y una entrada analógica desconectada puede entregar valores aparentemente
+    válidos; la cobertura deberá evaluarse con el circuito real.
+    \item Recorrido excesivo y actuación de finales de carrera, si se incorporan.
+    \item Parada de emergencia, reinicio inesperado y vigilancia de ejecución
+    mediante \textit{watchdog}.
+    \item Pérdida de comunicación, diferenciándola de la ausencia legítima
+    de actualizaciones de un efecto persistente.
+\end{itemize}
+
+En particular, un efecto CONSTANT puede permanecer activo sin paquetes
+continuos. Por lo tanto, un temporizador reiniciado solamente por recepción
+de efectos no constituye una detección suficiente de desconexión.
+
+La respuesta de falla debe especificar si corresponde deshabilitar la etapa,
+reducir controladamente la referencia o aplicar otra acción. PWM cero,
+frenado y desconexión no son estados eléctricamente equivalentes para todos
+los drivers; deberá verificarse la tabla de funcionamiento del dispositivo
+y la energía almacenada en el sistema.
+
+\subsection{Placa de adquisición e interconexión}
+Se propone una placa que integre conexiones de sensores, acondicionamiento,
+distribución de alimentación y señales de habilitación. El diseño deberá
+documentar retornos de corriente, desacoplo, protección de entradas,
+conectores, puntos de prueba y separación funcional entre señales sensibles
+y trayectos de potencia. La estrategia de masas se justificará según los
+caminos reales de corriente y no mediante una separación arbitraria.
+
+\subsection{Verificación y entregables}
+Se elaborará una matriz que relacione falla, mecanismo de detección, respuesta,
+tiempo máximo admisible y condición de rearme. Se ensayarán fallas simuladas
+en condiciones controladas, inicialmente con la potencia deshabilitada o
+limitada. Se registrarán tiempos de respuesta, falsas detecciones y fallas
+que el sistema no logra detectar.
+
+Los entregables incluirán máquina de estados, matriz de fallas, esquemáticos,
+diseño de PCB cuando corresponda y resultados de ensayo. Estas actividades
+no equivalen a una certificación de seguridad del producto.
+
+\section*{Secuencia sugerida de desarrollo}
+\addcontentsline{toc}{section}{Secuencia sugerida de desarrollo}
+
+Antes de los ensayos con potencia, se definirán las medidas básicas de
+limitación y parada de la opción 7. Luego se recomienda calibrar la medición
+de corriente (opción 2) y el banco de fuerza (opción 1), caracterizar el
+conjunto electromecánico (opción 4) y evaluar los estimadores y filtros
+(opción 3). La integración final permitirá comparar el mando PWM de
+referencia, el PI de corriente y el PI con amortiguación local bajo
+condiciones reproducibles.
+
+Para cada comparación se documentarán versión del firmware, parámetros,
+calibraciones, instrumentos, condiciones iniciales y archivos de datos.
+La evidencia central será la concordancia entre requisitos, cálculos,
+simulación y mediciones, incluyendo las limitaciones observadas.
+
+\begin{thebibliography}{9}
+\bibitem{plan2023}
+Universidad Tecnológica Nacional, Facultad Regional Córdoba.
+\textit{Plan de estudio de la carrera de Ingeniería Electrónica, Plan 2023}.
+\url{https://www.institucional.frc.utn.edu.ar/electronica/pub/file/Plan%202023/Plan%20de%20estudio%20-%20Lista%20de%20asignaturas%202023.pdf}.
+
+\bibitem{tiBDC}
+Texas Instruments.
+\textit{Brushed DC motor drivers: current sensing and control}.
+\url{https://www.ti.com/product-category/motor-drivers/brushed-dc/overview.html}.
+
+\bibitem{microchipSync}
+Microchip Technology.
+\textit{Hardware Timing and Synchronization}.
+Ejemplo de sincronización PWM--ADC en control de motores; su aplicación
+al yugo requiere adaptación al hardware seleccionado.
+\url{https://onlinedocs.microchip.com/oxy/GUID-69278EBA-9F00-4CEE-8103-2998236856BD-en-US-2/GUID-16339F99-D30F-48D1-8854-21B6454F6CEC.html}.
+\end{thebibliography}
+
+\end{document}

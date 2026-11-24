@@ -1,0 +1,121 @@
+19:22:38.540	0.054	PC	inicio del registro: Pro Micro COM20, UNO COM15, archivos D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\modelizacion motor 775\registros\roll_E1_M1b_HOR_20261117_192238_*
+19:22:40.125	1.639	CELDA	# Celda de carga HX711 - comandos: t, c1/c2/c3 <kg>, r, f <cuentas/kg>, ?
+19:22:41.735	3.249	CELDA	# factor=106701.726 cuentas/kg, tara=-327160
+19:22:41.738	3.251	CELDA	# patron 1: sin registrar
+19:22:41.740	3.254	CELDA	# patron 2: sin registrar
+19:22:41.741	3.255	CELDA	# patron 3: sin registrar
+19:22:41.746	3.259	PC	UNO con celda: se registra la fuerza
+19:22:52.265	13.778	PC	comando a UNO: t
+19:22:53.971	15.484	CELDA	# tara hecha
+19:22:53.973	15.487	CELDA	# factor=106701.726 cuentas/kg, tara=-327149
+19:22:53.977	15.491	CELDA	# patron 1: sin registrar
+19:22:53.979	15.492	CELDA	# patron 2: sin registrar
+19:22:53.981	15.495	CELDA	# patron 3: sin registrar
+19:23:24.092	45.606	PC	comando a UNO: c1 0.187
+19:23:25.810	47.324	CELDA	# patron 1 registrado: 0.187 kg, 20144 cuentas
+19:23:25.813	47.326	CELDA	# faltan 2 patron(es) para calibrar
+19:23:55.237	76.750	PC	comando a UNO: c2 0.345
+19:23:56.936	78.450	CELDA	# patron 2 registrado: 0.345 kg, 36653 cuentas
+19:23:56.939	78.453	CELDA	# faltan 1 patron(es) para calibrar
+19:24:22.418	103.932	PC	comando a UNO: c3 0.187
+19:24:24.161	105.675	CELDA	# patron 3 registrado: 0.187 kg, 20088 cuentas
+19:24:24.163	105.677	CELDA	# patron,masa_kg,medido_kg,error_kg,error_%
+19:24:24.166	105.680	CELDA	# 1,0.187,0.189,0.0017,0.93
+19:24:24.169	105.683	CELDA	# 2,0.345,0.343,-0.0016,-0.46
+19:24:24.172	105.685	CELDA	# 3,0.187,0.188,0.0012,0.65
+19:24:24.175	105.689	CELDA	# error medio absoluto: 0.0015 kg (0.68 %)
+19:24:24.179	105.693	CELDA	# calibrado y guardado
+19:24:24.184	105.698	CELDA	# factor=106733.429 cuentas/kg, tara=-327149
+19:24:24.188	105.701	CELDA	# patron 1: 0.187 kg, 20144 cuentas
+19:24:24.190	105.704	CELDA	# patron 2: 0.345 kg, 36653 cuentas
+19:24:24.192	105.706	CELDA	# patron 3: 0.187 kg, 20088 cuentas
+19:24:33.834	115.347	PC	comando a UNO: t
+19:24:35.598	117.112	CELDA	# tara hecha
+19:24:35.600	117.114	CELDA	# factor=106733.429 cuentas/kg, tara=-327154
+19:24:35.606	117.119	CELDA	# patron 1: 0.187 kg, 20144 cuentas
+19:24:35.609	117.122	CELDA	# patron 2: 0.345 kg, 36653 cuentas
+19:24:35.611	117.125	CELDA	# patron 3: 0.187 kg, 20088 cuentas
+19:24:42.737	124.251	PC	comando a UNO: t
+19:24:44.465	125.979	CELDA	# tara hecha
+19:24:44.468	125.981	CELDA	# factor=106733.429 cuentas/kg, tara=-327106
+19:24:44.473	125.987	CELDA	# patron 1: 0.187 kg, 20144 cuentas
+19:24:44.476	125.990	CELDA	# patron 2: 0.345 kg, 36653 cuentas
+19:24:44.478	125.992	CELDA	# patron 3: 0.187 kg, 20088 cuentas
+19:25:21.042	162.556	PUNTO	inicio: 0.5 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:25:21.043	162.556	PC	comando a MICRO: c 0.5
+19:25:21.046	162.559	MICRO	# sostenido: I=0.50 A, t=3600.0 s, techo de duty 15.4 %
+19:25:21.495	163.008	MICRO	# cero ACS712: 527.3 cuentas (2.575 V)
+19:25:22.127	163.640	MICRO	# FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+19:25:22.130	163.643	MICRO	# corriente medida -0.01 A. Driver apagado. Revisar y enviar r para rearmar.
+19:25:22.159	163.672	PUNTO	punto interrumpido: el Pro Micro paso a FALLA: FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+19:25:22.159	163.673	PC	comando a MICRO: s
+19:25:22.160	163.674	MICRO	# driver apagado
+19:25:31.599	173.113	PC	comando a MICRO: r
+19:25:31.600	173.114	MICRO	# rearmado
+19:25:34.916	176.430	PC	comando a MICRO: z
+19:25:35.417	176.930	MICRO	# cero ACS712: 527.8 cuentas (2.577 V)
+19:25:42.885	184.398	PUNTO	inicio: 0.5 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:25:42.885	184.399	PC	comando a MICRO: c 0.5
+19:25:42.889	184.402	MICRO	# sostenido: I=0.50 A, t=3600.0 s, techo de duty 15.4 %
+19:25:43.337	184.851	MICRO	# cero ACS712: 527.8 cuentas (2.577 V)
+19:25:46.730	188.244	MICRO	# techo de duty ajustado a 15.4 % (estable 14.15 %)
+19:26:14.772	216.286	PC	comando a MICRO: s
+19:26:14.773	216.286	PUNTO	punto terminado: 0.5 A durante 30 s, driver apagado
+19:26:14.777	216.291	MICRO	# fin de punto (parado a mano): I_obj=0.50 A, I_media=0.500 A, duty_medio=14.04 %, V_est=2.17 V, tramo estable=30.0 s
+19:26:14.778	216.292	MICRO	# pausa de 10 s antes del proximo punto
+19:26:24.773	226.287	MICRO	# listo para el proximo punto
+19:26:32.695	234.208	PUNTO	inicio: 1 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:26:32.695	234.209	PC	comando a MICRO: c 1
+19:26:32.698	234.211	MICRO	# sostenido: I=1.00 A, t=3600.0 s, techo de duty 17.5 %
+19:26:33.148	234.661	MICRO	# cero ACS712: 526.5 cuentas (2.571 V)
+19:26:36.504	238.018	MICRO	# techo de duty ajustado a 17.5 % (estable 15.28 %)
+19:27:04.592	266.105	PC	comando a MICRO: s
+19:27:04.592	266.105	PUNTO	punto terminado: 1 A durante 30 s, driver apagado
+19:27:04.596	266.110	MICRO	# fin de punto (parado a mano): I_obj=1.00 A, I_media=1.000 A, duty_medio=15.10 %, V_est=2.42 V, tramo estable=30.1 s
+19:27:04.598	266.111	MICRO	# pausa de 10 s antes del proximo punto
+19:27:14.592	276.106	MICRO	# listo para el proximo punto
+19:27:25.143	286.657	PUNTO	inicio: 1.5 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:27:25.144	286.657	PC	comando a MICRO: c 1.5
+19:27:25.146	286.660	MICRO	# sostenido: I=1.50 A, t=3600.0 s, techo de duty 19.6 %
+19:27:25.596	287.110	MICRO	# cero ACS712: 525.7 cuentas (2.567 V)
+19:27:29.456	290.970	MICRO	# techo de duty ajustado a 19.6 % (estable 17.36 %)
+19:27:57.547	319.061	PC	comando a MICRO: s
+19:27:57.547	319.061	PUNTO	punto terminado: 1.5 A durante 30 s, driver apagado
+19:27:57.552	319.066	MICRO	# fin de punto (parado a mano): I_obj=1.50 A, I_media=1.500 A, duty_medio=17.05 %, V_est=2.89 V, tramo estable=30.1 s
+19:27:57.553	319.067	MICRO	# pausa de 10 s antes del proximo punto
+19:28:07.548	329.062	MICRO	# listo para el proximo punto
+19:28:14.142	335.656	PUNTO	inicio: 2 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:28:14.142	335.656	PC	comando a MICRO: c 2
+19:28:14.145	335.659	MICRO	# sostenido: I=2.00 A, t=3600.0 s, techo de duty 21.7 %
+19:28:14.595	336.108	MICRO	# cero ACS712: 525.8 cuentas (2.567 V)
+19:28:18.939	340.453	MICRO	# techo de duty ajustado a 21.7 % (estable 17.82 %)
+19:28:47.044	368.558	PC	comando a MICRO: s
+19:28:47.045	368.558	PUNTO	punto terminado: 2 A durante 30 s, driver apagado
+19:28:47.049	368.562	MICRO	# fin de punto (parado a mano): I_obj=2.00 A, I_media=2.000 A, duty_medio=18.02 %, V_est=3.12 V, tramo estable=30.1 s
+19:28:47.049	368.563	MICRO	# pausa de 10 s antes del proximo punto
+19:28:57.047	378.560	MICRO	# listo para el proximo punto
+19:29:05.533	387.047	PUNTO	inicio: 2.5 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:29:05.534	387.047	PC	comando a MICRO: c 2.5
+19:29:05.537	387.051	MICRO	# sostenido: I=2.50 A, t=3600.0 s, techo de duty 23.7 %
+19:29:05.986	387.500	MICRO	# cero ACS712: 525.7 cuentas (2.567 V)
+19:29:09.878	391.392	MICRO	# techo de duty ajustado a 23.7 % (estable 18.83 %)
+19:29:37.934	419.448	PC	comando a MICRO: s
+19:29:37.934	419.448	PUNTO	punto terminado: 2.5 A durante 30 s, driver apagado
+19:29:37.939	419.452	MICRO	# fin de punto (parado a mano): I_obj=2.50 A, I_media=2.500 A, duty_medio=19.70 %, V_est=3.53 V, tramo estable=30.1 s
+19:29:37.939	419.453	MICRO	# pausa de 10 s antes del proximo punto
+19:29:47.935	429.449	MICRO	# listo para el proximo punto
+19:29:54.894	436.408	PUNTO	inicio: 3 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:29:54.894	436.408	PC	comando a MICRO: c 3
+19:29:54.897	436.411	MICRO	# sostenido: I=3.00 A, t=3600.0 s, techo de duty 25.8 %
+19:29:55.347	436.860	MICRO	# cero ACS712: 525.8 cuentas (2.567 V)
+19:29:59.859	441.372	MICRO	# techo de duty ajustado a 25.8 % (estable 20.39 %)
+19:30:28.020	469.533	PC	comando a MICRO: s
+19:30:28.020	469.533	PUNTO	punto terminado: 3 A durante 30 s, driver apagado
+19:30:28.024	469.537	MICRO	# fin de punto (parado a mano): I_obj=3.00 A, I_media=3.000 A, duty_medio=20.24 %, V_est=3.66 V, tramo estable=30.2 s
+19:30:28.025	469.538	MICRO	# pausa de 10 s antes del proximo punto
+19:30:36.037	477.550	PC	comando a MICRO: s
+19:30:36.038	477.552	MICRO	# driver apagado
+19:30:38.020	479.533	MICRO	# listo para el proximo punto
+19:30:38.328	479.842	PC	comando a MICRO: s (al salir)
+19:30:38.329	479.843	MICRO	# driver apagado
+19:30:38.932	480.445	PC	fin del registro

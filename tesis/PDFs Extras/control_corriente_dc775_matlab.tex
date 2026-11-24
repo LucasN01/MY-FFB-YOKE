@@ -1,0 +1,542 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot,es-noshorthands]{babel}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,array,tabularx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{babel,arrows.meta,positioning}
+\usepackage{listings}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!45!black,urlcolor=blue!45!black}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlist{itemsep=3pt,topsep=4pt}
+\renewcommand{\arraystretch}{1.18}
+\lstdefinelanguage{matlabsimple}{morekeywords={for,end,if,else,elseif,function,while,return,figure,plot,legend,hold,on,off,grid},sensitive=true,morecomment=[l]\%,morestring=[m]'}
+\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,frame=single,breaklines=true,showstringspaces=false,keepspaces=true,keywordstyle=\color{blue!55!black}\bfseries,commentstyle=\color{green!35!black}\itshape,literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\sat}{\operatorname{sat}}
+\newcommand{\caja}[3]{\par\noindent\fcolorbox{#1}{#1!4}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\textbf{\color{#1}#2} #3}}\par}
+\newcommand{\advertencia}[1]{\caja{red!55!black}{Advertencia.}{#1}}
+\newcommand{\nota}[1]{\caja{blue!45!black}{Nota.}{#1}}
+\newcommand{\control}[1]{\caja{orange!70!black}{Cómo saber si salió bien.}{#1}}
+\newcommand{\fuente}[1]{{\footnotesize\textcolor{black!60}{[#1]}}}
+\def\UrlBreaks{\do\_\do/\do.}\newcommand{\archivo}[1]{\path{#1}}
+
+\title{Control de corriente del motor DC 775\\[2pt]\large Análisis del apunte de Electrónica de Potencia, diseño con MATLAB\\y pasos para pasar de la simulación al yugo real}
+\author{Proyecto MiYoke PD}
+\date{Noviembre de 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Este documento resume el análisis del apunte de la cátedra Electrónica de Potencia \emph{Regulación de motores de corriente continua} (capítulo~7, R.~C.~Oros, rev.~C, 2010) \cite{oros} y lo aplica al control de corriente de los motores DC 775 del yugo con force feedback (driver BTS7960, Raspberry Pi Pico~2). Explica qué partes del apunte se usan y cuáles no, señala los errores encontrados en él, adapta el diseño del PI de corriente (sección~7.9) a un controlador digital, enumera los problemas propios de un yugo que el apunte no trata (fuerza contraelectromotriz impuesta por la mano, regeneración, muestreo) y propone un flujo de trabajo en MATLAB/Simulink para diseñar, simular y comparar lo simulado con lo medido. Termina con una lista ordenada de pasos. Los parámetros del motor usados en los ejemplos son \textbf{supuestos} (los de \code{caracterizacion_motor_775.tex}); deben reemplazarse por los medidos antes de cargar cualquier ganancia en el hardware.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%=====================================================================
+\section*{Cómo se indican las fuentes}
+\addcontentsline{toc}{section}{Cómo se indican las fuentes}
+Cada dato, ecuación o afirmación lleva al lado su origen, con esta convención:
+\begin{center}
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+Marca & Significa \\
+\midrule
+\fuente{Apunte §7.9.4.1, ec.~7.68, pág.~7.40} & Apunte de la cátedra \cite{oros}: sección, ecuación o figura y página impresa (``Pág.~7.x'' al pie de cada hoja; coincide con la página x del PDF). \\
+\fuente{Hoja de datos BTS7960} & Hoja de datos o manual del fabricante, listado en la bibliografía. \\
+\fuente{Proyecto: \code{include/MotorDriver.h}} & Código o documento del repositorio MiYoke PD. \\
+\fuente{Decisión del usuario, fecha} & Dato informado por el autor del proyecto, sin documento técnico detrás. \\
+\fuente{Cálculo propio} & Cuenta hecha para este documento con las fórmulas citadas; se indica con qué fórmula y datos. \\
+\fuente{Hipótesis} & Criterio o estimación sin fuente verificable: debe confirmarse con simulación o ensayo. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Los parámetros del motor de los ejemplos vienen de \fuente{Proyecto: \code{caracterizacion_motor_775.tex}, sección ``Resumen del modelo del motor''}, donde figuran como \emph{ejemplo supuesto}; no son mediciones.
+
+%=====================================================================
+\section{Punto de partida}
+\label{sec:partida}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{2.9cm}X>{\raggedright\arraybackslash}p{5.2cm}}
+\toprule
+Elemento & Situación actual & Fuente \\
+\midrule
+Motor & DC 775 de imanes permanentes, 24~V, sin ficha técnica; corriente en vacío $\approx$1~A & \fuente{Decisión del usuario, 2026-10-11; dato del vendedor} \\
+Reductoras & Roll 1:3,7; pitch 1:19,2 con polea & \fuente{Dato del usuario; \archivo{procedimiento_control_corriente.tex}, sec.~1} \\
+Driver & BTS7960 (dos medios puentes), PWM admisible hasta 25~kHz & \fuente{Hoja de datos BTS7960 \cite{bts}} \\
+PWM en el firmware & 490~Hz, signo--magnitud: una rama conmuta y la otra queda en 0; techo 220/255 & \fuente{Proyecto: \archivo{include/mis_defines.h} (\archivo{MOTOR_PWM_HZ}, \archivo{MOTOR_PWM_HARD_LIMIT}); \archivo{include/MotorDriver.h} (\archivo{setPWM})} \\
+Lazo de efectos & 2~ms (500~Hz); la salida del modelo de efectos va directo a PWM, sin lazo de corriente & \fuente{Proyecto: \archivo{include/mis_defines.h} (\archivo{CONTROL_LOOP_MS}); \archivo{procedimiento_control_corriente.tex}, sec.~1.1} \\
+Sensado de corriente previsto & ACS712-30A (66~mV/A) leído por ADS1115 por I\textsuperscript{2}C & \fuente{Decisión del usuario, 2026-10-11; sensibilidad: hoja de datos ACS712 \cite{acs712}} \\
+Posición & Encoders (AS5600 previstos) & \fuente{Decisión del usuario, 2026-10-22} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Documentos relacionados: \code{caracterizacion_motor_775.tex} (cómo medir $R$, $V_{esc}$, $K_t$, $K_e$, $L$, $J_m$) y \code{procedimiento_control_corriente.tex} (calibración torque--corriente, límites y PI). Este documento no los reemplaza: agrega el fundamento del apunte de la cátedra, los cálculos de PWM y muestreo, y el trabajo en MATLAB.
+
+%=====================================================================
+\section{Análisis del apunte}
+\label{sec:apunte}
+
+\subsection{Contenido y utilidad para el proyecto}
+
+\fuente{Apunte \cite{oros}, todo el capítulo; la columna ``Utilidad'' es valoración propia para este proyecto}
+\begin{center}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{2.4cm}X>{\raggedright\arraybackslash}p{3.2cm}}
+\toprule
+Sección (páginas) & Contenido & Utilidad \\
+\midrule
+7.2--7.3 (7.1--7.8) & Ecuaciones de par y potencia; modelo del motor de excitación independiente; $\tau_e=L_a/R_a$, $\tau_m=R_aJ/(k_Ek_T)$; funciones de transferencia (7.22--7.28) & Alta: es la planta a simular \\
+7.4--7.5 (7.8--7.13) & Control por campo y combinado & No aplica (imanes permanentes) \\
+7.6 (7.13--7.15) & Modelo del motor de CC en Simulink (bloque \emph{DC Machine}) con ejemplo & Alta: punto de partida en MATLAB \\
+7.7 (7.15--7.18) & Frenado dinámico y regenerativo; capacitor de bus (7.48) & Alta: el piloto mueve el motor \\
+7.8.1--7.8.3 (7.19--7.31) & Uno, dos y cuatro cuadrantes; métodos de manejo del puente H; PWM unipolar y bipolar & Alta: define el esquema de PWM \\
+7.8.5 (7.33--7.34) & Rizado de corriente (7.50--7.52), factor de forma (7.53), pulsaciones de torque & Crítica: dimensiona la frecuencia de PWM \\
+7.9 (7.34--7.46) & Control en cascada, modelo promediado del convertidor, diseño del PI de corriente, velocidad y posición, feed-forward, límites, anti-windup & Núcleo del diseño \\
+7.10--7.12 (7.46--7.49) & Campo, motor serie, arranque & No aplica \\
+7.13 (7.49--7.53) & CI LM628/629 y MC33035 & Idea útil: limitación de corriente pulso a pulso por hardware \\
+7.14 (7.54--7.63) & Convertidores con tiristores & No aplica \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Requisitos del convertidor (7.8, incisos a--g)}
+El apunte lista lo que debe cumplir el convertidor de un accionamiento de CC \fuente{Apunte §7.8, incisos a--g, págs.~7.19--7.20}. La lectura para el yugo es propia y usa el estado del firmware de la sección~\ref{sec:partida}:
+\begin{enumerate}[label=\alph*)]
+\item Operar en los cuadrantes necesarios: el yugo necesita los cuatro (torque en ambos sentidos, con el eje movido por la mano en cualquier sentido).
+\item Operar en modo \textbf{corriente controlada}, con límite de corriente máxima: hoy no se cumple (el techo de PWM no es un límite de amperes).
+\item Tensión media lineal con la entrada: se cumple con PWM, salvo la zona muerta de las escobillas.
+\item Rizado de corriente limitado, porque es rizado de torque: a 490~Hz no se cumple (sección~\ref{sec:pwm}).
+\item Respuesta rápida, representable por una ganancia: requiere PWM rápido.
+\item $f_s$ mucho mayor que $1/\tau_e$: a 490~Hz no se cumple.
+\item Unipolar o bipolar según el frenado: se elige unipolar (sección~\ref{sec:pwm}).
+\end{enumerate}
+
+\subsection{Errores encontrados en el apunte}
+Se encontraron leyendo las páginas indicadas y se verificaron con \fuente{Cálculo propio} usando los datos de la Tabla~7.3 del propio apunte (pág.~7.38). Conviene tenerlos presentes al usarlo.
+\begin{enumerate}
+\item \textbf{Ec.~7.54} \fuente{pág.~7.36}: dice $k_{PWM}=v_c/v_a$; está invertida. Lo correcto es $k_{PWM}=v_a/v_c=V_d/\hat V_{tri}$, como se deduce de la misma ec.~7.54 ($v_a=k_{PWM}v_c$) y de la Fig.~7.41. En el ejemplo da $60/5=12$, que es el valor con el que salen los números de la pág.~7.41.
+\item \textbf{Ejemplo del lazo de velocidad} \fuente{pág.~7.42}: las ganancias están intercambiadas. Resolviendo las ec.~7.74 y 7.75 con $|G|=1$ y margen de fase de $60^\circ$ en $\omega_c=628$~rad/s resulta $k_{p\omega}=0{,}827$ y $k_{i\omega}=299{,}7$; el apunte dice $k_i=0{,}827$ y $k_p=299{,}7$.
+\item \fuente{pág.~7.41}: las referencias ``ec.~7.28.6'' y ``ec.~7.28.2'' del ejemplo de corriente corresponden a las ecuaciones 7.71 y 7.68 (pág.~7.40).
+\item \fuente{págs.~7.36, 7.37 y 7.34}: en 7.57 y 7.62 falta el signo menos de $T_{em}-T_L$ (problema de fuente del PDF); en 7.51 figura $V_a$ donde la Fig.~7.39 indica $V_d$.
+\end{enumerate}
+El ejemplo del lazo de corriente \fuente{pág.~7.41} es correcto: con las ec.~7.71 y 7.68 da $k_{iI}=\omega_{cI}R_a/k_{PWM}=1047$ y $k_{pI}=\tau_e k_{iI}=2{,}72$ \fuente{Cálculo propio, coincide con el apunte}.
+
+\subsection{Qué no trata el apunte y sí importa en el yugo}
+Observaciones propias a partir de lo que el apunte supone en cada lugar:
+\begin{itemize}
+\item \textbf{Control digital}: el apunte diseña en tiempo continuo con el modelo promediado \fuente{Apunte §7.9.1, pág.~7.35}. En la Pico hay muestreo, retardo de cálculo y cuantización.
+\item \textbf{Fuerza contraelectromotriz impuesta}: el apunte desprecia $E_a$ suponiendo inercia grande \fuente{Apunte §7.9.4.1, ec.~7.66 y Fig.~7.45 b$\to$c, págs.~7.39--7.40}. En el yugo la velocidad la impone la mano, de modo que $E_a$ es una perturbación externa.
+\item \textbf{Regeneración hacia una fuente que no absorbe}: el apunte guarda la energía en un banco de capacitores o la devuelve a la red \fuente{Apunte §7.7, págs.~7.16--7.18}; una fuente de laboratorio o conmutada no recibe energía.
+\item \textbf{Caída en escobillas, zona muerta y variación de $R$ con la temperatura.}
+\item No se usan los lazos de velocidad ni de posición: el \emph{modelo de efectos} cumple el papel de lazo externo.
+\end{itemize}
+
+%=====================================================================
+\section{Modelo del motor y estructura del control}
+\label{sec:modelo}
+
+Ecuaciones del motor de imanes permanentes \fuente{Apunte §7.9.2, ec.~7.56--7.57, pág.~7.36}, con la caída de escobillas agregada \fuente{Proyecto: \code{procedimiento_control_corriente.tex}, sec.~``Ecuación del motor''}:
+\begin{equation}
+v_a=R_a i_a+L_a\frac{di_a}{dt}+K_e\,\omega_m+V_{esc}\,\mathrm{sgn}(i_a),\qquad
+T_{em}=K_t\,i_a,\qquad
+J\frac{d\omega_m}{dt}=T_{em}-T_L.
+\label{eq:motor}
+\end{equation}
+
+Con los valores supuestos de \code{caracterizacion_motor_775.tex} ($R=0{,}55~\Omega$, $L=0{,}17$~mH, $K_e=0{,}0322$~V\,s/rad, $J_m=1{,}9\times10^{-5}$~kg\,m$^2$):
+\[
+\tau_e=\frac{L}{R}\approx0{,}31~\text{ms}\ (\text{polo en }\approx515~\text{Hz}),\qquad
+\tau_m=\frac{RJ_m}{K_eK_t}\approx10~\text{ms},\qquad \frac{\tau_m}{\tau_e}\approx33 .
+\]
+\fuente{Cálculo propio con las definiciones de $\tau_e$ y $\tau_m$ del Apunte §7.3.2, ec.~7.13 y 7.19, págs.~7.3--7.4; valores supuestos de \code{caracterizacion_motor_775.tex}}
+
+En el yugo se usa solo el lazo interno de la cascada \fuente{Apunte §7.9.1, Fig.~7.40, pág.~7.34}. El modelo de efectos calcula el torque o la fuerza deseados y los convierte en corriente de referencia:
+\begin{center}
+\begin{tikzpicture}[>=Latex,node distance=6mm,
+ box/.style={draw,rounded corners,align=center,minimum height=9mm,font=\small,inner sep=3pt}]
+\node[box] (efe) {Modelo de efectos\\(2~ms)};
+\node[box,right=of efe] (conv) {$I^*=\tau^*/K$\\límite $\pm I_{max}$};
+\node[box,right=of conv] (pi) {PI + feed-forward\\(10--20~kHz)};
+\node[box,right=of pi] (pwm) {PWM 20~kHz\\BTS7960};
+\node[box,right=of pwm] (mot) {Motor 775\\+ reductora};
+\node[box,below=8mm of pi] (adc) {ACS712 $\to$ ADC\\sincronizado};
+\draw[->] (efe)--(conv);
+\draw[->] (conv)--(pi);
+\draw[->] (pi)--(pwm);
+\draw[->] (pwm)--(mot);
+\draw[->] (mot.south)|-(adc.east);
+\draw[->] (adc.north)--(pi.south);
+\end{tikzpicture}
+\end{center}
+La regla de la cascada del apunte \fuente{Apunte §7.9.1, pág.~7.35: el ancho de banda crece hacia el lazo interno} sigue valiendo: el lazo de corriente debe ser bastante más rápido que el de efectos, es decir, con un ancho de banda varias veces mayor que lo que los efectos necesitan reproducir.
+
+%=====================================================================
+\section{Frecuencia y esquema de PWM}
+\label{sec:pwm}
+
+\subsection{Esquema}
+El firmware conmuta una rama del puente y deja la otra en nivel bajo \fuente{Proyecto: \code{include/MotorDriver.h}, \code{setPWM}}. Cada medio puente del BTS7960 conmuta de forma complementaria: entrada alta, conduce el lado alto; entrada baja, conduce el lado bajo \fuente{Hoja de datos BTS7960, tabla de funcionamiento}. Por eso, en el tiempo de apagado los dos lados bajos cortocircuitan el motor y la corriente recircula sin pasar por la fuente. Corresponde al manejo unipolar del puente H del apunte \fuente{Apunte §7.8.3.3--7.8.3.5, págs.~7.26--7.31}: tensión en bornes $0$ o $V_d$, corriente posible en ambos sentidos y, por lo tanto, regeneración. Se mantiene este esquema porque su rizado es la mitad que el del bipolar \fuente{Apunte ec.~7.51--7.52, pág.~7.34}.
+
+\subsection{Rizado de corriente}
+\fuente{Apunte §7.8.5, ec.~7.51 y 7.52 y Fig.~7.39, pág.~7.34; ec.~7.50, pág.~7.21} (peor caso, $D=0{,}5$, despreciando $R_a$):
+\begin{equation}
+(\Delta I_{pp})_{max}=\frac{V_d}{4L_af_s}\ \text{(unipolar)},\qquad
+(\Delta I_{pp})_{max}=\frac{V_d}{2L_af_s}\ \text{(bipolar)}.
+\end{equation}
+Con $V_d=24$~V, $R=0{,}55~\Omega$ y $L=0{,}17$~mH (supuestos). La columna ``exacto'' es \fuente{Cálculo propio}: régimen permanente periódico del circuito RL, sin fuerza contraelectromotriz y con $D=0{,}5$,
+\[
+I_{max}=\frac{V_d}{R}\,\frac{1-a}{1-ab},\quad I_{min}=b\,I_{max},\quad
+a=e^{-DT_s/\tau_e},\ b=e^{-(1-D)T_s/\tau_e},
+\]
+que tiende a la ec.~7.52 cuando $T_s\ll\tau_e$. Las otras dos columnas aplican directamente las ecuaciones del apunte.
+
+\begin{center}
+\begin{tabular}{rccc}
+\toprule
+$f_s$ & $\Delta I_{pp}$ exacto (unipolar) & $V_d/(4Lf_s)$ & $V_d/(2Lf_s)$ (bipolar) \\
+\midrule
+490~Hz (actual) & 40,5~A & 72~A (no válida: $T_s\gg\tau_e$) & 144~A \\
+5~kHz & 7,0~A & 7,1~A & 14,1~A \\
+20~kHz & 1,76~A & 1,76~A & 3,5~A \\
+25~kHz & 1,41~A & 1,41~A & 2,8~A \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A 490~Hz el período (2~ms) es unas seis veces $\tau_e$: en cada pulso la corriente se acerca a la de rotor bloqueado ($V_d/R\approx44$~A) \fuente{Cálculo propio}. Consecuencias:
+\begin{itemize}
+\item Factor de forma muy alto \fuente{Apunte §7.8.5.1, ec.~7.53, pág.~7.34}: calienta el motor ($I^2_{rms}R$) sin producir torque medio útil.
+\item Pulsaciones de torque a 490~Hz \fuente{Apunte §7.8.5.2, pág.~7.34: el rizado de corriente es rizado de torque}, que se sienten en la mano y se oyen \fuente{Hipótesis: verificar con el yugo}.
+\item Supera el rango de $\pm30$~A del ACS712-30A \fuente{Hoja de datos ACS712} y exige al BTS7960 picos innecesarios.
+\end{itemize}
+\fuente{El requisito de $f_s\gg1/\tau_e$ viene del Apunte §7.8, inciso f, pág.~7.20}
+
+\advertencia{Antes de cerrar un lazo de corriente hay que subir la frecuencia de PWM. Recomendación propia: \textbf{20~kHz}, en el límite superior de lo audible y dentro de los 25~kHz del BTS7960 \fuente{Hoja de datos BTS7960}. Verificar el calentamiento del módulo (pérdidas de conmutación) y, si hace falta, bajar a 16--18~kHz \fuente{Hipótesis: verificar con ensayo térmico}.}
+
+\nota{La inductancia $L$ manda en todo este cálculo. Medirla con LCR y con escalón (Ensayo~4 de \code{caracterizacion_motor_775.tex}) antes de fijar $f_s$.}
+
+\subsection{PWM en el RP2350}
+Usar PWM centrado (\emph{phase-correct}), que el periférico PWM del RP2350 ofrece por canal, con un contador que sube y baja \fuente{Hoja de datos RP2350, capítulo PWM \cite{rp2350}}. Con el reloj de sistema por defecto de 150~MHz \fuente{Hoja de datos RP2350} y 20~kHz, el contador llega a $150\times10^6/(2\cdot20\times10^3)=3750$ cuentas \fuente{Cálculo propio}: resolución sobrada frente a los 255 niveles actuales. En modo centrado, el instante en que el contador vuelve a cero coincide con el centro del pulso; ahí, con rizado triangular simétrico, la corriente instantánea vale la media del período \fuente{Cálculo propio sobre la forma de onda de la Fig.~7.39 del apunte; verificar en Simscape y con osciloscopio}.
+
+%=====================================================================
+\section{Medición de corriente}
+\label{sec:medicion}
+
+El ADS1115 entrega como máximo 860 muestras/s \fuente{Hoja de datos ADS1115 \cite{ads1115}}; al multiplexar dos ejes quedan unas 430 por eje, más la latencia del bus I\textsuperscript{2}C \fuente{Cálculo propio}. Con el criterio práctico $f_c\le f_{muestreo}/10$ \fuente{Proyecto: \code{procedimiento_control_corriente.tex}, sec.~``Elección de rapidez'', donde figura como criterio inicial y no como teorema} el lazo quedaría en unos 40~Hz: no alcanza para un lazo de corriente.
+
+Propuesta:
+\begin{enumerate}
+\item ACS712 en el cable del motor, no en la alimentación: durante la recirculación la corriente no pasa por la fuente \fuente{Nota técnica maxon \cite{maxon}; también Apunte §7.8.3.5, págs.~7.28--7.31, circuitos equivalentes de la Fig.~7.35}.
+\item Salida del ACS712 (alrededor de $V_{CC}/2=2{,}5$~V, con 66~mV/A en la versión de 30~A \fuente{Hoja de datos ACS712 \cite{acs712}}) a un divisor hacia el \textbf{ADC interno} del RP2350 (12~bits, 500~kmuestras/s \fuente{Hoja de datos RP2350, capítulo ADC \cite{rp2350}}). Con divisor 0,6 y referencia de 3,3~V la resolución ideal es de unos 20~mA por cuenta \fuente{Cálculo propio: $3{,}3/4096/(0{,}6\cdot0{,}066)$}.
+\item Disparar la conversión en la interrupción de \emph{wrap} del PWM (o por DMA), una muestra por período: se obtiene la corriente media sin filtrar \fuente{ver sección anterior; criterio también en \code{procedimiento_control_corriente.tex}, sec.~``Muestreo y filtrado''}.
+\item Medir también $V_{bus}$ con un divisor, necesario para la prealimentación y para detectar sobretensión por regeneración \fuente{Propuesta propia; ver sección~\ref{sec:regeneracion}}.
+\item El ADS1115, si se conserva, queda para telemetría o temperatura.
+\end{enumerate}
+Las salidas IS del BTS7960 dependen del estado del dispositivo y miden la corriente del lado alto con una relación de tolerancia amplia \fuente{Hoja de datos BTS7960 \cite{bts}}: no se recomiendan para cerrar el lazo.
+
+%=====================================================================
+\section{Diseño del PI de corriente}
+\label{sec:pi}
+
+\subsection{Método del apunte}
+\fuente{Apunte §7.9.4.1, Fig.~7.45, ec.~7.67--7.71, págs.~7.39--7.40}. Despreciando $E_a$, la planta es $I_a/V_a=(1/R_a)/(1+s\tau_e)$. Se elige el cero del PI para cancelar el polo eléctrico (ec.~7.68) y la ganancia para fijar el cruce (ec.~7.71):
+\[
+\frac{k_{iI}}{k_{pI}}=\frac{1}{\tau_e},\qquad k_{iI}=\frac{\omega_{cI}R_a}{k_{PWM}},\qquad G_{I,OL}=\frac{\omega_{cI}}{s}.
+\]
+El lazo cerrado queda de primer orden con constante de tiempo $1/\omega_{cI}$ y margen de fase de $90^\circ$.
+
+\subsection{Forma usada en el firmware}
+Si el PI entrega tensión (volts) y el ciclo útil se calcula como $D=v/V_{bus}$, la ganancia $k_{PWM}$ queda compensada y:
+\begin{equation}
+\boxed{K_p=L\,\omega_c,\qquad K_i=R\,\omega_c,\qquad \omega_c=2\pi f_c}
+\label{eq:pi}
+\end{equation}
+\fuente{Cálculo propio: reemplazando $k_{PWM}=1$ en las ec.~7.68 y 7.71, con el PI expresado en volts}. Es la misma expresión de \fuente{Proyecto: \code{procedimiento_control_corriente.tex}, sec.~``Controlador en unidades de tensión''}. El apunte pide $f_c$ una o dos décadas debajo de $f_s$ \fuente{Apunte §7.9.1, pág.~7.35, y §7.9.4.1, pág.~7.40}. En digital también hay que considerar el retardo de muestreo y cálculo, que se aproxima como $1{,}5\,T_s$ y resta una fase $\omega_c\cdot1{,}5\,T_s$ \fuente{Hipótesis de diseño: aproximación usual, a confirmar con el script~1, parte~3, y con el ensayo de respuesta en frecuencia}. La tabla siguiente es \fuente{Cálculo propio con la ec.~\eqref{eq:pi} y los parámetros supuestos}:
+
+\begin{center}
+\begin{tabular}{rccc}
+\toprule
+$f_c$ & $K_p$ [V/A] & $K_i$ [V/(A\,s)] & Margen de fase aprox. ($T_s=50~\mu$s) \\
+\midrule
+200~Hz & 0,21 & 691 & $85^\circ$ \\
+500~Hz & 0,53 & 1728 & $77^\circ$ \\
+1~kHz & 1,07 & 3456 & $63^\circ$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Punto de partida sugerido \fuente{propuesta propia}: $f_c=500$~Hz con muestreo a 20~kHz. \textbf{No cargar estas ganancias}: salen de parámetros supuestos.
+
+\subsection{Prealimentación (feed-forward)}
+El apunte usa la prealimentación para compensar la lentitud de la cascada \fuente{Apunte §7.9.5, Fig.~7.51, pág.~7.44}. En el yugo sirve sobre todo para anular la fuerza contraelectromotriz que impone la mano y la caída de escobillas. La expresión sale de despejar la tensión de la ec.~\eqref{eq:motor} en régimen \fuente{Proyecto: \code{caracterizacion_motor_775.tex}, sec.~``Cómo se usa todo esto en el control de corriente''}:
+\begin{equation}
+v_{ff}=R\,I^*+V_{esc}\,\mathrm{sgn}(I^*)+K_e\,N\,\omega_s ,
+\end{equation}
+con $\omega_s$ la velocidad del eje de salida medida por el encoder y $N$ la relación de reducción. El PI corrige solo el error que queda (temperatura, variación de $R$, error de $K_e$).
+
+\subsection{Límites y anti-windup}
+\begin{itemize}
+\item Referencia: $I^*=\sat(I_{pedida},\pm I_{max})$. Es el límite de torque y de seguridad de la mano \fuente{Apunte §7.9.6, pág.~7.45: limitar la referencia de torque; criterio de $I_{max}$ en \code{procedimiento_control_corriente.tex}, sec.~``Elegir y aplicar los límites de corriente''}.
+\item Salida: $v=\sat(v_{ff}+v_{PI},\pm V_{max})$ \fuente{Apunte §7.9.6, Fig.~7.52, pág.~7.45}, con $V_{max}=(220/255)\,V_{bus}$ si se conserva el techo actual \fuente{Proyecto: \code{MOTOR_PWM_HARD_LIMIT}}.
+\item Anti-windup por congelamiento: el integrador deja de acumular cuando la salida está saturada y la saturación crece en el mismo sentido \fuente{Apunte §7.9.7, Fig.~7.53, págs.~7.45--7.46}.
+\end{itemize}
+
+\subsection{Algoritmo discreto (una vez por período de PWM)}
+\fuente{Propuesta propia: traducción a tiempo discreto (integración por Euler hacia adelante) del PI de la ec.~7.65, con la prealimentación y el anti-windup anteriores}
+\begin{lstlisting}
+i_med = (adc - offset) * escala            // muestra en el centro del pulso
+e     = I_ref - i_med
+v_ff  = R*I_ref + Vesc*sgn(I_ref) + Ke*N*w_salida
+v     = v_ff + Kp*e + integ
+v_sat = limitar(v, -Vmax, +Vmax)
+si NO (v != v_sat y signo(e) == signo(v)):  integ += Ki*Ts*e
+D = v_sat / Vbus_medida                     // signo -> rama, |D| -> ciclo útil
+aplicar D en el próximo período
+\end{lstlisting}
+
+%=====================================================================
+\section{Regeneración y protecciones}
+\label{sec:regeneracion}
+
+Cuando el piloto mueve el yugo contra la fuerza, el motor trabaja como generador: corriente y velocidad de signo opuesto, cuadrantes II o IV \fuente{Apunte §7.7, pág.~7.16, y §7.8, Fig.~7.23 y Tabla~2, pág.~7.20}. En el puente H con conmutación complementaria la energía vuelve al capacitor del bus \fuente{Apunte §7.8.3, Fig.~7.34, págs.~7.27--7.28}. Una fuente de laboratorio o conmutada no la absorbe y $V_{bus}$ sube \fuente{Observación propia; cuantificar con el modelo de Simscape}.
+\begin{itemize}
+\item \textbf{Capacitor de bus}: la ec.~7.48 sirve de base ($\tfrac12L_aI_a^2=\tfrac12C\,V^2$) \fuente{Apunte §7.7, ec.~7.48, pág.~7.18}. Hay que sumar la energía mecánica que puede entregar el piloto \fuente{Propuesta propia}. Ubicarlo junto al BTS7960.
+\item \textbf{Limitación de sobretensión}: TVS o chopper de frenado, es decir, una resistencia conmutada como la del frenado dinámico \fuente{Apunte §7.7, Fig.~7.18, págs.~7.16--7.17}, con umbral por debajo del máximo admisible del BTS7960 \fuente{Hoja de datos BTS7960}.
+\item \textbf{Medir $V_{bus}$} y llevar el sistema a estado seguro si supera un umbral \fuente{Propuesta propia}.
+\item \textbf{Frenado dinámico o eje libre}: \code{stop()} pone ambas ramas en 0 \fuente{Proyecto: \code{include/MotorDriver.h}}, lo que cortocircuita el motor por los lados bajos: es un frenado dinámico \fuente{Apunte §7.7, pág.~7.16}. Deshabilitar EN deja ambos medios puentes abiertos \fuente{Hoja de datos BTS7960} y la corriente vuelve por los diodos al bus. Elegir a propósito qué hacer en cada falla.
+\item \textbf{Sobrecorriente por hardware}: comparador sobre la salida del ACS712 que corte el BTS7960 en el mismo período, independiente del firmware. Es la idea de la limitación de corriente pulso a pulso del MC33035 \fuente{Apunte §7.13.2, pág.~7.50}.
+\end{itemize}
+
+%=====================================================================
+\section{Trabajo en MATLAB}
+\label{sec:matlab}
+
+\subsection{Herramientas}
+MATLAB con Control System Toolbox, Simulink y Simscape Electrical; System Identification Toolbox es opcional. Las funciones y bloques usados (\code{tf}, \code{pid}, \code{c2d}, \code{margin}, \code{step}, \code{stepinfo}, \code{goodnessOfFit}, \code{tfestimate}, \code{tfest}, \code{greyest}; \emph{DC Motor}, \emph{H-Bridge}, \emph{Controlled PWM Voltage}) están descriptos en la documentación de MathWorks \cite{mathworks}. El modelo de máquina de CC de Simulink que usa el apunte está en \fuente{Apunte §7.6, Fig.~7.14--7.17, págs.~7.13--7.15}.
+
+Al momento de escribir este documento MATLAB no está instalado en la PC del proyecto. \textbf{Los scripts de abajo no se ejecutaron todavía}: los números de control que deben reproducir se verificaron por separado con un cálculo propio (sección~\ref{sec:apunte} y tablas anteriores).
+
+\subsection{Niveles de modelo}
+\begin{center}
+\begin{tabularx}{\linewidth}{lXl}
+\toprule
+Nivel & Qué representa & Para qué \\
+\midrule
+1. Lineal continuo & $1/(Ls+R)$ y PI, como el apunte & Ganancias, Bode, márgenes \\
+2. Discreto & ZOH, retardo de una muestra, PI discreto igual al firmware & Margen real, efecto de $T_s$ \\
+3. Temporal promediado & Ec.~\eqref{eq:motor}, saturación, anti-windup, $V_{esc}$, $E_a$ impuesta & Escalones, perturbación de la mano \\
+4. Conmutado (Simscape) & Puente H, PWM, motor, capacitor y fuente & Rizado, $V_{bus}$ al regenerar \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Script 1: validación con el apunte y diseño lineal y discreto}
+Primero se reproduce el ejemplo del apunte \fuente{Apunte Tabla~7.3, pág.~7.38; ejemplo y Fig.~7.46, pág.~7.41}; si da $k_{iI}\approx1047$ y $k_{pI}\approx2{,}72$ y el Bode coincide con la Fig.~7.46, el script es confiable para el 775.
+\begin{lstlisting}[language=matlabsimple]
+%% 1) Validación con el ejemplo del apunte (Tabla 7.3)
+Ra = 2; La = 5.2e-3; Vd = 60; Vtri = 5;
+kPWM = Vd/Vtri;                        % = 12 (ec. 7.54 corregida)
+wc  = 2*pi*1000;
+kiI = wc*Ra/kPWM;                      % esperado 1047
+kpI = La/Ra*kiI;                       % esperado 2,72
+G1  = tf(1/Ra, [La/Ra 1]);
+C1  = tf([kpI kiI], [1 0]);
+figure; margin(C1*kPWM*G1);            % comparar con Fig. 7.46 (a)
+figure; bode(feedback(C1*kPWM*G1, 1)); % comparar con Fig. 7.46 (b)
+
+%% 2) Motor 775: reemplazar por los valores MEDIDOS
+R = 0.55; L = 0.17e-3;                 % supuestos
+fc = 500; fs = 20e3; Ts = 1/fs;
+wc = 2*pi*fc;  Kp = L*wc;  Ki = R*wc;
+G  = tf(1, [L R]);                     % planta en V -> A
+C  = pid(Kp, Ki);
+figure; step(feedback(C*G, 1));
+
+%% 3) Versión discreta: ZOH + una muestra de retardo de cálculo
+z  = tf('z', Ts);
+Gd = c2d(G, Ts, 'zoh') / z;
+Cd = pid(Kp, Ki, 'Ts', Ts, 'IFormula', 'ForwardEuler');
+[Gm, Pm, ~, Wcp] = margin(Cd*Gd)       % Pm esperado 70-80 grados
+figure; step(feedback(Cd*Gd, 1));
+\end{lstlisting}
+
+\subsection{Script 2: simulación temporal con el mismo algoritmo del firmware}
+\fuente{Propuesta propia; ecuaciones de la planta: ec.~\eqref{eq:motor}; valores de $K_e$ y $V_{esc}$ supuestos de \code{caracterizacion_motor_775.tex}}. La planta se integra con paso 20 veces menor que $T_s$; el controlador corre una vez por $T_s$ con el pseudocódigo de la sección~\ref{sec:pi}. La velocidad del eje se impone (la mano), no se calcula.
+\begin{lstlisting}[language=matlabsimple]
+Ke = 0.0322; Vesc = 0.6; N = 3.7; Vbus = 24; Vmax = 220/255*Vbus;
+t  = 0:Ts:0.05;  n = numel(t);
+Iref = 3*(t > 0.005) - 5*(t > 0.025);   % escalones [A]
+wout = 2*sin(2*pi*2*t);                 % mano moviendo el eje [rad/s]
+sgn  = @(x) tanh(x/0.05);               % signo suavizado
+i = 0; integ = 0; u_prev = 0; sub = 20; dt = Ts/sub;
+I = zeros(1,n); U = zeros(1,n);
+for k = 1:n
+  e   = Iref(k) - i;
+  vff = R*Iref(k) + Vesc*sgn(Iref(k)) + Ke*N*wout(k);
+  u   = vff + Kp*e + integ;
+  us  = min(max(u, -Vmax), Vmax);
+  if ~(us ~= u && sign(e) == sign(u))
+    integ = integ + Ki*Ts*e;             % anti-windup (7.9.7)
+  end
+  va = u_prev; u_prev = us;              % retardo de cálculo
+  for m = 1:sub
+    di = (va - R*i - Vesc*sgn(i) - Ke*N*wout(k))/L;
+    i  = i + di*dt;
+  end
+  I(k) = i; U(k) = us;
+end
+figure; plot(t, Iref, t, I); grid on; legend('I^*', 'I');
+\end{lstlisting}
+Variantes a probar: sin prealimentación (ver cuánto tarda el integrador en rechazar $E_a$), con $R$ un 30~\% mayor (motor caliente), con $L$ un 30~\% menor, con $f_c$ de 200~Hz y 1~kHz.
+
+\subsection{Modelo conmutado en Simscape}
+\fuente{Propuesta propia, en la línea de las simulaciones conmutadas del Apunte §7.8.1, Fig.~7.25--7.26, págs.~7.20--7.21, y §7.8.4, págs.~7.32--7.33}. Bloques: fuente de 24~V (o fuente ideal con diodo en serie, para representar una fuente que no absorbe), capacitor de bus, \emph{H-Bridge} o dos medios puentes con MOSFET, \emph{Controlled PWM Voltage} a 20~kHz, \emph{DC Motor} con $R$, $L$, $K_e$, $J$ medidos y una fuente de velocidad ideal en el eje (la mano). El controlador puede ser un \emph{MATLAB Function} discreto con el mismo código del script~2. Qué mirar:
+\begin{itemize}
+\item Rizado de corriente frente a la tabla de la sección~\ref{sec:pwm}.
+\item $V_{bus}$ cuando la mano mueve el eje contra el torque: tamaño de capacitor y umbral del TVS o chopper.
+\item Que la muestra en el centro del pulso coincida con la corriente media.
+\end{itemize}
+
+%=====================================================================
+\section{Comparación entre lo simulado y lo medido}
+\label{sec:comparacion}
+
+Esta sección es una propuesta propia de método; aplica el paso que pide el apunte de simular el sistema completo en condiciones de gran señal para evaluar el controlador \fuente{Apunte §7.9.1, pág.~7.35, y §7.9.6, pág.~7.45}, y lo extiende a la comparación con mediciones.
+
+\subsection{Registro en la Pico}
+A 20~kHz el USB no permite transmitir todo en continuo. Se guardan ráfagas en RAM (por ejemplo 0,1--0,5~s) y se envían después en CSV con columnas: tiempo, $I^*$, $I_{med}$, ciclo útil con signo, $V_{bus}$, $\omega_s$.
+
+\subsection{Procedimiento}
+\begin{enumerate}
+\item Ejecutar el mismo ensayo en el banco y en MATLAB: la misma $I^*$ y, como perturbación, la $\omega_s$ medida.
+\item Cargar en MATLAB:
+\begin{lstlisting}[language=matlabsimple]
+d = readtable('ensayo.csv');
+% simular con Iref = d.Iref y wout = d.w (script 2) -> Isim
+fit = goodnessOfFit(Isim(:), d.Imed, 'NRMSE');   % 0 = coincidencia perfecta
+infoS = stepinfo(Isim, t);  infoR = stepinfo(d.Imed, d.t);
+\end{lstlisting}
+\item Respuesta en frecuencia: referencia tipo chirp o PRBS de amplitud pequeña; estimar el lazo cerrado medido con \code{tfestimate(Iref, Imed, [], [], [], fs)} y compararlo con el Bode diseñado.
+\item Si la diferencia es grande, reidentificar $R$ y $L$ con los propios escalones (\code{tfest} o \code{greyest}) y repetir.
+\end{enumerate}
+
+\subsection{Métricas a informar}
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Métrica & Simulado & Medido \\
+\midrule
+Tiempo de subida 10--90~\% & & \\
+Sobrepico & & \\
+Error en régimen & & \\
+Error RMS con la mano moviendo el eje & & \\
+Ancho de banda $-3$~dB del lazo cerrado & & \\
+Rizado de corriente $\Delta I_{pp}$ & & \\
+$V_{bus}$ máxima al regenerar & & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Vectores de prueba para el firmware}
+Exportar desde MATLAB un CSV con la entrada y salida del PI discreto (script~2) y agregar una prueba C++ en \code{tests/} que ejecute el PI del firmware con esas entradas y compare la salida con tolerancia. Así se comprueba que el código en C es exactamente el algoritmo simulado. La prueba entra en \code{herramientas/compilacion/probar.ps1}.
+
+%=====================================================================
+\section{Pasos a seguir}
+\label{sec:pasos}
+
+\begin{enumerate}
+\item \textbf{Herramientas.} Instalar MATLAB (licencia de la facultad) con Control System Toolbox, Simulink y Simscape Electrical.
+\item \textbf{Validar el script con el apunte.} Correr el script~1, parte 1.
+\control{$k_{iI}\approx1047$, $k_{pI}\approx2{,}72$ y Bode igual a la Fig.~7.46.}
+\item \textbf{Caracterizar los motores} con \fuente{Proyecto: \code{caracterizacion_motor_775.tex}, Etapa~1}: $R$, $V_{esc}$, $K_t$, $K_e$ (ensayos 1--3), $L$ (ensayo 4), $J_m$ (ensayo 5), $I_{cont}$ (ensayo 6). Completar la tabla de la sección~\ref{sec:parametros}.
+\item \textbf{Elegir $f_s$ y $f_c$} con los valores medidos: rizado aceptable (sección~\ref{sec:pwm}), $f_c$ con margen de fase discreto mayor que $60^\circ$ (script~1, partes 2 y 3).
+\item \textbf{Simular} con el script~2: escalones, mano moviendo el eje, con y sin prealimentación, variación de $R$ y $L$.
+\item \textbf{Simular el modelo conmutado} en Simscape: rizado, centro del pulso, $V_{bus}$ al regenerar. Dimensionar capacitor y TVS o chopper.
+\item \textbf{Hardware}: PWM 20~kHz centrado; ACS712 en el cable del motor al ADC interno con divisor; medición de $V_{bus}$; capacitor de bus y protección de sobretensión; comparador de sobrecorriente.
+\item \textbf{Firmware} (tarea crítica: diseño corto, implementación y revisión con lista de control \fuente{Proyecto: \code{CLAUDE.md}, ``Reparto por riesgo''}): muestreo sincronizado con el PWM, PI con prealimentación y anti-windup en el núcleo 1, conversión $I^*=\tau^*/K$ desde el modelo de efectos, límites, registro por ráfagas, prueba C++ con los vectores de MATLAB.
+\item \textbf{Ensayos en banco}, en este orden y con corriente limitada en la fuente:
+ \begin{enumerate}
+ \item Rotor bloqueado, escalones chicos de $I^*$ (1--2~A).
+ \item Rotor bloqueado, respuesta en frecuencia (chirp).
+ \item Eje libre y movido a mano, con y sin prealimentación.
+ \item Regeneración: mover el eje contra el torque y medir $V_{bus}$.
+ \item Térmico: corriente sostenida y temperatura del motor y del BTS7960.
+ \end{enumerate}
+\item \textbf{Comparar} cada ensayo con la simulación (sección~\ref{sec:comparacion}) y completar la tabla de métricas.
+\item \textbf{Integrar} con el modelo de efectos y validar en vuelo con los registros habituales.
+\item \textbf{Documentar} resultados para la tesis (consultar antes qué capítulo se modifica).
+\end{enumerate}
+
+%=====================================================================
+\section{Hoja de parámetros}
+\label{sec:parametros}
+
+La columna ``Supuesto'' sale de \fuente{Proyecto: \code{caracterizacion_motor_775.tex}, ``Resumen del modelo del motor''} y, para $f_s$, $f_c$, $K_p$ y $K_i$, de las secciones~\ref{sec:pwm} y~\ref{sec:pi} de este documento.
+\begin{center}
+\begin{tabularx}{\linewidth}{Xccc}
+\toprule
+Parámetro & Supuesto & Medido roll & Medido pitch \\
+\midrule
+$R$ [$\Omega$] & 0,55 & & \\
+$V_{esc}$ [V] & 0,60 & & \\
+$K_t$ [N\,m/A] & 0,0325 & & \\
+$K_e$ [V\,s/rad] & 0,0322 & & \\
+$L$ [mH] & 0,17 & & \\
+$J_m$ [kg\,m$^2$] & $1{,}9\times10^{-5}$ & & \\
+$I_{cont}$ [A] & -- & & \\
+$f_s$ elegida [kHz] & 20 & & \\
+$f_c$ elegida [Hz] & 500 & & \\
+$K_p$ [V/A] / $K_i$ [V/(A\,s)] & 0,53 / 1728 & & \\
+$I_{max}$ [A] & -- & & \\
+Capacitor de bus [$\mu$F] / umbral de sobretensión [V] & -- & & \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+%=====================================================================
+\section{Bibliografía del apunte y relevancia}
+\label{sec:biblio}
+
+Las referencias marcadas ``Ap.~[n]'' son las numeradas [1] a [12] en la bibliografía del apunte \fuente{Apunte §7.15, pág.~7.63}. Lo que se dice de cada libro sale de: la cita que hace el propio apunte en cada sección (por ejemplo, el título de la Tabla~7.3 cita Ap.~[5], y §7.9 cita Ap.~[5] y Ap.~[2]); los índices publicados por las editoriales o por MathWorks, consultados en línea en noviembre de 2026; y el manual de TI. La prioridad es valoración propia.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{4.6cm}X>{\centering\arraybackslash}p{1.6cm}}
+\toprule
+Referencia del apunte & Qué aporta al proyecto & Prioridad \\
+\midrule
+Ap.~[5] Mohan, \emph{Electric Drives: An Integrative Approach} & Fuente de la sección 7.9: el apunte lo cita en el título de §7.9 y de la Tabla~7.3 (págs.~7.34 y 7.38). Su libro de 2020 \cite{mohan2020} incluye ``Designing Feedback Controllers for Motor Drives'' en el capítulo~5, con MATLAB/Simulink (índice del editor) & Alta \\
+Ap.~[3] Mohan, Undeland, Robbins, \emph{Power Electronics} & El apunte lo cita en la Fig.~7.39 y §7.9.2 (págs.~7.34 y 7.37): rizado con PWM unipolar y bipolar (7.51, 7.52) & Alta \\
+Ap.~[12] Veltman, Pulle, De Doncker, \emph{Fundamentals of Electrical Drives} & La 2.ª edición tiene un capítulo ``Pulse Width Modulation and Current Control for DC Drives''; la 1.ª trae tutoriales en Simulink (índice y descripción del editor \cite{veltman}) & Alta (parte digital) \\
+Ap.~[11] TI, \emph{Stellaris Brushed DC Motor Control RDK} & El apunte muestra su etapa de potencia (§7.13, Fig.~7.61, PWM de 15~kHz, 12~V y 40~A). El manual del RDK-BDC24 indica motores de 12 y 24~V y hasta 40~A continuos \cite{rdk} & Alta (práctica) \\
+Ap.~[2] Leonhard, \emph{Control of Electrical Drives} & Control de corriente muestreado & Media \\
+Ap.~[6] Kuo, \emph{Sistemas de Control Automático} & PI, margen de fase, sistemas discretos & Media \\
+Ap.~[4] Krause et al., \emph{Analysis of Electric Machinery} & Modelado de máquinas & Baja \\
+Ap.~[7]--[10] Bautista, Aguilar Peña, Pomilio, Séguier & Convertidores, en especial con tiristores; material de Pomilio libre en Unicamp \cite{pomilio} & Baja \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Los libros con derechos de autor no se leyeron completos; la tabla indica qué capítulos consultar. Los números entre corchetes sin ``Ap.'' remiten a las referencias de este documento, listadas a continuación.
+
+\begin{thebibliography}{9}
+\bibitem{oros} R.~C.~Oros. \textit{Regulación de motores de corriente continua}, capítulo~7 del apunte de Electrónica de Potencia, rev.~C, Córdoba, 2010.
+\bibitem{mohan2020} N.~Mohan, S.~Raju. \textit{Analysis and Control of Electric Drives: Simulations and Laboratory Implementation}. Wiley, 2020. \href{https://ch.mathworks.com/academia/books/analysis-and-control-of-electric-drives-mohan.html}{Ficha en MathWorks}.
+\bibitem{veltman} A.~Veltman, D.~W.~J.~Pulle, R.~W.~De~Doncker. \textit{Fundamentals of Electrical Drives}, 2.ª ed. Springer, 2016. \href{https://www.springer.com/9783319200422}{Página del editor}.
+\bibitem{rdk} Texas Instruments. \textit{Stellaris Brushed DC Motor Control Reference Design Kit (RDK-BDC24) User's Manual}. \href{https://wiki.penfieldrobotics.com/wiki/images/e/e7/BDC24_RDK_UM.pdf}{Copia del manual}; \href{https://www.ti.com/lit/pdf/spmu133}{documento de TI}.
+\bibitem{pomilio} J.~A.~Pomilio. Material de Electrónica de Potencia, FEEC--Unicamp. \href{https://site.fee.unicamp.br/sites/default/files/uploads/antenor/apres_retif_controlad.pdf}{Retificadores controlados}.
+\bibitem{bts} Infineon Technologies. \textit{BTS7960 Datasheet}, rev.~1.1, 2004. \href{https://www.infineon.com/assets/row/public/documents/10/57/infineon-bts7960-ds-en.pdf}{Hoja de datos}.
+\bibitem{acs712} Allegro MicroSystems. \textit{ACS712: Fully Integrated, Hall-Effect-Based Linear Current Sensor IC}. Sensibilidad de la versión de 30~A, rango y salida en reposo. \href{https://www.allegromicro.com/-/media/files/datasheets/acs712-datasheet.pdf}{Hoja de datos}.
+\bibitem{ads1115} Texas Instruments. \textit{ADS111x Ultra-Small, Low-Power, I2C-Compatible, 860-SPS, 16-Bit ADCs}. \href{https://www.ti.com/lit/ds/symlink/ads1115.pdf}{Hoja de datos}.
+\bibitem{rp2350} Raspberry Pi Ltd. \textit{RP2350 Datasheet}. Capítulos de PWM, ADC y relojes. \href{https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf}{Hoja de datos}.
+\bibitem{mathworks} The MathWorks. Documentación de Control System Toolbox, Signal Processing Toolbox, System Identification Toolbox y Simscape Electrical. \href{https://www.mathworks.com/help/}{Centro de ayuda}.
+\bibitem{maxon} maxon Support. \textit{Motor current measurement in case of a PWM power amplifier}. \href{https://support.maxongroup.com/hc/en-us/articles/360012273994-Motor-current-measurement-in-case-of-a-PWM-power-amplifier}{Nota técnica}.
+\end{thebibliography}
+
+\end{document}

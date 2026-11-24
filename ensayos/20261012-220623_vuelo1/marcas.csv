@@ -1,0 +1,16 @@
+host_time_ms,fase,titulo
+95535828,inicio,inicio
+95567484,F1,Pausa
+95603703,F2,Menu
+95621812,F3,Parado
+95650203,F4,Potes parado
+95679140,F5,Rodaje
+95733687,F6,Despegue
+95803484,F7,Crucero
+95833468,F8,Potes en vuelo
+95931234,F9,Tren y flaps
+95968453,F10,Perdida
+95988828,F11,Pausa en vuelo
+96005078,F12,Slew
+96032250,F13,Turbulencia (opcional)
+96229328,F14,Aterrizaje

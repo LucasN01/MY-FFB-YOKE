@@ -1,0 +1,9 @@
+﻿[17:17:33] Pico: registro CSV ACTIVADO
+[17:28:48] Pico: ciclo lento lp=39376 us fuera=0 us etapa=3:FLASH (39304 us) hace 1 ms flags=0x7 total=1 perdidos=0
+[17:28:48] Pico: registro CSV DESACTIVADO
+[17:29:23] Pico: ciclo lento lp=37712 us fuera=0 us etapa=3:FLASH (37635 us) hace 1 ms flags=0x7 total=2 perdidos=0
+[17:29:23] Pico: registro CSV ACTIVADO
+[18:04:43] Pico: ciclo lento lp=39203 us fuera=0 us etapa=3:FLASH (39141 us) hace 144745 ms flags=0x6 total=3 perdidos=0
+[18:04:43] Pico: registro CSV DESACTIVADO
+[18:07:14] Pico: ciclo lento lp=38766 us fuera=0 us etapa=3:FLASH (38693 us) hace 0 ms flags=0x7 total=4 perdidos=0
+[18:07:14] Pico: registro CSV ACTIVADO

@@ -1,0 +1,5 @@
+Yoke SimConnect SC8: transporte de telemetria; todos los modelos en Pico 2 | HABILITADO
+Ajustes enviados: referencia 120.0 kt, gustGain 1.00, longitudinal 0.25, gusts=0 buffets=1
+REPLAY D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\ensayos\20261012-215853_banco\entrada.csv: 4478 filas enviadas, 225.2 s | HABILITADO
+[21:58:54] Pico: BOOT reset=ENCENDIDO wd=0x0 pm=0x10000
+Fin: muestras=4478 error=0 reconexiones=0 lineas_pico=4535 lineas_pico_malas=0

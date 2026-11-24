@@ -1,0 +1,75 @@
+19:53:20.154	0.031	PC	inicio del registro: Pro Micro COM20, UNO COM15, archivos D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\modelizacion motor 775\registros\roll_E1_M1b_ANTHOR_20261117_195320_*
+19:53:21.742	1.619	CELDA	# Celda de carga HX711 - comandos: t, c1/c2/c3 <kg>, r, f <cuentas/kg>, d, ?
+19:53:21.758	1.636	CELDA	# factor=106733.429 cuentas/kg (por defecto), tara=104856
+19:53:21.763	1.641	CELDA	# patron por defecto 1: 0.187 kg, 20144 cuentas
+19:53:21.766	1.643	CELDA	# patron por defecto 2: 0.345 kg, 36653 cuentas
+19:53:21.771	1.649	CELDA	# patron por defecto 3: 0.187 kg, 20088 cuentas
+19:53:21.774	1.652	CELDA	# patron 1: sin registrar
+19:53:21.777	1.654	CELDA	# patron 2: sin registrar
+19:53:21.778	1.656	CELDA	# patron 3: sin registrar
+19:53:21.783	1.660	PC	UNO con celda: se registra la fuerza
+19:53:29.092	8.970	PC	comando a MICRO: t
+19:53:29.094	8.971	MICRO	# error: usar t <s> entre 1 y 8
+19:53:31.383	11.260	PC	comando a UNO: t
+19:53:31.408	11.286	CELDA	# tara hecha
+19:53:31.414	11.291	CELDA	# factor=106733.429 cuentas/kg (por defecto), tara=419429
+19:53:31.417	11.294	CELDA	# patron por defecto 1: 0.187 kg, 20144 cuentas
+19:53:31.422	11.300	CELDA	# patron por defecto 2: 0.345 kg, 36653 cuentas
+19:53:31.425	11.302	CELDA	# patron por defecto 3: 0.187 kg, 20088 cuentas
+19:53:31.428	11.306	CELDA	# patron 1: sin registrar
+19:53:31.431	11.308	CELDA	# patron 2: sin registrar
+19:53:31.434	11.311	CELDA	# patron 3: sin registrar
+19:53:50.391	30.269	PC	comando a MICRO: t
+19:53:50.393	30.271	MICRO	# error: usar t <s> entre 1 y 8
+19:53:52.848	32.725	PC	comando a UNO: t
+19:53:54.549	34.427	CELDA	# tara hecha
+19:53:54.554	34.432	CELDA	# factor=106733.429 cuentas/kg (por defecto), tara=-327297
+19:53:54.558	34.435	CELDA	# patron por defecto 1: 0.187 kg, 20144 cuentas
+19:53:54.563	34.440	CELDA	# patron por defecto 2: 0.345 kg, 36653 cuentas
+19:53:54.565	34.443	CELDA	# patron por defecto 3: 0.187 kg, 20088 cuentas
+19:53:54.568	34.446	CELDA	# patron 1: sin registrar
+19:53:54.571	34.448	CELDA	# patron 2: sin registrar
+19:53:54.574	34.451	CELDA	# patron 3: sin registrar
+19:54:19.179	59.057	PC	comando a MICRO: r
+19:54:20.028	59.905	PC	comando a MICRO: z
+19:54:20.528	60.406	MICRO	# cero ACS712: 499.6 cuentas (2.439 V)
+19:54:33.298	73.175	PUNTO	inicio: -0.5 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:54:33.298	73.176	PC	comando a MICRO: c -0.5
+19:54:33.301	73.179	MICRO	# sostenido: I=-0.50 A, t=3600.0 s, techo de duty 15.4 %
+19:54:33.751	73.628	MICRO	# cero ACS712: 499.8 cuentas (2.440 V)
+19:54:34.381	74.259	MICRO	# FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+19:54:34.383	74.261	MICRO	# corriente medida -0.11 A. Driver apagado. Revisar y enviar r para rearmar.
+19:54:34.413	74.290	PUNTO	punto interrumpido: el Pro Micro paso a FALLA: FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+19:54:34.413	74.291	PC	comando a MICRO: s
+19:54:34.415	74.293	MICRO	# driver apagado
+19:54:42.680	82.558	PC	comando a UNO: t
+19:54:44.432	84.310	CELDA	# tara hecha
+19:54:44.437	84.315	CELDA	# factor=106733.429 cuentas/kg (por defecto), tara=-327148
+19:54:44.440	84.318	CELDA	# patron por defecto 1: 0.187 kg, 20144 cuentas
+19:54:44.446	84.323	CELDA	# patron por defecto 2: 0.345 kg, 36653 cuentas
+19:54:44.449	84.326	CELDA	# patron por defecto 3: 0.187 kg, 20088 cuentas
+19:54:44.451	84.329	CELDA	# patron 1: sin registrar
+19:54:44.454	84.331	CELDA	# patron 2: sin registrar
+19:54:44.456	84.334	CELDA	# patron 3: sin registrar
+19:54:47.387	87.265	PC	comando a MICRO: r
+19:54:47.388	87.265	MICRO	# rearmado
+19:54:50.508	90.385	PC	comando a MICRO: z
+19:54:51.008	90.885	MICRO	# cero ACS712: 498.6 cuentas (2.435 V)
+19:55:03.516	103.394	PC	comando a MICRO: z
+19:55:04.016	103.894	MICRO	# cero ACS712: 499.3 cuentas (2.438 V)
+19:55:30.512	130.389	MICRO	# aviso: el ACS712 marca corriente con el driver apagado; revisar el cero (z) o el cableado
+19:55:42.887	142.765	PC	comando a MICRO: zz
+19:55:43.388	143.266	MICRO	# cero ACS712: 508.8 cuentas (2.484 V)
+19:55:49.357	149.235	PC	comando a MICRO: z
+19:55:49.858	149.735	MICRO	# cero ACS712: 509.0 cuentas (2.485 V)
+19:56:02.913	162.790	PUNTO	inicio: -0.5 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:56:02.913	162.791	PC	comando a MICRO: c -0.5
+19:56:02.916	162.793	MICRO	# sostenido: I=-0.50 A, t=3600.0 s, techo de duty 15.4 %
+19:56:03.365	163.242	MICRO	# cero ACS712: 509.3 cuentas (2.487 V)
+19:56:04.006	163.884	MICRO	# FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+19:56:04.007	163.885	MICRO	# corriente medida -0.28 A. Driver apagado. Revisar y enviar r para rearmar.
+19:56:04.026	163.904	PUNTO	punto interrumpido: el Pro Micro paso a FALLA: FALLA: sin corriente en el ACS712 (sensor desconectado, motor abierto o fusible)
+19:56:04.026	163.904	PC	comando a MICRO: s
+19:56:04.027	163.905	MICRO	# driver apagado
+19:56:21.537	181.415	PC	se perdio el Pro Micro: ClearCommError failed (PermissionError(13, 'El dispositivo no reconoce el comando.', None, 22))
+19:56:28.114	187.991	PC	fin del registro

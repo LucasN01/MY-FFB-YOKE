@@ -1,0 +1,80 @@
+19:33:46.977	0.041	PC	inicio del registro: Pro Micro COM20, UNO COM15, archivos D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\modelizacion motor 775\registros\roll_E1_M2b_HOR_20261117_193346_*
+19:33:47.037	0.100	PC	UNO con celda: se registra la fuerza
+19:33:53.547	6.610	PC	comando a MICRO: r
+19:33:55.481	8.545	PC	comando a MICRO: z
+19:33:55.982	9.046	MICRO	# cero ACS712: 526.3 cuentas (2.570 V)
+19:34:01.589	14.653	PC	comando a UNO: t
+19:34:03.352	16.416	CELDA	# tara hecha
+19:34:03.355	16.418	CELDA	# factor=106733.429 cuentas/kg, tara=-325694
+19:34:03.360	16.424	CELDA	# patron 1: 0.187 kg, 20144 cuentas
+19:34:03.363	16.426	CELDA	# patron 2: 0.345 kg, 36653 cuentas
+19:34:03.365	16.429	CELDA	# patron 3: 0.187 kg, 20088 cuentas
+19:34:34.377	47.440	PUNTO	inicio: 0.5 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:34:34.377	47.440	PC	comando a MICRO: c 0.5
+19:34:34.380	47.443	MICRO	# sostenido: I=0.50 A, t=3600.0 s, techo de duty 15.4 %
+19:34:34.829	47.893	MICRO	# cero ACS712: 525.7 cuentas (2.567 V)
+19:34:37.692	50.756	MICRO	# techo de duty ajustado a 15.4 % (estable 13.57 %)
+19:35:05.769	78.833	PC	comando a MICRO: s
+19:35:05.770	78.833	PUNTO	punto terminado: 0.5 A durante 30 s, driver apagado
+19:35:05.774	78.837	MICRO	# fin de punto (parado a mano): I_obj=0.50 A, I_media=0.500 A, duty_medio=13.56 %, V_est=2.06 V, tramo estable=30.1 s
+19:35:05.774	78.838	MICRO	# pausa de 10 s antes del proximo punto
+19:35:15.771	88.834	MICRO	# listo para el proximo punto
+19:35:21.738	94.802	PC	comando a MICRO: z
+19:35:22.238	95.302	MICRO	# cero ACS712: 525.5 cuentas (2.566 V)
+19:35:27.487	100.550	PUNTO	inicio: 1 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:35:27.487	100.551	PC	comando a MICRO: c 1
+19:35:27.490	100.554	MICRO	# sostenido: I=1.00 A, t=3600.0 s, techo de duty 17.5 %
+19:35:27.940	101.003	MICRO	# cero ACS712: 525.6 cuentas (2.566 V)
+19:35:30.947	104.010	MICRO	# techo de duty ajustado a 17.5 % (estable 15.82 %)
+19:35:59.100	132.164	PC	comando a MICRO: s
+19:35:59.101	132.164	PUNTO	punto terminado: 1 A durante 30 s, driver apagado
+19:35:59.106	132.169	MICRO	# fin de punto (parado a mano): I_obj=1.00 A, I_media=1.000 A, duty_medio=15.80 %, V_est=2.59 V, tramo estable=30.2 s
+19:35:59.107	132.171	MICRO	# pausa de 10 s antes del proximo punto
+19:36:09.102	142.165	MICRO	# listo para el proximo punto
+19:36:14.689	147.753	PC	comando a MICRO: ?
+19:36:14.692	147.755	MICRO	# estado=R Vfuente=24.00 V, t_punto=5.0 s, pausa=10.0 s
+19:36:14.694	147.757	MICRO	# ACS712: 100.00 mV/A, signo -, cero 525.6 cuentas, resolucion 49 mA/cuenta (se promedia)
+19:36:14.695	147.759	MICRO	# limites: I pedida <= 6.0 A, corte 7.5 A, duty <= 25.0 %, zona muerta m=5.0 %
+19:36:27.632	160.695	PUNTO	inicio: 1.5 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:36:27.632	160.696	PC	comando a MICRO: c 1.5
+19:36:27.635	160.699	MICRO	# sostenido: I=1.50 A, t=3600.0 s, techo de duty 19.6 %
+19:36:28.084	161.148	MICRO	# cero ACS712: 525.6 cuentas (2.566 V)
+19:36:31.230	164.293	MICRO	# techo de duty ajustado a 19.6 % (estable 17.24 %)
+19:36:59.309	192.372	PC	comando a MICRO: s
+19:36:59.309	192.373	PUNTO	punto terminado: 1.5 A durante 30 s, driver apagado
+19:36:59.314	192.377	MICRO	# fin de punto (parado a mano): I_obj=1.50 A, I_media=1.500 A, duty_medio=17.28 %, V_est=2.95 V, tramo estable=30.1 s
+19:36:59.315	192.378	MICRO	# pausa de 10 s antes del proximo punto
+19:37:09.310	202.373	MICRO	# listo para el proximo punto
+19:37:11.865	204.928	PUNTO	inicio: 2 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:37:11.865	204.929	PC	comando a MICRO: c 2
+19:37:11.868	204.932	MICRO	# sostenido: I=2.00 A, t=3600.0 s, techo de duty 21.7 %
+19:37:12.318	205.382	MICRO	# cero ACS712: 525.6 cuentas (2.566 V)
+19:37:15.567	208.631	MICRO	# techo de duty ajustado a 21.7 % (estable 18.46 %)
+19:37:43.683	236.746	PC	comando a MICRO: s
+19:37:43.683	236.747	PUNTO	punto terminado: 2 A durante 30 s, driver apagado
+19:37:43.688	236.751	MICRO	# fin de punto (parado a mano): I_obj=2.00 A, I_media=2.000 A, duty_medio=18.18 %, V_est=3.16 V, tramo estable=30.1 s
+19:37:43.688	236.752	MICRO	# pausa de 10 s antes del proximo punto
+19:37:53.684	246.748	MICRO	# listo para el proximo punto
+19:38:04.249	257.312	PUNTO	inicio: 2.5 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:38:04.249	257.313	PC	comando a MICRO: c 2.5
+19:38:04.252	257.316	MICRO	# sostenido: I=2.50 A, t=3600.0 s, techo de duty 23.7 %
+19:38:04.702	257.765	MICRO	# cero ACS712: 525.6 cuentas (2.567 V)
+19:38:08.243	261.306	MICRO	# techo de duty ajustado a 23.7 % (estable 19.09 %)
+19:38:36.371	289.435	PC	comando a MICRO: s
+19:38:36.371	289.435	PUNTO	punto terminado: 2.5 A durante 30 s, driver apagado
+19:38:36.376	289.440	MICRO	# fin de punto (parado a mano): I_obj=2.50 A, I_media=2.500 A, duty_medio=18.89 %, V_est=3.33 V, tramo estable=30.1 s
+19:38:36.377	289.441	MICRO	# pausa de 10 s antes del proximo punto
+19:38:46.372	299.435	MICRO	# listo para el proximo punto
+19:38:53.609	306.673	PUNTO	inicio: 3 A durante 30 s (modo sostenido; 's' lo corta antes)
+19:38:53.610	306.673	PC	comando a MICRO: c 3
+19:38:53.612	306.676	MICRO	# sostenido: I=3.00 A, t=3600.0 s, techo de duty 25.8 %
+19:38:54.062	307.126	MICRO	# cero ACS712: 525.6 cuentas (2.567 V)
+19:38:57.810	310.873	MICRO	# techo de duty ajustado a 25.8 % (estable 20.22 %)
+19:39:25.936	339.000	PC	comando a MICRO: s
+19:39:25.937	339.000	PUNTO	punto terminado: 3 A durante 30 s, driver apagado
+19:39:25.941	339.004	MICRO	# fin de punto (parado a mano): I_obj=3.00 A, I_media=3.000 A, duty_medio=20.38 %, V_est=3.69 V, tramo estable=30.1 s
+19:39:25.942	339.005	MICRO	# pausa de 10 s antes del proximo punto
+19:39:35.939	349.003	MICRO	# listo para el proximo punto
+19:39:38.888	351.951	PC	comando a MICRO: s (al salir)
+19:39:38.888	351.952	MICRO	# driver apagado
+19:39:39.492	352.556	PC	fin del registro

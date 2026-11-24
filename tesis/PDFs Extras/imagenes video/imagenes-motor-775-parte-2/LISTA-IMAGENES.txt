@@ -1,0 +1,24 @@
+IMG-24.png — Ajuste del límite de corriente con un puente entre los bornes de la fuente.
+IMG-25.png — Dos motores identificados con cinta azul y naranja y puntos de polaridad.
+IMG-26.png — Separación de la reductora y el motor, documentada con un teléfono.
+IMG-27.png — Engranajes de una etapa planetaria con un lápiz señalando un diente.
+IMG-28.png — Calibre digital junto al eje del motor para medir su diámetro.
+IMG-29.png — Celda de carga conectada al amplificador HX711 y al Arduino Uno.
+IMG-30.png — Computadora con editor y monitor serie conectada al montaje de adquisición.
+IMG-31.png — Resistencia shunt en el circuito del motor y medición con multímetro.
+IMG-32.png — Ajuste de la abrazadera del motor con la palanca apoyada en la celda de carga.
+IMG-33.png — Montaje ilustrativo con shunt, sonda, capacitor, interruptor y curva ascendente.
+IMG-34.png — Volante de arandelas sobre balanza, con calibre al lado.
+IMG-35.png — Motor bloqueado con termocupla, termómetro infrarrojo y cronómetro.
+IMG-36.png — Celda de carga sobre carro con husillo y perilla, en contacto con una palanca.
+IMG-37.png — Puntero en el eje de la reductora sobre una regla metálica.
+IMG-38.png — Carro de cabeceo del yugo con guías, correa, poleas y regla.
+IMG-39.png — Módulo de potencia con disipador conectado al Arduino y al motorreductor.
+IMG-40.png — Planilla de registro vacía en un portapapeles junto a multímetro y motor.
+IMG-41.png — Motor con polea e hilo que sostiene una botella de agua.
+IMG-42.png — Dos motores enfrentados y unidos mediante un acople rígido de aluminio.
+
+Una sola generación por imagen, mediante la herramienta integrada de imágenes.
+Se conservaron las serigrafías y marcas propias de instrumentos y placas según la última indicación.
+No se añadieron títulos, carteles ni texto flotante.
+Dimensiones nativas detalladas en DIMENSIONES.txt; el generador no entregó los 1792 x 1024 solicitados.

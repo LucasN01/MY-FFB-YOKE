@@ -1,0 +1,24 @@
+ENSAYO D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\ensayos\20261012-213753_banco | filas tel=4481 sent=4481 pico=2252 gan=45
+A fidelidad: SIN DATOS emparejadas=0.000% q=0.000% gust=0.000% buffet=0.000% ground=0.000% env=0.000% peor=q@0:0.000000 excluidas=0 esperadas=0 no_emparejadas_drop=0
+B1: OK violaciones=0
+B2: OK violaciones=0
+B3: OK violaciones=0
+B4: OK violaciones=0
+B5: OK violaciones=0
+B6: SIN DATOS violaciones=0 transiciones=0 evaluadas=0 latencia_max=0ms
+B7: OK violaciones=0 pico=0.000% puente=0.000% dropped=0.000
+B8: OK violaciones=0
+B9: OK violaciones=0 lineas=2297 malas=0
+C us/lp/gap max=286/39252/39297 | lp>=2000=1 | centrado signo R=0.000% P=0.000% | corr q-ias=0.000 | skip=0.000 excluidas=0
+01 PAUSA: 0.094s ias=0.000 gs=0.000 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=
+02 PARADO: 43.735s ias=0.384 gs=0.419 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=
+03 RODAJE: 27.000s ias=67.896 gs=69.580 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=
+04 TREN: 45.921s ias=68.885 gs=70.592 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=
+05 PAUSA: 2.985s ias=55.988 gs=58.886 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=
+06 TREN: 22.187s ias=62.687 gs=65.577 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=
+07 PERDIDA: 7.641s ias=50.245 gs=52.698 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=
+08 TREN: 43.000s ias=119.092 gs=123.695 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=
+09 VUELO: 4.922s ias=132.014 gs=137.035 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=
+10 TREN: 20.750s ias=150.683 gs=156.330 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=
+11 PAUSA: 7.125s ias=150.660 gs=156.332 q=0.000 gust=0.000 buf=0.000 gnd=0.000 cmdR/P=0.000/0.000 pwmR/P=0.000/0.000 act=0.000% marca=
+RESULTADO: SIN DATOS

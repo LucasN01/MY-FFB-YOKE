@@ -1,0 +1,8 @@
+Yoke SimConnect SC8: transporte de telemetria; todos los modelos en Pico 2 | SOLO MONITOR
+Ajustes enviados: referencia 120.0 kt, gustGain 1.00, longitudinal 0.25, gusts=0 buffets=1
+REPLAY D:\LUCAS\UTN\PROYECTO FINAL\PROYECTO ALEMAN\PROYECTO MODIFICADO\MiYoke_PD\ensayos\20261013-191634_arranque\entrada.csv: 300 filas enviadas, 14.6 s | SOLO MONITOR
+[19:16:34] Pico: BOOT reset=ENCENDIDO wd=0x0 pm=0x10000
+[19:16:34] Pico: stack libre minimo 800 B
+[19:16:34] Pico: registro CSV ACTIVADO
+[19:16:35] Pico: stack libre minimo 568 B
+Fin: muestras=300 error=0 reconexiones=0 lineas_pico=155 lineas_pico_malas=0 registro=ACTIVADO ciclos_lentos=0 filas_csv_malas=0 stack_libre_min=568
