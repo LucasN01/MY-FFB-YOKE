@@ -19,10 +19,14 @@ Modelo promediado del convertidor ($k_{PWM}$) & Apunte, secc. 7.9.1, ec. 7.54--7
 Modelo del motor para el diseño & Apunte, secc. 7.9.2, ec. 7.56--7.61, págs. 7.36--7.37\\
 Cálculo del PI de corriente & Apunte, secc. 7.9.4.1, ec. 7.67--7.71, págs. 7.39--7.40\\
 Rizado de corriente con PWM unipolar & Apunte, secc. 7.8.5, ec. 7.51, pág. 7.34\\
-Límites y anti-windup & Apunte, secc. 7.9.6 y 7.9.7, págs. 7.45--7.46; recálculo: \cite{astrom2008}\\
+Límites y anti-windup & Apunte, secc. 7.9.6 y 7.9.7, págs. 7.45--7.46; recálculo: \cite{astrom2020}, secc. 11.4\\
+Márgenes, criterio de Nyquist y valores recomendados & \cite{astrom2020}, secc. 10.2 y 10.3, págs. 10-6 y 10-14 a 10-17\\
+Estabilidad de sistemas discretos & \cite{astrom2008}, ejercicio del cap. 5, pág. 165\\
+Lugar de raíces, márgenes sobre el Bode y digitalización & Temario de Sistemas de Control \cite{sistcontrol2025}\\
+Funciones de MATLAB & \cite{mathworks_control}\\
 Parámetros del motor & Mediciones propias (Subsección~\ref{sec:motor775_parametros})\\
 Bloque \emph{Motor DC} de Simulink & \code{MotorModeloFFB.slx} (Subsección~\ref{sec:motor775_simulink})\\
-Frecuencia máxima del driver & Hoja de datos del BTS7960 \cite{bts7960cc}: 25 kHz\\
+Frecuencia máxima del driver & Hoja de datos del BTS7960 \cite{bts7960} y guía del módulo \cite{bts7960mod}, pág. 1: 25 kHz\\
 Sensor de corriente y conversores & Hojas de datos del ACS712 \cite{acs712}, RP2350 \cite{rp2350} y ADS1115 \cite{ads1115}\\
 Comando, período y límites & Código del firmware: \code{include/mis_defines.h}, \code{include/SimEffects.h} y \code{include/MotorDriver.h}\\\bottomrule
 \end{tabular}
@@ -127,11 +131,11 @@ v_k &= K_p\,e_k + x_k, & v^{sat}_k &= \sat(v_k, \pm V_{max}),\nonumber\\
 x_{k+1} &= x_k + K_i T_s\left[e_k + \frac{v^{sat}_k - v_k}{K_p}\right], & D_k &= \frac{v^{sat}_k}{V_{bus}},
 \label{eq:cc_algoritmo}
 \end{align}
-donde $x$ es el estado del integrador [V], $V_{max} = (220/255)\,V_{bus} = 20.7$ V y $D$ el ciclo de trabajo con signo, que se aplica en el período siguiente.
+donde $x$ es el estado del integrador, obtenido con la sustitución $s \to (z-1)/T_s$, una de las reglas de digitalización usadas en Sistemas de Control \cite{sistcontrol2025} (examen integrador, tema 4.3). La otra regla de la materia, la bilineal o de Tustin, $s \to \frac{2}{T_s}\frac{z-1}{z+1}$ (segundo parcial), da márgenes casi iguales, $62.9^\circ$ y 10.1 dB frente a $63.3^\circ$ y 10.4 dB. Se conserva la primera porque el integrador no depende del error del mismo período, lo que evita un lazo algebraico con el anti-windup. $x$ se expresa en volts, $V_{max} = (220/255)\,V_{bus} = 20.7$ V y $D$ el ciclo de trabajo con signo, que se aplica en el período siguiente.
 
 \subsubsection{Anti-windup}
 \label{sec:cc_aw}
-En los saltos grandes, $K_p\,e$ supera la tensión disponible y la salida satura. El apunte propone congelar el integrador mientras la salida está saturada y el error empuja en el mismo sentido (secc. 7.9.7). La Ecuación~\eqref{eq:cc_algoritmo} usa en cambio el recálculo (\emph{back-calculation}) \cite{astrom2008}: descuenta del integrador la parte de la tensión que no se pudo aplicar. Con el coeficiente $1/K_p$, el integrador acumula solo el error que la tensión realmente aplicada pudo atender. Como el cero del PI coincide con el polo de la planta, eso evita la cola lenta, de constante $\tau_e$, que deja el congelamiento. En la simulación de referencia con comandos al azar e $I_{FS} = 10$ A, el error al final de los 2 ms fue de 0.15 A con congelamiento y 0.04 A con recálculo.
+En los saltos grandes, $K_p\,e$ supera la tensión disponible y la salida satura. El apunte propone congelar el integrador mientras la salida está saturada y el error empuja en el mismo sentido (secc. 7.9.7). La Ecuación~\eqref{eq:cc_algoritmo} usa en cambio el recálculo (\emph{back-calculation}) que presenta \cite{astrom2020} (secc. 11.4, Figura 11.11, págs. 11-16 y 11-17): una realimentación adicional lleva al integrador, con ganancia $k_{aw}$, la diferencia entre la salida aplicada y la pedida. Esa diferencia es nula sin saturación, de modo que no altera el diseño lineal. La referencia indica que $k_{aw}$ grande acorta el reinicio, que excesivo amplifica el ruido, y que una elección razonable es un múltiplo de la ganancia integral. Aquí $k_{aw} = K_i/K_p = 1/\tau_e = 1737\ \text{s}^{-1}$. Con esa elección, el integrador acumula solo el error que la tensión realmente aplicada pudo atender. Como el cero del PI coincide con el polo de la planta, eso evita la cola lenta, de constante $\tau_e$, que deja el congelamiento. En la simulación de referencia con comandos al azar e $I_{FS} = 10$ A, el error al final de los 2 ms fue de 0.15 A con congelamiento y 0.04 A con recálculo.
 
 \textbf{Lectura de la Figura~\ref{fig:cc_aw}.} Ambas curvas coinciden mientras la tensión está saturada, porque la pendiente la fija la alimentación. Sin anti-windup, el integrador acumuló de más y la corriente llega a unos 11.4 A antes de volver a los 8.63 A pedidos. Con el recálculo, el sobrepico es de unos 0.3 A.
 
@@ -145,9 +149,98 @@ En los saltos grandes, $K_p\,e$ supera la tensión disponible y la salida satura
 \subsubsection{Prealimentaciones descartadas}
 Se probaron dos términos adicionales. Sumar $R\,I^*$ es contraproducente: el PI ya cancela el polo eléctrico, y en la simulación con comandos al azar ($I_{FS}=5$ A) el sobrepico pasó de 0.18 a 1.40 A. Sumar $K_e\,\omega$ con la velocidad del encoder cada 2 ms no mejoró el resultado: con rotor libre, el error final fue 0.066 A, frente a 0.060 A sin él. El bloque queda en el modelo, desactivado.
 
+\subsection{Estabilidad y márgenes}
+\label{sec:cc_estabilidad}
+\subsubsection{Criterios}
+Sea $L(z) = C(z)\,z^{-1}G(z)$ la función de transferencia de lazo, con la planta discretizada y el retardo de cálculo. Se usan las siguientes medidas \cite{astrom2020} (secc. 10.3, págs. 10-14 a 10-17):
+\begin{itemize}
+\item \textbf{Margen de ganancia} $g_m = 1/|L(i\omega_{pc})|$: factor por el que puede aumentar la ganancia antes de la inestabilidad. $\omega_{pc}$ es la frecuencia en que la fase vale $-180^\circ$.
+\item \textbf{Margen de fase} $\varphi_m = 180^\circ + \angle L(i\omega_{gc})$: atraso de fase adicional admisible. $\omega_{gc}$ es la frecuencia en que $|L| = 1$.
+\item \textbf{Margen de estabilidad} $s_m$: menor distancia de la curva de Nyquist al punto crítico $-1$. Es el inverso del máximo de la sensibilidad, $M_s = \max|1/(1+L)| = 1/s_m$. Detecta casos en que los dos márgenes clásicos son buenos y, sin embargo, la curva pasa cerca de $-1$.
+\item \textbf{Margen de retardo} $\varphi_m/\omega_{gc}$ (con $\varphi_m$ en radianes): retardo adicional que admite el lazo cuando hay un solo cruce de ganancia.
+\end{itemize}
+La referencia da como valores razonables $\varphi_m = 30^\circ$--$60^\circ$, $g_m = 2$--$5$ (6--14 dB) y $s_m = 0.5$--$0.8$ (pág. 10-17). La lectura de ambos márgenes sobre el diagrama de Bode es, además, parte del temario de Sistemas de Control \cite{sistcontrol2025} (segundo parcial, tema 2).
+
+\subsubsection{Resultado del diseño}
+\begin{center}
+\begin{tabular}{lccl}\toprule
+Medida & Nominal & Con el filtro del sensor & Valor razonable \cite{astrom2020}\\\midrule
+Margen de fase & $63.3^\circ$ & $60.8^\circ$ & $30^\circ$--$60^\circ$\\
+Margen de ganancia & 10.4 dB (3.32) & 10.2 dB (3.23) & 6--14 dB (2--5)\\
+Margen de estabilidad $s_m$ & 0.65 & 0.63 & 0.5--0.8\\
+Sensibilidad máxima $M_s$ & 1.53 & 1.58 & 1.25--2 ($1/s_m$)\\
+Margen de retardo & 183 $\mu$s (3.7 períodos) & 176 $\mu$s & ---\\
+Cruce de ganancia / de fase & 963 / 3326 Hz & 957 / 3036 Hz & ---\\\bottomrule
+\end{tabular}
+\end{center}
+La segunda columna agrega el polo del divisor (6.1 $\mu$s) y el del ACS712 (80 kHz \cite{acs712}). Ambas cumplen los valores recomendados, y el margen de fase alcanza o supera levemente el extremo superior: se prefirió poco sobrepico. En la frecuencia de muestreo y el cruce elegidos, la pérdida de fase de un PI que cancela el polo se explica por el retardo equivalente de unas 1.5 muestras: $360^\circ\cdot 963\cdot 1.5\cdot 50\times10^{-6} = 26^\circ$, y quedarían $90^\circ - 26^\circ = 64^\circ$, de acuerdo con el valor calculado.
+
+\textbf{Lectura de la Figura~\ref{fig:cc_margenes}.} El segmento del panel superior mide el margen de ganancia: en la frecuencia en que la fase llega a $-180^\circ$, la magnitud está 10.4 dB por debajo de 0 dB. El del panel inferior mide el margen de fase: en la frecuencia en que la magnitud cruza 0 dB, faltan $63.3^\circ$ para llegar a $-180^\circ$.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/control_corriente/margenes.png}
+\caption{Margen de ganancia y margen de fase del lazo discreto nominal.}
+\label{fig:cc_margenes}
+\end{figure}
+
+\textbf{Lectura de la Figura~\ref{fig:cc_nyquist}.} El lazo no tiene polos inestables (solo el integrador, en $z=1$, equivalente al origen). En ese caso, el lazo cerrado es estable si y solo si la curva no encierra el punto $-1$ (criterio de Nyquist simplificado, \cite{astrom2020}, Teorema 10.1, pág. 10-6; enunciado en tiempo continuo, se aplica aquí a la respuesta en frecuencia del lazo muestreado). La curva corta el eje real negativo en $-0.30$, es decir, $1/3.32$, a la derecha de $-1$: no lo encierra. El círculo en torno de $-1$, de radio $s_m = 0.65$, es tangente a la curva en su punto más cercano.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.6\textwidth]{figuras/control_corriente/nyquist.png}
+\caption{Diagrama de Nyquist del lazo discreto nominal y margen de estabilidad $s_m$.}
+\label{fig:cc_nyquist}
+\end{figure}
+
+\textbf{Lectura de la Figura~\ref{fig:cc_lgr}.} Un sistema discreto es asintóticamente estable si y solo si todos sus autovalores tienen módulo menor que 1 \cite{astrom2008} (pág. 165). Los polos de lazo cerrado del diseño son $0.9118$ y $0.5025 \pm 0.2210i$, de módulo 0.549: todos están dentro del círculo unidad. El primero está junto al cero del PI, $1 - T_s/\tau_e = 0.913$: proviene del polo eléctrico ($e^{-T_s/\tau_e} = 0.917$), casi cancelado, y no domina la respuesta a la referencia; sí aparece, lento, frente a perturbaciones o saturaciones, que es la razón del anti-windup de la Subsección~\ref{sec:cc_aw}. Al aumentar la ganancia, el par complejo se desplaza hacia el círculo y lo alcanza para $k = 3.32$, el mismo valor que el margen de ganancia.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.6\textwidth]{figuras/control_corriente/lugar_raices.png}
+\caption{Lugar de raíces en el plano $z$ al variar la ganancia del lazo.}
+\label{fig:cc_lgr}
+\end{figure}
+
+\subsubsection{Error en régimen}
+El lazo tiene un integrador: es de tipo 1. Según la clasificación por constantes de error \cite{sistcontrol2025} (primer parcial, tema 1), sigue un escalón sin error y una rampa con error constante. Por eso la corriente alcanza exactamente cada referencia, que es constante durante 2 ms. La fuerza contraelectromotriz actúa como perturbación: si crece como una rampa de pendiente $\dot e_a$, el error es $\dot e_a/K_i$, de 1.8 mA para 10 V/s.
+
+\subsubsection{Robustez}
+Los parámetros reales difieren de los nominales. La tabla recalcula los márgenes manteniendo las ganancias y el filtro del sensor, y cambiando la planta. Los valores de $R$ cubren el calentamiento y la resistencia del motor solo (0.66 $\Omega$); los de $L$ y $V_{bus}$, variaciones supuestas.
+\begin{center}
+\begin{tabular}{lcccc}\toprule
+Caso & Margen de fase & Margen de ganancia & $s_m$ & Margen de retardo\\\midrule
+Nominal & $60.8^\circ$ & 10.2 dB & 0.63 & 176 $\mu$s\\
+$R$ +30\% & $66.1^\circ$ & 10.4 dB & 0.65 & 197 $\mu$s\\
+$R = 0.66\ \Omega$ & $56.7^\circ$ & 10.1 dB & 0.62 & 162 $\mu$s\\
+$L$ +30\% & $62.2^\circ$ & 12.4 dB & 0.70 & 228 $\mu$s\\
+$L$ $-30$\% & $54.5^\circ$ & 7.4 dB & 0.52 & 114 $\mu$s\\
+$L$ $-30$\% y $R$ +30\% & $60.4^\circ$ & 7.6 dB & 0.54 & 130 $\mu$s\\
+$V_{bus}$ +10\% & $58.0^\circ$ & 9.4 dB & 0.60 & 153 $\mu$s\\
+$V_{bus}$ $-10$\% & $63.5^\circ$ & 11.1 dB & 0.67 & 205 $\mu$s\\\bottomrule
+\end{tabular}
+\end{center}
+El caso más desfavorable es una inductancia 30\% menor, y aun así cumple los valores recomendados. La inductancia medida varía con la frecuencia: 0.656 mH a 1 kHz, 0.50 mH a 10 kHz y un mínimo de 0.464 mH entre posiciones. El ensayo de $-30\%$ (0.35 mH) es más exigente que ese mínimo.
+
+Los márgenes también justifican la elección de $f_c$: con 1500 Hz se obtienen $50.4^\circ$, 6.9 dB y $s_m = 0.50$, en el límite recomendado sin dejar reserva para esas variaciones; con 2000 Hz, $37.2^\circ$, 4.4 dB y $s_m = 0.36$, fuera de los valores recomendados.
+
+\subsubsection{Comprobación en Simulink}
+El margen de ganancia es una predicción verificable. En el modelo, con tensión promediada, el filtro del sensor, sin ruido y con un escalón pequeño (0.3 A) que no satura al comienzo, se multiplicaron $K_p$ y $K_i$ por un mismo factor. El límite calculado para ese caso es 3.28.
+
+\textbf{Lectura de la Figura~\ref{fig:cc_margen_sim}.} Con el diseño ($\times 1$) la respuesta es rápida y casi sin sobrepico. Con $\times 2$ oscila y se amortigua. Con $\times 3$, debajo del límite, la oscilación decrece despacio. Con $\times 3.5$, encima del límite, crece hasta que la saturación la limita. La simulación confirma que el límite está entre 3 y 3.5.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/control_corriente/margen_simulink.png}
+\caption{Comprobación del margen de ganancia: escalón de 0.3 A con la ganancia multiplicada por 1, 2, 3 y 3.5 (la última, con otra escala).}
+\label{fig:cc_margen_sim}
+\end{figure}
+
+\textbf{Alcance.} Estos márgenes son los del modelo lineal. No cubren la saturación (tratada con el anti-windup y las simulaciones de la Subsección~\ref{sec:cc_resultados}) ni la dinámica real del driver. Una estimación experimental, con un escalón o un barrido de frecuencia, forma parte de los próximos pasos.
+
 \subsection{Medición de la corriente}
 \label{sec:cc_medicion}
-El lazo necesita una muestra por período de PWM. El ADS1115, previsto inicialmente, entrega 860 muestras por segundo como máximo \cite{ads1115}, unas 430 por eje al alternar dos canales: menos de una por cada comando de 2 ms. El conversor interno del RP2350 (12 bits, 500 kmuestras/s \cite{rp2350}) permite tomarlas sincronizadas con el PWM.
+El lazo necesita una muestra por período de PWM. El ADS1115, previsto inicialmente, entrega 860 muestras por segundo como máximo \cite{ads1115} (pág. 1), unas 430 por eje al alternar dos canales: menos de una por cada comando de 2 ms. El conversor interno del RP2350 (12 bits, 9.2 bits efectivos y 500 kmuestras/s \cite{rp2350}, secc. 12.4) permite tomarlas sincronizadas con el PWM.
 
 \textbf{Lectura de la Figura~\ref{fig:cc_ads}.} Los dos paneles superiores muestran el lazo propuesto, calculado con un script independiente del modelo de Simulink. El inferior muestra los mismos comandos con el ADS1115, prealimentación $R\,I^*$ y una corrección integral lenta, con una resistencia real 15\% mayor que la nominal. La corriente no alcanza la referencia: al final de los 2 ms queda un error de hasta 1.05 A, frente a 0.05 A del lazo propuesto.
 
@@ -158,26 +251,36 @@ El lazo necesita una muestra por período de PWM. El ADS1115, previsto inicialme
 \label{fig:cc_ads}
 \end{figure}
 
-El ACS712 de 20 A entrega 2.5 V $\pm$ 0.1 V/A con alimentación de 5 V \cite{acs712}, y los pines analógicos del RP2350 admiten 3.3 V. Se adapta con un divisor de 4.7 k$\Omega$ y 6.8 k$\Omega$ (factor 0.591) y un capacitor de 2.2 nF junto al pin. La resistencia total, de 11.5 k$\Omega$, respeta la carga mínima de 4.7 k$\Omega$ del sensor. Un traductor de niveles digital, como el TXS0108E, no es aplicable a una señal analógica.
+El ACS712 de 20 A entrega 2.5 V $\pm$ 0.1 V/A con alimentación de 5 V \cite{acs712}, y los pines analógicos del RP2350 admiten 3.3 V. Se adapta con un divisor de 4.7 k$\Omega$ y 6.8 k$\Omega$ (factor 0.591) y un capacitor de 2.2 nF junto al pin. La resistencia total, de 11.5 k$\Omega$, respeta la carga mínima de 4.7 k$\Omega$ del sensor. Un traductor de niveles digital, como el TXS0108E, no es aplicable: contiene circuitos que aceleran los flancos \cite{txs0108e} (secc. de descripción, págs. 16--17) y deformarían una señal analógica.
 
-\textbf{Ruido.} El divisor atenúa por igual la señal y el ruido del sensor, y su ruido térmico equivale a unos 0.04 mA. Solo aumenta el efecto del conversor: el escalón de 12 bits pasa de 8 a 14 mA. Con 0.05 A eficaces supuestos para el sensor y unos 9.2 bits efectivos supuestos para el conversor, el ruido total pasa de 0.053 a 0.057 A (8\%). Es una estimación a verificar con mediciones sin corriente. Más importante es la alimentación: el sensor es ratiométrico, y una caída de 100 mV en los 5 V desplaza el cero 50 mV, equivalentes a 0.5 A. Por eso se prevé medir también los 5 V y calibrar el cero al encender.
+\textbf{Ruido.} El divisor atenúa por igual la señal y el ruido del sensor, y su ruido térmico equivale a unos 0.04 mA. Solo aumenta el efecto del conversor: el escalón de 12 bits pasa de 8 a 14 mA. Con 0.05 A eficaces supuestos para el sensor y los 9.2 bits efectivos del conversor, el ruido total pasa de 0.053 a 0.057 A (8\%). El valor supuesto se compara con la hoja de datos del ACS712 de 20 A, que indica 11 mV pico a pico típicos con 2 kHz de ancho de banda \cite{acs712}. Dividiendo por 6.6, son 0.017 A eficaces. Si el ruido fuera blanco, con el filtro del divisor (26 kHz) ascendería a unos 0.06 A, por el cociente de anchos de banda. La estimación es del mismo orden y debe verificarse con mediciones sin corriente. En el modelo promediado, 0.05, 0.10 y 0.20 A de ruido en la medición producen 0.023, 0.047 y 0.093 A eficaces en el motor: el lazo transmite algo menos de la mitad. Más importante es la alimentación: el sensor es ratiométrico \cite{acs712}, y una caída de 100 mV en los 5 V desplaza el cero 50 mV, equivalentes a 0.5 A. Por eso se prevé medir también los 5 V y calibrar el cero al encender.
 
-\textbf{Instante de muestreo.} Con PWM centrado, la corriente instantánea en el centro del intervalo de apagado coincide con su valor medio. El filtro del divisor ($\tau = 6.1\ \mu$s) retrasa el rizado, y la muestra deja de coincidir con la media. En Simulink, a 4.3 A y sin ruido, el sesgo es de $-0.038$ A si se muestrea en el centro, y de $+0.004$ A si se muestrea 6.1 $\mu$s después. Este desfase forma parte del diseño.
+\textbf{Instante de muestreo.} El RP2350 dispone de un modo de PWM de fase correcta, que centra el pulso sin importar el ciclo de trabajo, y genera una interrupción por período \cite{rp2350} (cap. 12, PWM). Con PWM centrado y rizado triangular, la corriente instantánea en el centro del intervalo de apagado coincide con su valor medio. El filtro del divisor ($\tau = 6.1\ \mu$s) retrasa el rizado, y la muestra deja de coincidir con la media. En Simulink, a 4.3 A y sin ruido, el sesgo es de $-0.038$ A si se muestrea en el centro, y de $+0.004$ A si se muestrea 6.1 $\mu$s después. Este desfase forma parte del diseño.
 
 \subsection{Modelo de Simulink}
 \label{sec:cc_simulink}
 El modelo \code{Control_Corriente_FFB.slx} (carpeta \code{modelizacion motor 775/Control_Corriente}) toma una copia del subsistema \emph{Motor DC} validado en la Subsección~\ref{sec:motor775_validacion} y cierra el lazo a su alrededor. \code{MotorModeloFFB.slx} no se modificó. El modelo se genera con el script \code{Crear_Modelo_Control.m}, de modo que la construcción es reproducible.
 
-\textbf{Lectura de la Figura~\ref{fig:cc_modelo}.} De izquierda a derecha, por el camino directo:
-\begin{itemize}
-\item \emph{Comando +-1}: entrega un valor de \code{cmd_ws} cada 2 ms y lo mantiene, como la salida del lazo de efectos. \emph{Recorte} aplica el límite de $\pm 0.863$ e \emph{I\_FS} lo convierte en $I^*$. El bloque \emph{2 ms a Ts} adapta el período al lazo de corriente, que se ejecuta 40 veces por comando.
-\item \emph{Error} y \emph{PI corriente}: diferencia con la corriente medida y controlador de la Ecuación~\eqref{eq:cc_algoritmo}.
-\item \emph{Retardo calculo}: retardo de un período, propio de la ejecución digital.
-\item \emph{BTS7960 PWM}: convierte la tensión pedida en la aplicada al motor.
-\item \emph{Motor DC}: planta, con las entradas de tensión, torque externo ($T_L$) e inercia adicional ($J_L$).
-\item \emph{Kt} y \emph{Reductora N}: torque ideal en el eje.
-\end{itemize}
-Por el camino de realimentación, \emph{Sensor ACS712 + ADC} devuelve la corriente medida. \emph{Encoder 2 ms} y \emph{Ka (FCEM)} forman la prealimentación de velocidad, desactivada. \emph{T\_L en el eje} y \emph{J\_L reflejada} se dividen por $N$ y $N^2$ para referirlos al motor. Los bloques de la derecha grafican las señales y las envían al espacio de trabajo.
+\textbf{Lectura de la Figura~\ref{fig:cc_modelo}.} La señal recorre el diagrama de izquierda a derecha y vuelve por el sensor. La tabla siguiente explica cada bloque, su parámetro y el motivo por el que está.
+
+\begin{longtable}{p{0.17\textwidth}p{0.21\textwidth}p{0.52\textwidth}}
+\toprule Bloque & Parámetro & Qué hace y por qué\\\midrule\endhead
+\emph{Comando +-1} & \code{cmd_ws}, período \code{Ts_cmd} = 2 ms & Entrega un valor entre $-1$ y $+1$ cada 2 ms y lo mantiene. Reproduce la salida del lazo de efectos del firmware (\code{CONTROL_LOOP_MS}).\\
+\emph{Recorte} & \code{cmd_max} = 0.863 & Limita el comando como \code{SIMCONNECT_EXTRA_LIMIT}. Es el límite en la referencia que recomienda el apunte \cite{oros2010} (secc. 7.9.6).\\
+\emph{I\_FS} & 5 A (roll) & Convierte el comando en corriente de referencia, Ecuación~\eqref{eq:cc_escala}.\\
+\emph{2 ms a Ts} & \code{Ts} = 50 $\mu$s & Pasa la referencia del lazo de 2 ms al de 50 $\mu$s: el de corriente se ejecuta 40 veces por comando. Es la separación de velocidades de la cascada (secc. 7.9.1).\\
+\emph{Error} & --- & Resta la corriente medida: es la realimentación negativa.\\
+\emph{PI corriente} & \code{Kp}, \code{Ki} & Calcula la tensión necesaria (secc. 7.9.4.1). Se detalla más abajo.\\
+\emph{Retardo calculo} & $1/z$, \code{Ts} & La tensión calculada se aplica en el período siguiente. Resta fase y define los márgenes de la Subsección~\ref{sec:cc_estabilidad}.\\
+\emph{BTS7960 PWM} & \code{Vbus}, \code{usar_conmutado} & Convierte la tensión pedida en pulsos de 0 a $\pm 24$ V, o en su valor medio.\\
+\emph{Motor DC} & $R$, $L$, $K_e$, $J$, $B$, $\tau_c$ & Planta, con parámetros medidos. Entradas: tensión, $T_L$ y $J_L$. Salidas: corriente, velocidad y posición.\\
+\emph{Sensor ACS712 + ADC} & \code{k_acs}, \code{k_div}, \code{ruido_A} & Mide la corriente con sus imperfecciones y cierra el lazo.\\
+\emph{Kt}, \emph{Reductora N} & 0.0225; 13.7 & Torque ideal en el eje. No intervienen en el lazo.\\
+\emph{Encoder 2 ms}, \emph{w a Ts}, \emph{Ka (FCEM)} & \code{usar_FCEM} = 0 & Prealimentación de la fuerza contraelectromotriz con la velocidad muestreada. Es la idea del control anticipativo (secc. 7.9.5). Desactivada, porque no mejoró.\\
+\emph{T\_L en el eje}, \emph{1 sobre N} & \code{tl_ws} & Torque externo en el eje de salida (la mano), referido al motor.\\
+\emph{J\_L reflejada} & \code{J_eje}/$N^2$ & Inercia de reductora y mando, referida al motor.\\
+\emph{Scope control} y salidas & --- & Gráficos y variables \code{I_ref}, \code{I_real}, \code{I_adc}, \code{V_motor}, \code{w_motor}, \code{T_eje} y \code{theta_motor}. No afectan la simulación.\\\bottomrule
+\end{longtable}
 
 \begin{figure}[H]
 \centering
@@ -186,7 +289,14 @@ Por el camino de realimentación, \emph{Sensor ACS712 + ADC} devuelve la corrien
 \label{fig:cc_modelo}
 \end{figure}
 
-\textbf{Lectura de la Figura~\ref{fig:cc_sim_pi}.} \emph{Kp} y \emph{Integral Ki} forman el PI. \emph{Limite Vmax} recorta la salida. El lazo inferior calcula la diferencia entre la salida recortada y la pedida, la divide por $K_p$ y la suma a la entrada del integrador: es el anti-windup por recálculo.
+\textbf{Lectura de la Figura~\ref{fig:cc_sim_pi}.} Es la Ecuación~\eqref{eq:cc_algoritmo}:
+\begin{itemize}
+\item \emph{Kp}: acción proporcional, reacciona al error del período actual.
+\item \emph{Suma aw} e \emph{Integral Ki}: acción integral (Euler hacia adelante, $K_iT_s/(z-1)$). Acumula el error hasta anularlo y hace que el lazo sea de tipo 1.
+\item \emph{Suma PI}: suma la parte proporcional, la integral y la prealimentación.
+\item \emph{Limite Vmax}: recorta la salida a $\pm 20.7$ V, el techo de PWM del firmware. Representa el límite del convertidor (\cite{oros2010}, secc. 7.9.6 y Fig. 7.52).
+\item \emph{vsat - v} y \emph{1 sobre Kp}: realimentan al integrador la tensión que no pudo aplicarse. Es el anti-windup (\cite{astrom2020}, Figura 11.11).
+\end{itemize}
 
 \begin{figure}[H]
 \centering
@@ -195,7 +305,16 @@ Por el camino de realimentación, \emph{Sensor ACS712 + ADC} devuelve la corrien
 \label{fig:cc_sim_pi}
 \end{figure}
 
-\textbf{Lectura de la Figura~\ref{fig:cc_sim_pwm}.} La tensión pedida se divide por $V_{bus}$ y se separa en signo y módulo, como hace el driver al elegir la rama que conmuta. El módulo se compara con una portadora triangular de 20 kHz, desfasada 6.1 $\mu$s. \emph{Pulso perdido} permite representar el tiempo que el driver no conduce en cada período. \emph{Elegir} permite usar la tensión promediada, equivalente al modelo lineal del apunte, en lugar de la conmutada.
+\textbf{Lectura de la Figura~\ref{fig:cc_sim_pwm}.} La señal recorre los bloques en este orden:
+\begin{itemize}
+\item \emph{1 sobre Vbus}: de volts a ciclo de trabajo. Compensa la ganancia del convertidor, y por eso $k_{PWM} = 1$.
+\item \emph{Signo} y \emph{Abs}: separan el sentido, que elige la rama del puente que conmuta, y el módulo. Es el manejo unipolar (\cite{oros2010}, secc. 7.8.3), igual al de \code{MotorDriver.h}.
+\item \emph{Pulso perdido}: resta un tiempo por período en que el driver no conduce. Vale cero hasta medirlo.
+\item \emph{D 0..1}: limita el ciclo de trabajo.
+\item \emph{Portadora} y \emph{Comparador}: triangular de 20 kHz; mientras el ciclo de trabajo la supera, hay pulso. Está desfasada 6.1 $\mu$s por el filtro del sensor (Subsección~\ref{sec:cc_medicion}).
+\item \emph{a double}, \emph{conmutado} y \emph{Elegir}: seleccionan PWM conmutado o tensión promediada, que es el modelo lineal del apunte (secc. 7.9.1).
+\item \emph{Prod} y \emph{Vbus}: devuelven el signo y llevan el resultado a $\pm 24$ V.
+\end{itemize}
 
 \begin{figure}[H]
 \centering
@@ -204,7 +323,16 @@ Por el camino de realimentación, \emph{Sensor ACS712 + ADC} devuelve la corrien
 \label{fig:cc_sim_pwm}
 \end{figure}
 
-\textbf{Lectura de la Figura~\ref{fig:cc_sim_sensor}.} La corriente pasa por la sensibilidad del ACS712, el divisor con su filtro y el cero de 2.5 V atenuado. Luego se muestrea a 20 kHz, se suma el ruido, y se aplican el rango de 0 a 3.3 V y los escalones de 12 bits. Los dos últimos bloques hacen la conversión inversa, que hará el firmware.
+\textbf{Lectura de la Figura~\ref{fig:cc_sim_sensor}.} La señal recorre los bloques en este orden:
+\begin{itemize}
+\item \emph{ACS712 0.1 V por A}: sensibilidad de la versión de 20 A, 100 mV/A (\cite{acs712}).
+\item \emph{Divisor 4.7k 6.8k 2.2nF}: atenuación de 0.591 y filtro de primer orden de 6.1 $\mu$s.
+\item \emph{Cero}: suma la mitad de la alimentación, 2.5 V, ya atenuada. Está después del filtro para que la simulación arranque en régimen.
+\item \emph{Muestreo}: una muestra cada 50 $\mu$s.
+\item \emph{Ruido} y \emph{Suma}: ruido gaussiano, supuesto.
+\item \emph{Rango 0-3.3 V} y \emph{ADC 12 bits}: saturación y escalones de 0.81 mV del conversor (\cite{rp2350}, secc. 12.4).
+\item \emph{Resta cero} y \emph{a amperes}: conversión inversa, la que hará el firmware.
+\end{itemize}
 
 \begin{figure}[H]
 \centering
@@ -213,12 +341,12 @@ Por el camino de realimentación, \emph{Sensor ACS712 + ADC} devuelve la corrien
 \label{fig:cc_sim_sensor}
 \end{figure}
 
-\textbf{Lectura de la Figura~\ref{fig:cc_sim_motor}.} Es el subsistema de la Figura~\ref{fig:motor775_simulink_motor} con dos entradas más. $T_L$ se resta en la suma de torques y $J_L$ se suma a $J$ antes de dividir:
+\textbf{Lectura de la Figura~\ref{fig:cc_sim_motor}.} Es el subsistema de la Figura~\ref{fig:motor775_simulink_motor} con dos entradas más. La parte superior resuelve la ecuación eléctrica: la suma calcula $v - R\,i - K_a\,\omega$, \emph{Divide} la divide por $L$ y el integrador entrega $i$. La inferior resuelve la mecánica: $K_m\,i - B\,\omega$ menos la \emph{Friccion seca}, dividido por la inercia e integrado, entrega $\omega$. \emph{Eje libre} anula la aceleración si el rotor está trabado y el último integrador entrega la posición. En las entradas agregadas, $T_L$ se resta en la suma de torques y $J_L$ se suma a $J$ antes de dividir:
 \begin{equation}
 (J + J_L)\,\frac{d\omega}{dt} = K_t\,i - B\,\omega - \tau_c\tanh\!\left(\frac{\omega}{\omega_{tc}}\right) - T_L,\qquad J_L = \frac{J_{eje}}{N^2},\quad T_L = \frac{T_{eje}}{N}.
 \label{eq:cc_carga}
 \end{equation}
-La idea de incorporar estas entradas se tomó de un modelo de motor de corriente continua de Simulink consultado como comparación (\code{DC_Motor.slx}, 2021). Ese modelo resuelve la misma ecuación eléctrica, pero reúne todo el rozamiento en un término viscoso, calculado en vacío. Aplicado a este motor, a 20 rad/s daría unos 0.27 mN$\cdot$m, frente a 4.8 mN$\cdot$m del modelo con rozamiento seco. Como el mando trabaja a baja velocidad, se conservó el modelo propio. La relación $J_{eje}/N^2$ vale para una inercia constante, y los valores de la reductora todavía no se midieron.
+La idea de incorporar estas entradas se tomó de un modelo de motor de corriente continua de Simulink consultado como comparación (\code{DC_Motor.slx} \cite{dcmotor2021}). Ese modelo resuelve la misma ecuación eléctrica, pero reúne todo el rozamiento en un término viscoso, calculado en vacío. Aplicado a este motor, a 20 rad/s daría unos 0.27 mN$\cdot$m, frente a 4.8 mN$\cdot$m del modelo con rozamiento seco. Como el mando trabaja a baja velocidad, se conservó el modelo propio. La relación $J_{eje}/N^2$ vale para una inercia constante, y los valores de la reductora todavía no se midieron.
 
 \begin{figure}[H]
 \centering
@@ -235,12 +363,13 @@ Archivo & Función\\\midrule
 \code{Parametros_Control.m} & Lee los parámetros medidos de \code{Parametros_Motor_FFB.m}, calcula $K_p$ y $K_i$, muestra los márgenes y arma el comando de prueba\\
 \code{Control_Corriente_FFB.slx} & Modelo del lazo\\
 \code{Verificar_Control.m} & Ejecuta los casos de la Subsección~\ref{sec:cc_resultados} y mide tiempo de llegada y error\\
-\code{Figuras_Control.m} & Valida el procedimiento con el ejemplo del apunte y genera las figuras de esta sección\\
+\code{Estabilidad_Control.m} & Márgenes, Nyquist, lugar de raíces, robustez y comprobación del margen de ganancia en Simulink\\
+\code{Figuras_Control.m} & Valida el procedimiento con el ejemplo del apunte y genera las figuras de respuesta y los diagramas\\
 \code{Control_Corriente_775.m} & Simulación independiente, sin Simulink, para contrastar resultados\\
 \code{Crear_Modelo_Control.m} & Genera el modelo copiando el bloque \emph{Motor DC}\\\bottomrule
 \end{tabular}
 \end{center}
-Se usan MATLAB R2021a, Simulink y Control System Toolbox (\code{tf}, \code{c2d}, \code{pid}, \code{margin}, \code{stepinfo}). El cálculo central es:
+Se usan MATLAB R2021a, Simulink y Control System Toolbox (\code{tf}, \code{c2d}, \code{pid}, \code{margin}, \code{stepinfo}, \code{rlocus} y \code{freqresp}) \cite{mathworks_control}. El cálculo central es:
 \begin{verbatim}
 fc  = 1000;  wc = 2*pi*fc;     % cruce: fs/20
 tau_e = L/R;                   % polo que cancela el cero del PI (ec. 7.68)
@@ -340,12 +469,3 @@ El modelo no incluye la regeneración hacia la fuente, la caída real del BTS796
 \item Con la reductora, caracterizar ambos ejes (inercia, rozamiento, relación y rendimiento), cargar $J_{eje}$ en el modelo y ajustar $I_{FS}$.
 \item Repetir el cálculo para pitch con sus parámetros medidos.
 \end{enumerate}
-
-\begin{thebibliography}{9}
-\bibitem{oros2010} R.~C.~Oros, \emph{Regulación de motores de corriente continua}, capítulo~7 del apunte de la cátedra Electrónica de Potencia, rev.~C, Córdoba, 2010.
-\bibitem{astrom2008} K.~J.~Åström y R.~M.~Murray, \emph{Feedback Systems: An Introduction for Scientists and Engineers}, Princeton University Press, 2008, capítulo de control PID (integrator windup).
-\bibitem{bts7960cc} Infineon Technologies, \emph{BTS 7960 High Current PN Half Bridge NovalithIC}, hoja de datos, rev.~1.1, diciembre de 2004.
-\bibitem{acs712} Allegro MicroSystems, \emph{ACS712: Fully Integrated, Hall-Effect-Based Linear Current Sensor IC}, hoja de datos.
-\bibitem{rp2350} Raspberry Pi Ltd, \emph{RP2350 Datasheet}, capítulos de PWM y ADC.
-\bibitem{ads1115} Texas Instruments, \emph{ADS111x Ultra-Small, Low-Power, I$^2$C-Compatible, 860-SPS, 16-Bit ADCs}, hoja de datos.
-\end{thebibliography}
