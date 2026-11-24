@@ -7,7 +7,7 @@ El proyecto convierte las \textbf{variaciones del viento del simulador} en empuj
 Una forma sencilla de entenderlo es: \emph{``detectar cuánto cambió el viento respecto de su valor reciente y transformar ese cambio en un empuje del mando''}. No hay una tabla de posiciones a las que deba ir el yugo. El resultado es una orden de fuerza normalizada, no una posición objetivo.
 
 % [V-realismo]
-\textit{Actualización (realismo): ponderación por $\min(Q,1)$ $\rightarrow$ por $\sqrt Q\le2$; la carga de ráfaga crece como $\rho Vw$ (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ponderación por $\min(Q,1)$ $\rightarrow$ por $\sqrt Q\le2$; la carga de ráfaga crece como $\rho Vw$ (Pratt--Walker \cite{pratt1954}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Diferencia con el centrado}
 El centrado necesita el desplazamiento del mando para calcular su fuerza. La turbulencia aislada no multiplica por posición ni velocidad del yugo: puede actuar con el mando centrado y quieto. Potenciómetros, encoders y posición de SimConnect no determinan su amplitud en la fórmula. En la integración general sí se validan datos y pueden coexistir cargas de otros efectos; eso no convierte la turbulencia en un resorte.
@@ -39,7 +39,7 @@ El cálculo de viento y sus filtros se ejecutan en la Pico 2, en \code{GustModel
 \code{DYNAMIC PRESSURE} & psf & Ponderación de la perturbación según presión dinámica.\\
 \bottomrule
 \end{longtable}
-Los nombres, unidades y ejes se verifican en el \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{SDK de Prepar3D, Simulation Variables}. El código solicita los datos como \code{FLOAT64}. Las componentes ya se reciben en ejes del avión: MiYoke no aplica una matriz de rotación adicional.
+Los nombres, unidades y ejes se verifican en el SDK de Prepar3D, Simulation Variables \cite{p3dv3}. El código solicita los datos como \code{FLOAT64}. Las componentes ya se reciben en ejes del avión: MiYoke no aplica una matriz de rotación adicional.
 
 La tabla del SDK identifica los ejes, pero no basta por sí sola para certificar el sentido de fuerza que debe sentir el piloto. En el código actual una variación X positiva produce comando roll positivo; una Y positiva produce pitch positivo. Para convertir ese signo en movimiento físico hay que considerar el cableado y la polaridad del motor.
 
@@ -75,7 +75,7 @@ $u_R,u_P$ & Comandos de turbulencia tras zona muerta y ganancias.\\
 Se usan nombres distintos para evitar confundir la ganancia previa $\gamma$, las ganancias por eje $c_a$ y la ganancia general $G$. Actúan en puntos distintos de la cadena y no siempre producen resultados intercambiables.
 
 % [V-realismo]
-\textit{Actualización (realismo): $Q_T$ y $\tau_H=1$ s $\rightarrow$ $S_V=\sqrt Q\le2$ y $\tau_H$ variable; carga lineal en velocidad y decaimiento por plunge (Pratt--Walker; Hoblit); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $Q_T$ y $\tau_H=1$ s $\rightarrow$ $S_V=\sqrt Q\le2$ y $\tau_H$ variable; carga lineal en velocidad y decaimiento por plunge (Pratt--Walker \cite{pratt1954}; Hoblit \cite{hoblit1988}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 1: extraer las variaciones del viento}
 \subsubsection{Promedio temporal y resta}
@@ -92,7 +92,7 @@ $m$ sigue al viento con cierta lentitud. Al restarlo del viento actual, queda la
 Con $\Delta t=0.02$ s y $V_e=120$ kt ($\tau_H=0.47786$ s), $a=e^{-0.02/0.47786}\simeq0.959011$ y $1-a\simeq0.040989$. En cada muestra la media avanza aproximadamente el 4.10\% de la diferencia con el viento recibido. Una ráfaga brusca no es absorbida inmediatamente por esa media y aparece en $h$.
 
 % [V-realismo]
-\textit{Actualización (realismo): $\tau_H=1$ s $\rightarrow$ $\tau_H=\sat_{[0.25,1.5]}(29.5/V_e)$ s; adapta el decaimiento por plunge a la velocidad (Hoblit); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\tau_H=1$ s $\rightarrow$ $\tau_H=\sat_{[0.25,1.5]}(29.5/V_e)$ s; adapta el decaimiento por plunge a la velocidad (Hoblit \cite{hoblit1988}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{De dónde sale el filtro}
 El seguimiento de media responde a la ecuación de primer orden
@@ -113,7 +113,7 @@ La primera muestra activa después de un reinicio hace $m_i=w_i$ y devuelve cero
 Si se parte de viento cero estabilizado y el vertical salta a 5 kt, en la primera muestra de 20 ms se obtiene $m_Y\simeq0.204946$ kt y $h_Y\simeq4.795054$ kt (a 120 kt EAS). Si permanece en 5 kt, ese $h_Y$ va decayendo. Si posteriormente el viento baja, puede aparecer una perturbación de signo contrario: también se detecta la salida de la ráfaga. El filtro de salida puede demorar el cambio de signo efectivo del comando.
 
 % [V-realismo]
-\textit{Actualización (realismo): ejemplo con $\tau_H=1$ s $\rightarrow$ ejemplo recalculado a 120 kt EAS con $\tau_H=29.5/V_e$; decaimiento por plunge (Hoblit); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ejemplo con $\tau_H=1$ s $\rightarrow$ ejemplo recalculado a 120 kt EAS con $\tau_H=29.5/V_e$; decaimiento por plunge (Hoblit \cite{hoblit1988}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 2: mezclar viento hacia roll y pitch}
 Antes de aplicar presión y ganancia, se calculan las siguientes señales:
@@ -149,7 +149,7 @@ S_V&=\sat_{[0,2]}(\sqrt Q).
 La Pico conserva $Q\le4$ y la turbulencia usa $S_V\le2$. Con referencia 120 kt, $q_{\rm ref}\simeq2334.24$ Pa y $Q=2$ da $S_V=\sqrt2$. La ponderación lineal en velocidad equivalente procede de $q\Delta\alpha$ con $\Delta\alpha=w/V$; la referencia sigue siendo un ajuste háptico, no una Vne certificada.
 
 % [V-realismo]
-\textit{Actualización (realismo): $Q_T=\min(Q,1)$ $\rightarrow$ $S_V=\sqrt Q\le2$; la carga de ráfaga es $\propto\rho Vw$ (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $Q_T=\min(Q,1)$ $\rightarrow$ $S_V=\sqrt Q\le2$; la carga de ráfaga es $\propto\rho Vw$ (Pratt--Walker \cite{pratt1954}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ganancia previa al límite}
 La señal bruta es
@@ -164,7 +164,7 @@ v_P&=\gamma S_V\,\frac{h_Y+k_Zh_Z}{5}.
 Si $S_V$ o $\gamma$ se vuelven cero, el objetivo bruto es cero. \textbf{Una salida previa no desaparece necesariamente en ese instante}: decae por el filtro de 80 ms mientras el modelo continúe activo. La pausa, el suelo o un reinicio sí limpian directamente el estado del modelo.
 
 % [V-realismo]
-\textit{Actualización (realismo): ganancia previa $\gamma Q_T$ $\rightarrow$ $\gamma S_V$; ponderación lineal en velocidad equivalente de la carga de ráfaga (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ganancia previa $\gamma Q_T$ $\rightarrow$ $\gamma S_V$; ponderación lineal en velocidad equivalente de la carga de ráfaga (Pratt--Walker \cite{pratt1954}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 4: limitar conjuntamente los dos ejes}
 \subsubsection{Norma del vector y recorte radial}
@@ -191,7 +191,7 @@ Antes del suavizado, el objetivo no se recorta si
 Con $S_V=\gamma=1$, una variación exclusivamente lateral alcanza el límite alrededor de $|h_X|=7.143$ kt; una exclusivamente vertical, a 5 kt; una exclusivamente longitudinal con $k_Z=0.25$, a 20 kt. Son umbrales de \emph{variaciones filtradas}, no del viento meteorológico absoluto. Con viento mixto se puede saturar antes.
 
 % [V-realismo]
-\textit{Actualización (realismo): condición de saturación con $Q_T$ $\rightarrow$ con $S_V=\sqrt Q$; umbrales coherentes con la carga $\propto\rho Vw$ (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): condición de saturación con $Q_T$ $\rightarrow$ con $S_V=\sqrt Q$; umbrales coherentes con la carga $\propto\rho Vw$ (Pratt--Walker \cite{pratt1954}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 5: suavizar el objetivo}
 \subsubsection{Filtro de salida de 80 ms}
@@ -217,7 +217,7 @@ La referencia continua del pasaaltos tiene corte aproximado $f_H=1/(2\pi\tau_H)$
 Subir $\tau_H$ hace que el viento sostenido tarde más en ser absorbido por la media y prolonga el transitorio; baja la frecuencia de corte del pasaaltos. Subir $\tau_L$ suaviza más y retrasa la respuesta de salida. Los cortes son orientativos para la cadena lineal; muestreo, saturación y zona muerta modifican la respuesta completa.
 
 % [V-realismo]
-\textit{Actualización (realismo): corte pasaaltos fijo $\rightarrow$ corte dependiente de $\tau_H=29.5/V_e$ limitado; duración de ráfaga ligada al plunge (Hoblit); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): corte pasaaltos fijo $\rightarrow$ corte dependiente de $\tau_H=29.5/V_e$ limitado; duración de ráfaga ligada al plunge (Hoblit \cite{hoblit1988}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 6: datos USB y ejecución en la placa}
 La trama SC8 lleva viento X/Y/Z y presión en sus unidades originales, además de los parámetros de configuración. La Pico calcula $(o_R,o_P)$ en \code{GustModel.h}; el comando usa directamente esos flotantes como $z_R,z_P$, sin cuantización intermedia a enteros.
@@ -291,7 +291,7 @@ Supuestos: vuelo, viento cero ya inicializado, $\Delta t=20$ ms, $Q=0.5$, refere
 \end{enumerate}
 
 % [V-realismo]
-\textit{Actualización (realismo): ejemplo con pasaaltos de 1 s $\rightarrow$ ejemplo recalculado con $\tau_H=0.47786$ s a 120 kt EAS; decaimiento por plunge (Hoblit); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ejemplo con pasaaltos de 1 s $\rightarrow$ ejemplo recalculado con $\tau_H=0.47786$ s a 120 kt EAS; decaimiento por plunge (Hoblit \cite{hoblit1988}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Qué ocurre si ese viento de 5 kt permanece constante}
 % [V-realismo]
@@ -311,7 +311,7 @@ Mismos supuestos: $V_e=84.853$ kt, $\tau_H=0.675799$ s, $S_V=0.707107$, viento v
 La media absorbe el viento constante; presión fija y ejes fijos son supuestos del ejemplo.
 
 % [V-realismo]
-\textit{Actualización (realismo): tabla de viento constante con $\tau_H=1$ s $\rightarrow$ tabla recalculada con $29.5/V_e$ a 120 kt EAS; decaimiento por plunge (Hoblit); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): tabla de viento constante con $\tau_H=1$ s $\rightarrow$ tabla recalculada con $29.5/V_e$ a 120 kt EAS; decaimiento por plunge (Hoblit \cite{hoblit1988}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ráfaga mixta: el límite vectorial sí interviene}
 % [V-realismo]
@@ -325,7 +325,7 @@ v_R&=0.6713076,&v_P&=0.9590108,\\
 Tras zona muerta y ganancias: $u_R\simeq0.0343286$ y $u_P\simeq0.1036286$. Se aplican aproximadamente \textbf{9 PWM roll y 26 PWM pitch}. No salen dos valores iguales ni una relación 1:2: intervinieron la mezcla lateral 0.70, el reparto vectorial y la zona muerta.
 
 % [V-realismo]
-\textit{Actualización (realismo): ejemplo de ráfaga mixta con filtro fijo $\rightarrow$ ejemplo recalculado con $\tau_H=29.5/V_e$; transitorio de plunge previo al recorte vectorial (Hoblit); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ejemplo de ráfaga mixta con filtro fijo $\rightarrow$ ejemplo recalculado con $\tau_H=29.5/V_e$; transitorio de plunge previo al recorte vectorial (Hoblit \cite{hoblit1988}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Conversión rápida de señal recibida a PWM}
 Esta tabla parte de $z$ ya recibido, por lo que no especifica una ráfaga única capaz de producirlo. Cada eje se evalúa por separado, con sus ganancias iniciales y polaridad positiva:
@@ -383,7 +383,7 @@ TelemFFB utiliza pesos vertical 1, longitudinal 0.25 y lateral 0.70. Para roll a
 También hay límite conjunto de pitch/roll y suavizado exponencial en la referencia. TelemFFB ajusta sensibilidad mediante un divisor entre 10 y 1 y una intensidad posterior al límite de magnitud. MiYoke usa 5 kt, presión normalizada y ganancia \emph{antes} del límite unitario. Por tanto, \code{--gust-gain} no equivale exactamente al parámetro de intensidad de TelemFFB.
 
 % [V-realismo]
-\textit{Actualización (realismo): pasaaltos fijo de la adaptación anterior $\rightarrow$ $29.5/V_e$ limitado; se distingue el decaimiento por plunge del antecedente TelemFFB (Hoblit); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): pasaaltos fijo de la adaptación anterior $\rightarrow$ $29.5/V_e$ limitado; se distingue el decaimiento por plunge del antecedente TelemFFB (Hoblit \cite{hoblit1988}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{La entrada de viento no es la misma}
 \code{SimConnectManager.py} de TelemFFB define \code{RelWind} con \code{RELATIVE WIND VELOCITY BODY X/Y/Z} en m/s. Este proyecto usa \code{AIRCRAFT WIND X/Y/Z} en kt. No son nombres intercambiables: cambiar de familia de variables modifica el significado de la entrada, y cambiar a m/s exige revisar la escala de 5 kt.
@@ -412,7 +412,7 @@ Redondeo, escala 255 y techo 220 & Ruta eléctrica de MiYoke; no calibración de
 \code{SimConnectBridge/GustGain.h} contiene \code{scaleGust}, pero no está incluido ni llamado por el puente actual: aparece en pruebas. No se agregó su fórmula como una etapa extra, porque hacerlo duplicaría un cálculo que no está en la ruta de ejecución analizada.
 
 % [V-realismo]
-\textit{Actualización (realismo): $\min(Q,1)$ y 1 s $\rightarrow$ $\sqrt Q\le2$ y $29.5/V_e$ limitado; se documentan carga de ráfaga y plunge (Pratt--Walker; Hoblit); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $\min(Q,1)$ y 1 s $\rightarrow$ $\sqrt Q\le2$ y $29.5/V_e$ limitado; se documentan carga de ráfaga y plunge (Pratt--Walker \cite{pratt1954}; Hoblit \cite{hoblit1988}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Qué puede ajustarse y cómo cambia la sensación}
 \subsubsection{Ganancias disponibles en la placa}
@@ -438,7 +438,7 @@ El rango es $0\ldots1$ y el paso de botones 0.05. Las ganancias se guardan en me
 Subir referencia de 120 a 150 kt multiplica $Q$ sin recortar por 0.64 y $S_V$ por 0.8. El pasaaltos usa la presión física para $V_e$, por lo que su constante temporal no depende de esa referencia. El recorte superior de $Q$ puede alterar estas proporciones.
 
 % [V-realismo]
-\textit{Actualización (realismo): cambiar referencia escalaba por $Q_T$ $\rightarrow$ escala por $S_V=\sqrt Q$; la carga es lineal en velocidad y el plunge usa $V_e$ físico (Pratt--Walker; Hoblit); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): cambiar referencia escalaba por $Q_T$ $\rightarrow$ escala por $S_V=\sqrt Q$; la carga es lineal en velocidad y el plunge usa $V_e$ físico (Pratt--Walker \cite{pratt1954}; Hoblit \cite{hoblit1988}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Cambios que requieren editar y recompilar}
 % [V-realismo]
@@ -447,7 +447,7 @@ La escala 5 kt, el peso lateral 0.70 y los 80 ms están en \code{GustModel.h}; $
 Las polaridades de motor y límites PWM requieren revisar \code{mis_defines.h}. Invertir la polaridad de un motor invierte todos sus efectos, incluido el centrado. No conviene usar ese ajuste para corregir exclusivamente el signo de una turbulencia cuando el resorte ya restaura correctamente: en ese caso hay que revisar el mapeo del viento del modelo.
 
 % [V-realismo]
-\textit{Actualización (realismo): constante pasaaltos fija $\rightarrow$ cálculo $29.5/V_e$ en firmware; parámetros de decaimiento por plunge requieren recompilación (Hoblit); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): constante pasaaltos fija $\rightarrow$ cálculo $29.5/V_e$ en firmware; parámetros de decaimiento por plunge requieren recompilación (Hoblit \cite{hoblit1988}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Umbral efectivo por cuantización PWM}
 Superar $d=0.02$ genera un comando matemático, pero puede seguir redondeando a cero. Para un eje aislado con $M=255$ y $Gc_a>0$, la primera cuenta aparece aproximadamente cuando
@@ -498,7 +498,7 @@ El diagnóstico local \code{f=} muestra la suma de comandos multiplicada por 100
 Una ampliación útil sería registrar $h_X,h_Y,h_Z$, $S_V$, $\ell$, señal antes/después del límite, $o_a$, $z_a$ y aporte aislado de turbulencia. Así se distinguiría una ráfaga eliminada por el filtro de una señal recortada, una zona muerta o un techo de la suma. Este análisis no añadió esas variables al firmware ni al puente.
 
 % [V-realismo]
-\textit{Actualización (realismo): diagnóstico referido a $Q_T$ $\rightarrow$ propuesta de registro de $S_V$; permitiría distinguir la ponderación de carga $\propto\rho Vw$ del recorte (Pratt--Walker); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): diagnóstico referido a $Q_T$ $\rightarrow$ propuesta de registro de $S_V$; permitiría distinguir la ponderación de carga $\propto\rho Vw$ del recorte (Pratt--Walker \cite{pratt1954}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Mejoras posibles, todavía no implementadas}
 \subsubsection{Separar causas atmosféricas y maniobras}
@@ -536,11 +536,11 @@ Las rutas son relativas a MiYoke\_PD\_V2.4. Se verificaron numéricamente las ta
 \code{LEEME md/MODELO_TURBULENCIA.md} describe el fundamento y las ecuaciones del modelo, pero conserva pasajes antiguos sobre protocolo SC2, FFB HID y ganancias 0.10/0.20. Esos detalles no describen la integración actual. Esta sección usa SC8, ganancias 0.35/0.70 y suma exclusivamente generada por la ruta actual de SimConnect.
 
 \begin{enumerate}
-\item \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{Prepar3D SDK v3, Simulation Variables}: componentes \code{AIRCRAFT WIND X/Y/Z} y presión. Consultado el 7 de octubre de 2026.
-\item \href{https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/dynamic-pressure-2/}{NASA Glenn, Dynamic Pressure}: fundamento de presión dinámica, ya utilizado en la sección de centrado.
-\item \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/utils/TurbulenceModulator.py}{TelemFFB, TurbulenceModulator.py}: referencia pública para localizar filtros, mezcla y saturación; comparación realizada contra la copia local.
-\item \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/msfs_xp/TurbulenceMixIn.py}{TelemFFB, TurbulenceMixIn.py}: uso de componentes y envío de fuerza FFB; copia local inspeccionada.
-\item \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/telem/SimConnectManager.py}{TelemFFB, SimConnectManager.py}: definición de \code{RelWind} con viento relativo en m/s; copia local inspeccionada.
+\item Prepar3D SDK v3, Simulation Variables \cite{p3dv3}: componentes \code{AIRCRAFT WIND X/Y/Z} y presión. Consultado el 7 de octubre de 2026.
+\item NASA Glenn, Dynamic Pressure \cite{nasaq}: fundamento de presión dinámica, ya utilizado en la sección de centrado.
+\item TelemFFB, TurbulenceModulator.py \cite{telemffb}: referencia pública para localizar filtros, mezcla y saturación; comparación realizada contra la copia local.
+\item TelemFFB, TurbulenceMixIn.py \cite{telemffb}: uso de componentes y envío de fuerza FFB; copia local inspeccionada.
+\item TelemFFB, SimConnectManager.py \cite{telemffb}: definición de \code{RelWind} con viento relativo en m/s; copia local inspeccionada.
 \end{enumerate}
 Las ramas públicas pueden evolucionar. Los tiempos, ganancias y conclusiones de esta sección corresponden a los archivos locales inspeccionados. No se presentan como identificaciones experimentales de una aeronave ni como una validación del firmware efectivamente cargado.
 \newpage

@@ -3,17 +3,17 @@
 
 \subsection{Qué representa y diferencia con damper}
 % [V-realismo]
-Con \code{YOKE_FRICTION_MODEL=1} y sensor local (potenciómetros, encoders incrementales o encoders magnéticos AS5600), la fricción de Hayward--Armstrong conserva una deformación de presliding calculada con posición. El damper sigue usando velocidad. El flag 0 o \code{YOKE_POSITION_SOURCE=1} conserva la ley racional de velocidad.
+Con \code{YOKE_FRICTION_MODEL=1} y sensor local (potenciómetros, encoders incrementales o encoders magnéticos AS5600), la fricción de Hayward--Armstrong \cite{hayward2000} conserva una deformación de presliding calculada con posición. El damper sigue usando velocidad. El flag 0 o \code{YOKE_POSITION_SOURCE=1} conserva la ley racional de velocidad.
 
 % [V-realismo]
-\textit{Actualización (realismo): ley racional por velocidad $\rightarrow$ modelo Hayward--Armstrong por posición con sensor local; adherencia y presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ley racional por velocidad $\rightarrow$ modelo Hayward--Armstrong \cite{hayward2000} por posición con sensor local; adherencia y presliding (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Lo que sucede cuando el mando queda quieto}
 % [V-realismo]
-En modelo 1 puede persistir resistencia hasta $F_c$ aun sin velocidad: hay adherencia y memoria del ancla. Puede sostener una posición contra el resorte. La ley racional del modo 0 se anula al detenerse. No se modelan temperatura, desgaste ni Stribeck.
+En modelo 1 puede persistir resistencia hasta $F_c$ aun sin velocidad: hay adherencia y memoria del ancla. Puede sostener una posición contra el resorte. La ley racional del modo 0 se anula al detenerse. No se modelan temperatura, desgaste ni Stribeck \cite{armstrong1994}.
 
 % [V-realismo]
-\textit{Actualización (realismo): fricción nula al detenerse $\rightarrow$ resistencia persistente hasta $F_c$ con ancla local; adherencia estática (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): fricción nula al detenerse $\rightarrow$ resistencia persistente hasta $F_c$ con ancla local; adherencia estática (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Entradas y recorrido desde la posición hasta PWM}
 \subsubsection{Variables de simulación utilizadas}
@@ -24,7 +24,7 @@ Sólo la variante racional usa la misma velocidad estimada que el damper. En pos
 En modo 2 recibe la posición normalizada del potenciómetro; en modo 0, las cuentas normalizadas del encoder. Las ecuaciones de adquisición, calibraciones, tiempos de muestra y filtros están desarrolladas en las subsecciones \ref{sec:adquisicion_movimiento} y \ref{sec:velocidad_comun}. La fricción local usa esa posición calibrada directamente, sin derivarla; conserva un ancla independiente por eje y no necesita un filtro de velocidad propio.
 
 % [V-realismo]
-\textit{Actualización (realismo): velocidad derivada como entrada de fricción $\rightarrow$ posición local calibrada y ancla por eje; presliding sin derivada ruidosa (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): velocidad derivada como entrada de fricción $\rightarrow$ posición local calibrada y ancla por eje; presliding sin derivada ruidosa (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Cadena de cálculo y habilitación}
 \begin{center}
@@ -36,12 +36,12 @@ Posición local $x\in[-1,1]$ $\rightarrow$ ancla $w$ $\rightarrow$ deformación 
 Se requiere la misma telemetría armada, reciente y conexión USB que para damper. Puede actuar en tierra y en vuelo; no necesita tren extendido, pérdida, spoilers ni centrado activado. Durante pausa/desarmado o menú activo, la salida común se anula. Su coeficiente no cambia directamente con presión dinámica, IAS, AoA o configuración del avión.
 
 % [V-realismo]
-\textit{Actualización (realismo): cadena de velocidad y ley racional $\rightarrow$ cadena de posición, ancla y deformación local; adherencia y presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): cadena de velocidad y ley racional $\rightarrow$ cadena de posición, ancla y deformación local; adherencia y presliding (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Fórmula exacta explicada parte por parte}
 
 % [V-realismo]
-\textit{Actualización (realismo): ley racional como fórmula predeterminada $\rightarrow$ ancla local como modelo 1 y ley anterior en modo 0 o SimConnect; adherencia (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ley racional como fórmula predeterminada $\rightarrow$ ancla local como modelo 1 y ley anterior en modo 0 o SimConnect; adherencia (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Hayward--Armstrong: ancla y presliding}
 % [V-realismo]
@@ -61,7 +61,7 @@ $H_R=0.45$, $H_P=0.90$. Con damper el recorte se aplica a la suma algebraica, ec
 
 
 % [V-realismo]
-\textit{Actualización (realismo): $-\mathrm{sgn}(v)F_cm/(0.2+m)$ $\rightarrow$ $-F_cz/z_{\max}$ con ancla local; adherencia y presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $-\mathrm{sgn}(v)F_cm/(0.2+m)$ $\rightarrow$ $-F_cz/z_{\max}$ con ancla local; adherencia y presliding (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ley racional conservada: flag 0 o posición simulada}
 % [V-realismo]
@@ -69,19 +69,19 @@ En esas variantes, $m=\max(|v|-0.02,0)$ y $u_f=-\operatorname{sgn}(v)H_aF_cm/(0.
 
 
 % [V-realismo]
-\textit{Actualización (realismo): ley racional en todos los modos $\rightarrow$ conservada sólo con flag 0 o posición simulada; el sensor local permite adherencia por ancla (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ley racional en todos los modos $\rightarrow$ conservada sólo con flag 0 o posición simulada; el sensor local permite adherencia por ancla (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ajuste de transición local}
 % [V-realismo]
 $z_{\max}$ determina el desplazamiento hasta deslizar: mayor valor reduce rigidez de presliding; menor valor endurece la transición. El ensayo de reposo debe comprobar ausencia de vibración y rebote, sin derivada ruidosa en esta rama.
 
 % [V-realismo]
-\textit{Actualización (realismo): transición racional fijada por $v_0$ $\rightarrow$ transición local por $z_{\max}$; controla la rigidez de presliding $F_c/z_{\max}$ (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): transición racional fijada por $v_0$ $\rightarrow$ transición local por $z_{\max}$; controla la rigidez de presliding $F_c/z_{\max}$ (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Ejemplos completos para roll y pitch}
 
 % [V-realismo]
-\textit{Actualización (realismo): ejemplos por velocidad $\rightarrow$ ejemplos por deformación del ancla local; fuerza con memoria de presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ejemplos por velocidad $\rightarrow$ ejemplos por deformación del ancla local; fuerza con memoria de presliding (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Fricción aislada frente al desplazamiento}
 % [V-realismo]
@@ -99,7 +99,7 @@ Ancla inicial $w=0$, avance positivo sin invertir, $F_c=0.03$, $z_{\max}=0.02$ y
 En la última fila el ancla se desplaza a 0.03. Detener allí conserva $f=-0.03$; repetir la llamada no agrega desplazamiento. No se infiere fuerza a partir de velocidad sola.
 
 % [V-realismo]
-\textit{Actualización (realismo): tabla de fricción frente a velocidad $\rightarrow$ tabla recalculada frente a desplazamiento del ancla; presliding y adherencia (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): tabla de fricción frente a velocidad $\rightarrow$ tabla recalculada frente a desplazamiento del ancla; presliding y adherencia (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Desde muestras nuevas hasta fricción y damper conjuntos}
 % [V-realismo]
@@ -109,7 +109,7 @@ Ancla en $x=0.10$; avanzar a 0.12 en 20 ms, con velocidad filtrada previa cero, 
 Si permanece en 0.12, el damper se extingue, pero la fricción persiste hasta que un desplazamiento cambia la deformación del ancla.
 
 % [V-realismo]
-\textit{Actualización (realismo): fricción conjunta obtenida de velocidad $\rightarrow$ ejemplo recalculado con posición y ancla junto al damper; adherencia persistente (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): fricción conjunta obtenida de velocidad $\rightarrow$ ejemplo recalculado con posición y ancla junto al damper; adherencia persistente (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Conversión eléctrica y límites}
 Después de sumar los otros efectos se limita $u$ a $\pm220/255$, se aplica la dirección del motor y se calcula el PWM con factor 255 y redondeo simétrico. Son los mismos pasos descritos en DAMPER. El signo selecciona una de las dos ramas del puente H y la magnitud determina su ciclo de trabajo. Por ejemplo, 6 cuentas equivalen a aproximadamente $2.35\%$ de PWM; no aseguran que el motor venza el rozamiento mecánico real. La resistencia física resultante depende de la instalación.
@@ -117,21 +117,21 @@ Después de sumar los otros efectos se limita $u$ a $\pm220/255$, se aplica la d
 \subsection{Relación con damper, centrado y perturbaciones}
 
 % [V-realismo]
-\textit{Actualización (realismo): composición de dos cargas por velocidad $\rightarrow$ damper por velocidad y fricción por deformación local; memoria de presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): composición de dos cargas por velocidad $\rightarrow$ damper por velocidad y fricción por deformación local; memoria de presliding (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Cómo se reparten damper y fricción}
 % [V-realismo]
 En sensor local, no existe un cruce determinado únicamente por velocidad: el damper depende de $m$ y $s_B$, y la fricción de $z$. Cuando desliza con $|f|=F_c$, ambas magnitudes coinciden en $m=F_c/(Bs_B)$ (0.25 para defaults y $s_B=1$). Al invertir, sus signos pueden diferir hasta desplazar el ancla; se suman algebraicamente.
 
 % [V-realismo]
-\textit{Actualización (realismo): cruce damper--fricción determinado por velocidad $\rightarrow$ comparación que depende además de $z$ y $s_B$; presliding y escala de amortiguamiento (Hayward--Armstrong; Ogata); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): cruce damper--fricción determinado por velocidad $\rightarrow$ comparación que depende además de $z$ y $s_B$; presliding y escala de amortiguamiento (Hayward--Armstrong \cite{hayward2000}; Ogata \cite{ogata}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Techo compartido y pérdida de sensibilidad a ajustes}
 % [V-realismo]
 El techo es $|u_{\rm mov,a}|\le0.4H_a$. Deslizamiento con signos coincidentes lo alcanza cuando $Bs_Bm+F_c=0.4$: con $s_B=1$ y defaults, $m=3.083333$ y $|v|=3.103333$. Con signos opuestos cambia esa condición; el damper se recorta primero a 0.4 antes de sumar la fricción firmada. En ley racional permanece $Bs_Bm+F_cm/(v_0+m)=0.4$; para $s_B=1$ da $|v|\simeq3.1185$.
 
 % [V-realismo]
-\textit{Actualización (realismo): umbral conjunto de ley racional $\rightarrow$ umbral recalculado con fricción de ancla y $s_B$, manteniendo techo 0.4; presliding y amortiguamiento relativo (Hayward--Armstrong; Ogata); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): umbral conjunto de ley racional $\rightarrow$ umbral recalculado con fricción de ancla y $s_B$, manteniendo techo 0.4; presliding y amortiguamiento relativo (Hayward--Armstrong \cite{hayward2000}; Ogata \cite{ogata}); ver Sección~\ref{sec:realismo}.}
 
 % [V-realismo]
 \subsubsection{Relación con el centrado y adherencia}
@@ -142,7 +142,7 @@ La fórmula del resorte no cambia por fricción; su equilibrio puede quedar sost
 Ejemplo de deslizamiento estabilizado, pitch $Q=1$, $x=0.20$, $v=+1$, $s_B=1$: resorte $-0.144$, damper $-0.10584$ y fricción $-0.027$: total $-0.27684$, PWM $-71$. Regreso con $v=-1$ y ancla ya acomodada al deslizamiento negativo da total $-0.01116$, PWM $-3$. En roll, $-35$/$-1$. Al parar, damper desaparece y fricción puede persistir. En modo racional no hay ese rango de adherencia.
 
 % [V-realismo]
-\textit{Actualización (realismo): fricción sin sostén en reposo $\rightarrow$ fricción de ancla que puede equilibrar el resorte; ejemplos recalculados con adherencia (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): fricción sin sostén en reposo $\rightarrow$ fricción de ancla que puede equilibrar el resorte; ejemplos recalculados con adherencia (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Efectos periódicos, turbulencias y movimiento provocado por el motor}
 % [V-realismo]
@@ -152,26 +152,26 @@ La fricción puede reducir físicamente la oscilación causada por buffets, suel
 El cálculo no distingue una velocidad causada por la mano de una causada por el motor. Si el sensor detecta desplazamiento, responde; en sensor local conserva además el ancla al detenerse. En modo SimConnect esa relación física puede ser menos directa; una posición virtual fija no produce resistencia aunque el mecanismo se mueva sin reflejarse en esa variable. Asimismo, una posición virtual que cambia puede producir resistencia calculada sin que la mano se haya movido de igual manera.
 
 % [V-realismo]
-\textit{Actualización (realismo): respuesta por velocidad sola $\rightarrow$ respuesta local por desplazamiento con memoria al detenerse; adherencia y presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): respuesta por velocidad sola $\rightarrow$ respuesta local por desplazamiento con memoria al detenerse; adherencia y presliding (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Procedencia de la fórmula y de sus parámetros}
 \subsubsection{Qué está demostrado por el código}
 % [V-realismo]
-El modelo local predeterminado ahora usa el ancla de Hayward--Armstrong (2000). La fracción $m/(v_0+m)$ aparece en la instantánea anterior y se conserva en modo 0 y posición simulada. La modificación documentada convirtió esa corrección dependiente de fuerza base en una carga independiente. El número 0.20 y la ganancia 0.03 son parámetros locales; no hay evidencia de que sean mediciones de fricción del Cessna o del mecanismo del usuario.
+El modelo local predeterminado ahora usa el ancla de Hayward--Armstrong (2000) \cite{hayward2000}. La fracción $m/(v_0+m)$ aparece en la instantánea anterior y se conserva en modo 0 y posición simulada. La modificación documentada convirtió esa corrección dependiente de fuerza base en una carga independiente. El número 0.20 y la ganancia 0.03 son parámetros locales; no hay evidencia de que sean mediciones de fricción del Cessna o del mecanismo del usuario.
 
-La comparación completa y los enlaces están en \ref{sec:origen_damper_friccion}. El original alemán utiliza \code{ConditionForceCalculator} para el efecto HID de fricción, mientras TelemFFB configura un efecto del dispositivo mediante \code{friction(force,force)}. Esas evidencias no permiten atribuirles esta fracción racional concreta. OpenFFBoard es una referencia para separación y composición de efectos, no una fuente demostrada de esta ecuación exacta.
+La comparación completa y los enlaces están en \ref{sec:origen_damper_friccion}. El original alemán utiliza \code{ConditionForceCalculator} para el efecto HID de fricción, mientras TelemFFB \cite{telemffb} configura un efecto del dispositivo mediante \code{friction(force,force)}. Esas evidencias no permiten atribuirles esta fracción racional concreta. OpenFFBoard \cite{openffboard} es una referencia para separación y composición de efectos, no una fuente demostrada de esta ecuación exacta.
 
 % [V-realismo]
-\textit{Actualización (realismo): fracción racional local como modelo general $\rightarrow$ ancla local predeterminada con fuente identificada; fundamenta adherencia y presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): fracción racional local como modelo general $\rightarrow$ ancla local predeterminada con fuente identificada; fundamenta adherencia y presliding (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Interpretación física y límite de la simplificación}
 % [V-realismo]
-El principio de oposición al deslizamiento motiva el signo; la aproximación a una magnitud constante motiva el parecido con Coulomb. El ancla y presliding siguen el modelo háptico de Hayward--Armstrong; la función racional de la variante anterior es una elección computacional sencilla para suavizar la transición. No se identificó en el historial inspeccionado una publicación específica de la cual se hubiera copiado. La variante racional se presenta como \textbf{modelo local inspirado en rozamiento}, sin adjudicarle una procedencia que el código no demuestra.
+El principio de oposición al deslizamiento motiva el signo; la aproximación a una magnitud constante motiva el parecido con Coulomb. El ancla y presliding siguen el modelo háptico de Hayward--Armstrong \cite{hayward2000}; la función racional de la variante anterior es una elección computacional sencilla para suavizar la transición. No se identificó en el historial inspeccionado una publicación específica de la cual se hubiera copiado. La variante racional se presenta como \textbf{modelo local inspirado en rozamiento}, sin adjudicarle una procedencia que el código no demuestra.
 
 El coeficiente se expresa en comando normalizado antes de ganancias, no en newtons. Si se quisiera representar un rozamiento físico constante en ambos ejes, habría que convertir el esfuerzo lineal o torque deseado a la escala del motor y considerar la transmisión. La relación fija 1:2 de comandos no demuestra una relación 1:2 de fuerzas reales.
 
 % [V-realismo]
-\textit{Actualización (realismo): aproximación racional de Coulomb $\rightarrow$ modelo háptico de ancla y presliding; permite adherencia con memoria (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): aproximación racional de Coulomb $\rightarrow$ modelo háptico de ancla y presliding; permite adherencia con memoria (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Qué se puede pulir al implementarlo}
 \subsubsection{Ganancia de menú y sensibilidad del ajuste}
@@ -181,7 +181,7 @@ El coeficiente se expresa en comando normalizado antes de ganancias, no en newto
 Subir $F_c$ aumenta el roce local y la adherencia para una deformación dada (en modo racional, en todo el rango de velocidades útiles), hasta que interviene un límite. Ajustar la ganancia general cambia también resorte y perturbaciones, por lo que no permite identificar por separado la causa de una sensación distinta. No existen coeficientes independientes de fricción para roll y pitch en el menú actual.
 
 % [V-realismo]
-\textit{Actualización (realismo): $F_c$ escalaba la ley por velocidad $\rightarrow$ escala resistencia y adherencia para una deformación local dada; presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $F_c$ escalaba la ley por velocidad $\rightarrow$ escala resistencia y adherencia para una deformación local dada; presliding (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Calibraciones que cambian la fricción aunque su ganancia sea igual}
 % [V-realismo]
@@ -190,7 +190,7 @@ Un cambio en los extremos normaliza de otra manera la misma velocidad física. S
 Con potenciómetros, revisar rango ADC, centro y ruido. Demasiada histéresis puede esconder movimientos pequeños; muy poca puede producir pequeñas inversiones de signo. Con encoders, medir cuentas reales por recorrido y observar el tiempo entre pasos lentos. Con SimConnect, verificar curvas y zonas muertas del eje y la cadencia real de paquetes; corregir sólo la ganancia no elimina el retardo de esa ruta.
 
 % [V-realismo]
-\textit{Actualización (realismo): calibración afectaba velocidad de fricción $\rightarrow$ afecta deformación normalizada y llegada a $z_{\max}$; rigidez de presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): calibración afectaba velocidad de fricción $\rightarrow$ afecta deformación normalizada y llegada a $z_{\max}$; rigidez de presliding (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Parámetros de código que afectan la sensación de roce}
 \begin{longtable}{p{0.26\linewidth}p{0.23\linewidth}p{0.42\linewidth}}
@@ -210,7 +210,7 @@ Factor roll 0.5 & Escala ambos efectos de movimiento. & Comparar esfuerzos físi
 Excepto las ganancias del menú, esos ajustes requieren edición y recompilación. Cambiar los parámetros comunes para mejorar fricción modifica también el damper, por lo que deben volver a evaluarse juntos.
 
 % [V-realismo]
-\textit{Actualización (realismo): $v_0$ como transición general $\rightarrow$ $z_{\max}$ para sensor local y $v_0$ sólo en modo racional; parametriza presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $v_0$ como transición general $\rightarrow$ $z_{\max}$ para sensor local y $v_0$ sólo en modo racional; parametriza presliding (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ensayo propuesto para distinguir roce de amortiguación}
 \begin{enumerate}
@@ -224,7 +224,7 @@ Excepto las ganancias del menú, esos ajustes requieren edición y recompilació
 Este ensayo separa las contribuciones del software, pero no mide por sí solo la fuerza transmitida a la mano. Con los defaults, la fricción aislada utiliza pocas cuentas PWM: la zona de funcionamiento real del motor y el rozamiento mecánico pueden dominar lo percibido.
 
 % [V-realismo]
-\textit{Actualización (realismo): ensayo de fricción por velocidad $\rightarrow$ ensayo de resistencia local con desplazamiento y reposo; distingue adherencia del damper (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ensayo de fricción por velocidad $\rightarrow$ ensayo de resistencia local con desplazamiento y reposo; distingue adherencia del damper (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Mejoras posibles y qué datos hacen falta}
 % [V-realismo]
@@ -233,7 +233,7 @@ El modelo 1 local ya incorpora adherencia estática mediante el ancla y la regla
 Otras mejoras posibles son coeficientes separados por eje, pasos finos de menú, estimación de velocidad mejor adaptada al sensor y medición de torque/fuerza frente a velocidad. Deben definirse con datos de la instalación; no hay un valor universal correcto de fricción para todos los yugos. Tampoco se ha demostrado que aumentar fricción mejore automáticamente la estabilidad de cualquier montaje.
 
 % [V-realismo]
-\textit{Actualización (realismo): adherencia como mejora pendiente $\rightarrow$ incorporada en modelo 1 local; ancla de presliding conserva resistencia en reposo (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): adherencia como mejora pendiente $\rightarrow$ incorporada en modelo 1 local; ancla de presliding conserva resistencia en reposo (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Mapa de archivos para revisar o modificar ambos efectos}
 \begin{longtable}{p{0.38\linewidth}p{0.53\linewidth}}
@@ -249,7 +249,7 @@ Archivo / función & Responsabilidad comprobada\\
 \code{AxisEncoders.h}, \code{PicoEncoder.h} & Origen relativo, dirección y lectura de cuadratura.\\
 \code{YokeMotion.h} & Derivada, límite, filtro de 40 ms, inversión y reposo.\\
 \code{SimEffects.h::motionAdjustedForce} & Damper y fricción racional; la suma con fricción local se limita en command.\\
-\code{FrictionModel.h} & Ancla, presliding y fricción local Hayward--Armstrong.\\
+\code{FrictionModel.h} & Ancla, presliding y fricción local Hayward--Armstrong \cite{hayward2000}.\\
 \code{SimEffects.h::Effects::command} & Ganancias de eje, suma con centrado y perturbaciones, límite final.\\
 \code{GainSettings.h}, \code{mis_defines.h} & Defaults, habilitaciones, ajustes de menú y parámetros de compilación.\\
 \code{MotorDriver.h} & Polaridad recibida, conversión y redondeo a PWM, techo y salidas del puente.\\
@@ -259,4 +259,4 @@ Archivo / función & Responsabilidad comprobada\\
 \end{longtable}
 \textbf{Alcance del análisis:} se documentaron las ecuaciones implementadas, su procedencia verificable, las cuatro fuentes de posición y su relación con los demás efectos. Las propuestas de mejora están diferenciadas del comportamiento actual. No se modificó firmware, no se cargó la placa y no se realizó una identificación experimental del esfuerzo mecánico.
 % [V-realismo]
-\textit{Actualización (realismo): mapa de ley racional por velocidad $\rightarrow$ mapa que incorpora modelo de ancla local y sus parámetros; trazabilidad de adherencia y presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): mapa de ley racional por velocidad $\rightarrow$ mapa que incorpora modelo de ancla local y sus parámetros; trazabilidad de adherencia y presliding (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}

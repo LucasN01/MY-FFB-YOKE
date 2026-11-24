@@ -3,7 +3,7 @@
 
 \subsection{Actualización: textura suave de rodaje sobre pista}
 % [V-realismo]
-La salida combina baches de P3D con textura sintética siempre presente durante rodaje habilitado, por requisito del usuario. Roll dominante también es un requisito del usuario; pitch usa un décimo. Los baches conservan $E$ de la ecuación~\ref{eq:ground-envelope}; sólo la textura usa $\sqrt E$ (ISO 8608).
+La salida combina baches de P3D con textura sintética siempre presente durante rodaje habilitado, por requisito del usuario. Roll dominante también es un requisito del usuario; pitch usa un décimo. Los baches conservan $E$ de la ecuación~\ref{eq:ground-envelope}; sólo la textura usa $\sqrt E$ (ISO 8608 \cite{iso8608}).
 \begin{align*}
 T_n&=\sat_{[-0.12\sqrt E,\,0.12\sqrt E]}\{0.12\sqrt E(0.65N_{7,n}+0.35N_{11.3,n})\},\\
 F_{a,\mathrm{total}}&=\sat_{[-\sqrt E,\sqrt E]}(F_a+T_n).
@@ -18,7 +18,7 @@ Con suelo 0.450 y total 0.90, el techo aislado es $12.393\sqrt E$ PWM roll y $1.
 \code{gr/gp} conserva los baches previos a textura; R/P incluyen la suma. Los 800 casos de suelo y 96\,764 comprobaciones correspondían a la revisión de senoides. Los ejemplos siguientes de aceleraciones excluyen textura salvo indicación expresa.
 
 % [V-realismo]
-\textit{Actualización (realismo): textura sinusoidal proporcional a $E$ $\rightarrow$ banda estrecha 7/11.3 Hz proporcional a $\sqrt E$; RMS del perfil crece con raíz de velocidad (ISO 8608; Newland); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): textura sinusoidal proporcional a $E$ $\rightarrow$ banda estrecha 7/11.3 Hz proporcional a $\sqrt E$; RMS del perfil crece con raíz de velocidad (ISO 8608 \cite{iso8608}; Newland \cite{newland1993}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Qué hace el efecto en la versión SC8}
 El efecto responde a las \textbf{variaciones de aceleración lateral y vertical que entrega Prepar3D mientras el avión rueda}. La velocidad respecto del terreno conserva exactamente la progresión solicitada: hasta 0.5 kt no hay aporte; entre 0.5 y 40 kt aumenta el multiplicador de intensidad; desde 40 kt ese multiplicador vale uno.
@@ -32,7 +32,7 @@ En SC3--SC6 la placa sintetizaba una triangular de 8 Hz y suavizaba su amplitud 
 A igual velocidad, dos recorridos pueden producir comandos distintos si cambian las aceleraciones. El algoritmo no consulta un mapa de baches, no distingue cada rueda ni lee tipo de superficie: responde al movimiento que el simulador efectivamente publica. Puede responder también a maniobras bruscas en suelo. No hay un efecto separado de touchdown, ni reproducción mecánica calibrada de la transmisión del tren al yugo.
 
 % [V-realismo]
-\textit{Actualización (realismo): textura SC8 sinusoidal $\rightarrow$ ruido de banda estrecha con senoides en flag 0; excitación irregular sin cambiar la ruta de baches (ISO 8608; Newland); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): textura SC8 sinusoidal $\rightarrow$ ruido de banda estrecha con senoides en flag 0; excitación irregular sin cambiar la ruta de baches (ISO 8608 \cite{iso8608}; Newland \cite{newland1993}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Recorrido completo desde SimConnect hasta los motores}
 \begin{center}
@@ -56,7 +56,7 @@ El signo de las perturbaciones se calcula en la Pico. Entre paquetes se conserva
 \code{IS SLEW ACTIVE} & Bool & Debe valer cero.\\
 \bottomrule
 \end{longtable}
-El puente solicita estas entradas como \code{FLOAT64}. Los eventos \code{Sim} y \code{Pause} exigen simulación en marcha y sin pausa. El \href{https://www.prepar3d.com/SDKv4/sdk/references/variables/simulation_variables.html}{SDK de Prepar3D v4, Simulation Variables} documenta ambas aceleraciones en pies por segundo al cuadrado. No enumera la variable \code{CONTACT POINT COMPRESSION} usada por TelemFFB en MSFS; por ello esta adaptación utiliza aceleraciones documentadas y no presupone compatibilidad de esa variable.
+El puente solicita estas entradas como \code{FLOAT64}. Los eventos \code{Sim} y \code{Pause} exigen simulación en marcha y sin pausa. El SDK de Prepar3D v4, Simulation Variables \cite{p3dv4} documenta ambas aceleraciones en pies por segundo al cuadrado. No enumera la variable \code{CONTACT POINT COMPRESSION} usada por TelemFFB en MSFS; por ello esta adaptación utiliza aceleraciones documentadas y no presupone compatibilidad de esa variable.
 
 No se usan IAS, presión dinámica, posición o velocidad del yugo en la fórmula de suelo. Tampoco se solicitan compresiones de ruedas, RPM de neumáticos, geometría de suspensión ni tipo de superficie. Un avión detenido permanece sin este aporte aunque tenga viento relativo. Las opciones \code{--gusts}, \code{--gust-gain}, \code{--gust-longitudinal}, \code{--reference-knots} y \code{--no-buffets} no modifican este modelo.
 
@@ -97,7 +97,7 @@ E=\begin{cases}
 
 El denominador es $40-0.5=39.5$ kt. A 10 kt resulta $E\simeq0.240506$; a 20.25 kt, $E=0.5$; a 40 y 60 kt, $E=1$. Una velocidad negativa da cero: no se toma su valor absoluto. No se implementa histéresis alrededor de 0.5 kt.
 
-Esta rampa es una decisión local de sensación. No se deriva de un modelo de suspensión ni de TelemFFB. Multiplica la perturbación después de filtrarla y limitarla, de modo que el máximo normalizado disponible por eje es $E$.
+Esta rampa es una decisión local de sensación. No se deriva de un modelo de suspensión ni de TelemFFB \cite{telemffb}. Multiplica la perturbación después de filtrarla y limitarla, de modo que el máximo normalizado disponible por eje es $E$.
 
 \subsection{Paso 2: validar e inicializar las aceleraciones}
 El modelo devuelve cero y borra su memoria si $E=0$, si alguna aceleración no es finita o tiene magnitud mayor que 640 ft/s$^2$, o si $\Delta t$ no es finito, es negativo o alcanza 0.25 s. La cota 640 es una validación de sanidad, no un límite operativo del avión.
@@ -148,7 +148,7 @@ La rampa se aplica una sola vez dentro del modelo. El modelo de aceleraciones se
 El receptor valida CRC, secuencia, banderas, datos y avance de marca. Exige trama armada con menos de 300 ms y DTR. El puente desarma por pausa, simulación detenida, slew o pérdida de datos; exige datos de menos de 250 ms para armar. Permanecen rutas históricas para SC1--SC7, pero el puente actual sólo emite SC8.
 
 % [V-realismo]
-\textit{Actualización (realismo): techo de baches más textura $\pm E$ $\rightarrow$ $\pm\sqrt E$; permite la nueva escala RMS de textura (ISO 8608); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): techo de baches más textura $\pm E$ $\rightarrow$ $\pm\sqrt E$; permite la nueva escala RMS de textura (ISO 8608 \cite{iso8608}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Paso 6: ganancias, límites y suma con otros efectos}
 La etapa de suelo en \code{Effects::command} aplica:
@@ -272,5 +272,5 @@ Quedan como mejoras futuras una fuente válida de compresión por rueda, un efec
 \newpage
 
 % [V-realismo]
-\textit{Actualización (realismo): textura aleatoria pendiente $\rightarrow$ banda estrecha implementada con senoides en flag 0; excitación irregular de pista sin eventos por distancia (ISO 8608; Newland); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): textura aleatoria pendiente $\rightarrow$ banda estrecha implementada con senoides en flag 0; excitación irregular de pista sin eventos por distancia (ISO 8608 \cite{iso8608}; Newland \cite{newland1993}); ver Sección~\ref{sec:realismo}.}
 

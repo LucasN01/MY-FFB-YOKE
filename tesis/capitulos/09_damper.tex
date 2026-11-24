@@ -27,7 +27,7 @@ Las fórmulas siguientes corresponden a \code{SimEffects.h::motionAdjustedForce}
 El puente del PC \textbf{no transmite una fuerza de damper ni una velocidad de yugo}: cuando corresponde, transmite posiciones. La placa calcula la velocidad para damper y fricción racional, y usa posición con ancla para fricción local. El ciclo de control tiene un mínimo configurado de 2 ms; el cálculo emplea el intervalo real, no supone que todas las iteraciones duren exactamente 2 ms.
 
 % [V-realismo]
-\textit{Actualización (realismo): velocidad para damper y fricción $\rightarrow$ velocidad para damper y posición con ancla para fricción local; adherencia sin derivada (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): velocidad para damper y fricción $\rightarrow$ velocidad para damper y posición con ancla para fricción local; adherencia sin derivada (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Variables de SimConnect y condiciones de habilitación}
 \label{sec:damper_simvars}
@@ -216,7 +216,7 @@ $B$ es la ganancia efectiva de damper, $L$ limita la resistencia previa a la gan
 Para $v>0$ el resultado es negativo; para $v<0$ es positivo. En $v=0$, $m=0$ y el resultado es cero independientemente de cómo se implemente el signo. No depende de $x$ directamente: a igual velocidad y factor $s_B$, dos posiciones distintas generan el mismo damper mientras la medición no esté recortada.
 
 % [V-realismo]
-\textit{Actualización (realismo): $Bm$ $\rightarrow$ $Bs_Bm$, con $s_B=\sat_{[0.5,2]}\sqrt{k_f/(r+0.85)}$; amortiguamiento relativo constante con inercia fija (Ogata); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $Bm$ $\rightarrow$ $Bs_Bm$, con $s_B=\sat_{[0.5,2]}\sqrt{k_f/(r+0.85)}$; amortiguamiento relativo constante con inercia fija (Ogata \cite{ogata}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Límite compartido con fricción}
 Con ambos habilitados, el código realmente ejecuta:
@@ -244,7 +244,7 @@ La suma algebraica permite signos distintos al invertir el movimiento, por la me
 El máximo de esta rama con las ganancias generales actuales es 0.36 en pitch y 0.18 en roll: aproximadamente 92 y 46 cuentas PWM si actúa sola. No es el máximo de todos los efectos juntos, que sigue siendo 220. Con $s_B=1$, el damper aislado alcanza el límite a $|v|=0.02+0.4/0.12\simeq3.3533$. La fricción hace alcanzar antes el límite conjunto.
 
 % [V-realismo]
-\textit{Actualización (realismo): suma con fricción racional $\rightarrow$ suma algebraica con fricción local de ancla y damper escalado; presliding y amortiguamiento relativo constante (Hayward--Armstrong; Ogata); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): suma con fricción racional $\rightarrow$ suma algebraica con fricción local de ancla y damper escalado; presliding y amortiguamiento relativo constante (Hayward--Armstrong \cite{hayward2000}; Ogata \cite{ogata}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Procedencia de los valores}
 La dependencia proporcional a velocidad es el modelo viscoso. La diferencia discreta sale de la definición de derivada; el filtro es una aproximación de primer orden. Los números 0.12, 0.02, 40 ms, 10 y 0.40 son \textbf{parámetros del proyecto}, no constantes universales ni valores identificados para un avión concreto. La relación fija roll/pitch también es una elección local. Su presencia se verifica en \code{mis_defines.h}, \code{GainSettings.h} y \code{SimEffects.h}; la comparación histórica se detalla más adelante.
@@ -324,7 +324,7 @@ Atraviesa $x=0$ con $v\ne0$ & Es cero en ese instante. & Sigue oponiéndose al m
 Con $Q=1$, rigidez estabilizada $k_f=1$, pitch $x=0.20$ y $v=+1$, el resorte da $-0.144$ y el damper $-0.10584$: total $-0.24984$, PWM $-64$. Si el mismo mando regresa con $v=-1$, total $-0.03816$, PWM $-10$. El damper está reduciendo la rapidez del retorno, no cambiando el centro del resorte.
 
 % [V-realismo]
-\textit{Actualización (realismo): damper independiente de rigidez $\rightarrow$ damper multiplicado por $s_B$; conserva amortiguamiento relativo al variar el resorte (Ogata); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): damper independiente de rigidez $\rightarrow$ damper multiplicado por $s_B$; conserva amortiguamiento relativo al variar el resorte (Ogata \cite{ogata}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Presión y amortiguación: dependencia indirecta}
 % [V-realismo]
@@ -334,7 +334,7 @@ Al aumentar $Q$, el damper ahora escala con $\sqrt{k_f}$, limitado a 0.5--2 y s�
 $B$ y $k_f$ son adimensionales; faltan transmisión, inercia física y relación comando--torque para calcular un amortiguamiento físico calibrado.
 
 % [V-realismo]
-\textit{Actualización (realismo): presión sin escala directa del damper $\rightarrow$ escala por $\sqrt{k_f}$ cuando el centrado está disponible; amortiguamiento relativo constante (Ogata); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): presión sin escala directa del damper $\rightarrow$ escala por $\sqrt{k_f}$ cuando el centrado está disponible; amortiguamiento relativo constante (Ogata \cite{ogata}); ver Sección~\ref{sec:realismo}.}
 
 % [V-realismo]
 \subsubsection{Interacción con turbulencias, buffets y suelo}
@@ -346,7 +346,7 @@ El código tampoco distingue si el movimiento lo produjo la mano, el resorte o u
 
 
 % [V-realismo]
-\textit{Actualización (realismo): fricción por velocidad en la suma $\rightarrow$ fricción local con memoria de posición junto al damper escalado; presliding y amortiguamiento relativo (Hayward--Armstrong; Ogata); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): fricción por velocidad en la suma $\rightarrow$ fricción local con memoria de posición junto al damper escalado; presliding y amortiguamiento relativo (Hayward--Armstrong \cite{hayward2000}; Ogata \cite{ogata}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Qué demuestra la oposición al movimiento}
 % [V-realismo]
@@ -356,7 +356,7 @@ Para ganancias no negativas, en damper y en la rama de fricción por velocidad (
 La fricción local con ancla no garantiza ese signo instantáneo después de invertir: conserva deformación y puede devolver energía de presliding antes de acomodar el ancla.
 
 % [V-realismo]
-\textit{Actualización (realismo): oposición instantánea por ley de velocidad $\rightarrow$ fricción local capaz de devolver energía al invertir; memoria elástica de presliding (Hayward--Armstrong); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): oposición instantánea por ley de velocidad $\rightarrow$ fricción local capaz de devolver energía al invertir; memoria elástica de presliding (Hayward--Armstrong \cite{hayward2000}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Limitador de fuerza en los topes}
 \label{sec:limite_topes}
@@ -438,11 +438,11 @@ y evitaba que la corrección invirtiera el signo de la fuerza base. Por ello, si
 
 El comentario actual que menciona regularización conservada del ``original firmware'' debe interpretarse con cautela: \textbf{se comprobó su presencia en la versión local anterior; no se comprobó su procedencia del proyecto alemán}. No hay evidencia suficiente para asignarle un autor o una página matemática original. Las referencias históricas a \code{YOKE_MOTION_FORCE_BLEND=0.100} describen el modelo anterior: esa constante ya no participa en el cálculo. Asimismo, el estimador de una etapa anterior (la clase \code{AxisMotion} con \code{VELOCITY_FILTER_TAU_S=0.018}) se eliminó del firmware por no utilizarse; la velocidad de esta cadena la calcula \code{YokeMotion} con $\tau=0.040$ s.
 
-\subsubsection{Fuentes enlazadas y alcance de la atribución}
+\subsubsection{Fuentes citadas y alcance de la atribución}
 \begin{enumerate}
-\item \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{SDK de Prepar3D: Simulation Variables}. Referencia de nombres y unidades; las solicitudes concretas se verificaron en el puente local.
-\item \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/base/FFBForcesMixIn.py}{TelemFFB: FFBForcesMixIn.py}. Comparación con la copia local de configuración de efectos damper/friction; la rama remota puede evolucionar.
-\item \href{https://github.com/Ultrawipf/OpenFFBoard/blob/master/Firmware/FFBoard/Src/EffectsCalculator.cpp}{OpenFFBoard: EffectsCalculator.cpp}. Distingue posición para resorte y velocidad para damper, y suma efectos antes de recortar la salida. Es la referencia arquitectónica citada por \code{CAMBIOS_REALISMO.md}; no demuestra copia de sus coeficientes o de su ley de fricción.
+\item SDK de Prepar3D: Simulation Variables \cite{p3dv3}. Referencia de nombres y unidades; las solicitudes concretas se verificaron en el puente local.
+\item TelemFFB: FFBForcesMixIn.py \cite{telemffb}. Comparación con la copia local de configuración de efectos damper/friction; la rama remota puede evolucionar.
+\item OpenFFBoard: EffectsCalculator.cpp \cite{openffboard}. Distingue posición para resorte y velocidad para damper, y suma efectos antes de recortar la salida. Es la referencia arquitectónica citada por \code{CAMBIOS_REALISMO.md}; no demuestra copia de sus coeficientes o de su ley de fricción.
 \item Código local actual y copias históricas identificadas arriba. Para las fórmulas numéricas del proyecto son la fuente primaria, por encima de documentos descriptivos antiguos.
 \end{enumerate}
 Consulta de las referencias web del SDK y OpenFFBoard: 8 de octubre de 2026. Las comparaciones de TelemFFB y del original alemán se realizaron contra las copias disponibles en el espacio de trabajo.
@@ -484,5 +484,5 @@ Se podrían incorporar ganancias separadas por eje, captura real del centro del 
 \newpage
 
 % [V-realismo]
-\textit{Actualización (realismo): escala del damper por rigidez propuesta $\rightarrow$ implementada con $s_B\propto\sqrt{k_f}$; amortiguamiento relativo constante a validar en hardware (Ogata); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): escala del damper por rigidez propuesta $\rightarrow$ implementada con $s_B\propto\sqrt{k_f}$; amortiguamiento relativo constante a validar en hardware (Ogata \cite{ogata}); ver Sección~\ref{sec:realismo}.}
 

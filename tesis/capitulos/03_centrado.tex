@@ -54,7 +54,7 @@ Una definición de compilación puede cambiar esa opción. \code{Build-Pico2.ps1
 \code{YOKE Y POSITION} & \code{Position} & Posición de pitch, entre $-1$ y $+1$. Se usa en la fuerza solamente con modo 1.\\
 \bottomrule
 \end{longtable}
-El SDK describe X como desplazamiento izquierda/derecha e Y como mando hacia dentro/fuera. Son posiciones de mandos, no los ángulos de alabeo o cabeceo del avión. La unidad psf es libra-fuerza por pie cuadrado. Fuente: \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{SDK de Prepar3D, Simulation Variables}.
+El SDK describe X como desplazamiento izquierda/derecha e Y como mando hacia dentro/fuera. Son posiciones de mandos, no los ángulos de alabeo o cabeceo del avión. La unidad psf es libra-fuerza por pie cuadrado. Fuente: SDK de Prepar3D, Simulation Variables \cite{p3dv3}.
 
 \subsubsection{Datos que habilitan o invalidan la salida}
 \code{IS SLEW ACTIVE} debe valer cero. Los eventos de sistema \code{Sim} y \code{Pause} indican simulación en marcha y pausa; son eventos, no factores multiplicativos del resorte. También se necesitan \code{--enable}, un puerto identificado y muestras recientes.
@@ -70,7 +70,7 @@ La presión dinámica se representa mediante
 \begin{equation}
 q=\frac12\rho V^2.
 \end{equation}
-$\rho$ es la densidad del aire en kg/m$^3$ y $V$ la velocidad relativa al aire en m/s; el resultado se expresa en Pa. A igual densidad, duplicar $V$ cuadruplica $q$. Esta relación física está explicada por \href{https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/dynamic-pressure-2/}{NASA Glenn, Dynamic Pressure}. Justifica que el resorte se endurezca con la presión; no determina por sí sola las ganancias del yugo ni reproduce el momento de bisagra de un avión concreto.
+$\rho$ es la densidad del aire en kg/m$^3$ y $V$ la velocidad relativa al aire en m/s; el resultado se expresa en Pa. A igual densidad, duplicar $V$ cuadruplica $q$. Esta relación física está explicada por NASA Glenn, Dynamic Pressure \cite{nasaq}. Justifica que el resorte se endurezca con la presión; no determina por sí sola las ganancias del yugo ni reproduce el momento de bisagra de un avión concreto.
 
 \subsubsection{Conversión que hace la Pico}
 En \code{PicoForceModels.h}, dentro de \code{update}:
@@ -188,7 +188,7 @@ Una consecuencia poco evidente:
 Subir ``Centro reposo'' endurece igual en todo $Q$: el aporte mecánico y el crecimiento aerodinámico están separados.
 
 % [V-realismo]
-\textit{Actualización (realismo): $k=r+(1-r)Q$ $\rightarrow$ $k=r+0.85Q$; separa rigidez mecánica y aerodinámica (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): $k=r+(1-r)Q$ $\rightarrow$ $k=r+0.85Q$; separa rigidez mecánica y aerodinámica (Etkin--Reid \cite{etkin1996}; Nelson \cite{nelson1998}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Filtro de primer orden}
 El código suaviza la rigidez, guardándola en una variable llamada \code{centerPressure}:
@@ -307,7 +307,7 @@ Esa es la correspondencia conceptual con $q/q_{\rm ref}$ de MiYoke. La escala 0.
 
 TelemFFB puede usar Vne configurada o calcular una referencia a partir de datos de diseño; también mezcla presión del flujo de hélice en elevador, permite curvas, ganancias base y desplazamientos de centro. \code{_calculate_joystick_spring_coefficients} ajusta y limita coeficientes, y \code{_update_joystick_controls} los entrega al dispositivo FFB. MiYoke hace una adaptación mucho más simple: una presión común, centro fijo y cálculo local de fuerza/PWM. No reproduce toda la cadena TelemFFB, ni sus constantes calibran automáticamente este yugo.
 
-Referencia pública para localizar el antecedente: \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/msfs_xp/MsfsXpFlightControlsMixIn.py}{TelemFFB, archivo de controles MSFS/X-Plane}. Las afirmaciones de implementación anteriores se basan en la copia local inspeccionada; la rama pública puede cambiar.
+Referencia pública para localizar el antecedente: TelemFFB, archivo de controles MSFS/X-Plane \cite{telemffb}. Las afirmaciones de implementación anteriores se basan en la copia local inspeccionada; la rama pública puede cambiar.
 
 \subsubsection{Qué se conserva del proyecto alemán original}
 Se inspeccionó la carpeta vecina \code{../../PROEYCTO ORIGINAL/Arduino_FFB_Yoke}. En \code{src/Joystick.cpp}, el resorte HID usa \code{ConditionForceCalculator}, con posición normalizada, coeficientes, centro, banda muerta y saturaciones recibidas en el efecto. También existe una rama de resorte automático predeterminado:
@@ -336,7 +336,7 @@ Escala $\times255$, redondeo simétrico y techo 220 & Implementación vigente de
 La atribución es una comparación de fuentes y comentarios, no una reconstrucción de autoría mediante historial Git: la carpeta principal inspeccionada no es un repositorio Git.
 
 % [V-realismo]
-\textit{Actualización (realismo): ley local $r+(1-r)Q$ $\rightarrow$ $r+0.85Q$; se explicita la suma de rigideces y su adaptación local (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ley local $r+(1-r)Q$ $\rightarrow$ $r+0.85Q$; se explicita la suma de rigideces y su adaptación local (Etkin--Reid \cite{etkin1996}; Nelson \cite{nelson1998}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Qué ganancias y calibraciones se pueden ajustar}
 \subsubsection{Ajustes disponibles en el menú}
@@ -353,7 +353,7 @@ Estos cuatro ajustes admiten valores de 0 a 1; los botones avanzan 0.05, es deci
 Las ganancias se guardan en memoria persistente y se cargan al arrancar. Cambiar un \code{define} no garantiza que se use el nuevo valor si hay ajustes guardados válidos. \code{YOKE_SETTINGS_VERSION} permite invalidar el registro de ganancias; el registro de potenciómetros tiene formato y versión separados. Hay que registrar los valores efectivamente cargados al comparar ensayos. El menú tiene además una cuarta lista, \code{REGISTRO DATOS}, que activa o desactiva el envío de los registros de ensayo (\code{telemetry.csv}, \code{pico.csv} y \code{ganancias.csv}); su estado se guarda en un registro persistente propio y no modifica ninguna ganancia ni el cálculo de fuerzas.
 
 % [V-realismo]
-\textit{Actualización (realismo): ajuste de reposo que alteraba la pendiente $\rightarrow$ ajuste sólo de la base $r$; separa los aportes mecánico y aerodinámico (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): ajuste de reposo que alteraba la pendiente $\rightarrow$ ajuste sólo de la base $r$; separa los aportes mecánico y aerodinámico (Etkin--Reid \cite{etkin1996}; Nelson \cite{nelson1998}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Ajustes en el puente y en el firmware}
 \begin{itemize}
@@ -373,7 +373,7 @@ g_a\le\frac{L}{G\,[r+k_aQ_{\max}]\,|x_{\max}|}.
 Con $G=0.90$, $r=0.15$, $Q_{\max}=4$ y $|x_{\max}|=1$, se necesita $g_a\lesssim0.270$. Las ganancias iniciales 0.40 y 0.80 superan ese valor; por eso se recorta el recorrido a alta presión. Esto no obliga a usar 0.270: muestra la relación entre la dureza elegida y el margen antes de saturar. Si se necesita margen para otros efectos, el límite asignado al resorte debe ser menor que $L$.
 
 % [V-realismo]
-\textit{Actualización (realismo): cota de ganancias con $r+(1-r)Q$ $\rightarrow$ cota con $r+0.85Q$; margen recalculado para rigideces separadas (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): cota de ganancias con $r+(1-r)Q$ $\rightarrow$ cota con $r+0.85Q$; margen recalculado para rigideces separadas (Etkin--Reid \cite{etkin1996}; Nelson \cite{nelson1998}); ver Sección~\ref{sec:realismo}.}
 
 \subsection{Procedimiento práctico para pulir el centrado}
 \subsubsection{Primero, referencia mecánica y posición}
@@ -414,7 +414,7 @@ La mejora más directa es capturar un centro físico independiente de los extrem
 La separación quedó implementada: $k=r+k_aQ$, con \code{SIMCONNECT_CENTERING_AERO_STIFFNESS}=0.85. El ajuste de reposo no modifica la pendiente aerodinámica ni ablanda a presión alta.
 
 % [V-realismo]
-\textit{Actualización (realismo): separación de rigideces propuesta $\rightarrow$ implementada con $k_a=0.85$; el reposo ya no cambia la pendiente aerodinámica (Etkin--Reid; Nelson); ver Sección~\ref{sec:realismo}.}
+\textit{Actualización (realismo): separación de rigideces propuesta $\rightarrow$ implementada con $k_a=0.85$; el reposo ya no cambia la pendiente aerodinámica (Etkin--Reid \cite{etkin1996}; Nelson \cite{nelson1998}); ver Sección~\ref{sec:realismo}.}
 
 \subsubsection{Medición física y comportamiento cerca del centro}
 Conviene medir fuerza frente a PWM para varios sentidos y posiciones, y considerar una regulación de corriente si se requiere control de torque. La forma del resorte en comando puede ser lineal y la fuerza real no serlo. No hay compensación PWM mínima en \code{setCommand}; órdenes pequeñas pueden no vencer la fricción mecánica, aunque el cálculo sea correcto.
@@ -447,10 +447,10 @@ Las rutas siguientes son relativas a la carpeta MiYoke\_PD\_V2.4, salvo el origi
 
 \subsubsection{Referencias externas utilizadas}
 \begin{enumerate}
-\item NASA Glenn: \href{https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/dynamic-pressure-2/}{Dynamic Pressure}. Fundamento de presión dinámica; consultado el 7 de octubre de 2026.
-\item Lockheed Martin: \href{https://www.prepar3d.com/SDKv3/LearningCenter/utilities/variables/simulation_variables.html}{Prepar3D SDK v3, Simulation Variables}. Nombres y unidades de variables; consultado el 7 de octubre de 2026.
-\item VPforce/TelemFFB: \href{https://github.com/walmis/VPforce-TelemFFB/blob/refactor/telemffb/sim/msfs_xp/MsfsXpFlightControlsMixIn.py}{archivo de controles en la rama refactor}. Referencia de localización pública; comparación realizada contra la copia local incluida en este proyecto.
-\item Proyecto original local: \code{../../PROEYCTO ORIGINAL/Arduino_FFB_Yoke}, especialmente \code{src/Joystick.cpp}, \code{joystick.ino}, \code{AxisCalibration.cpp} y \code{Arduino.ino}. No se atribuye una URL de origen no comprobada.
+\item NASA Glenn: Dynamic Pressure \cite{nasaq}. Fundamento de presión dinámica; consultado el 7 de octubre de 2026.
+\item Lockheed Martin: Prepar3D SDK v3, Simulation Variables \cite{p3dv3}. Nombres y unidades de variables; consultado el 7 de octubre de 2026.
+\item VPforce/TelemFFB: archivo de controles en la rama refactor \cite{telemffb}. Referencia de localización pública; comparación realizada contra la copia local incluida en este proyecto.
+\item Proyecto original local \cite{yokealeman}: \code{../../PROEYCTO ORIGINAL/Arduino_FFB_Yoke}, especialmente \code{src/Joystick.cpp}, \code{joystick.ino}, \code{AxisCalibration.cpp} y \code{Arduino.ino}. No se atribuye una URL de origen no comprobada.
 \end{enumerate}
 
 \textbf{Alcance:} esta explicación reconstruye el software inspeccionado y sus consecuencias matemáticas. Los ejemplos suponen ganancias iniciales y centrado aislado. La validación de fuerza real, signos del mecanismo, firmware cargado y parámetros persistidos requiere comprobar el montaje; no se presenta como realizada.

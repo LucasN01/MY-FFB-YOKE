@@ -346,7 +346,7 @@ El modelo \code{Control_Corriente_FFB.slx} (carpeta \code{modelizacion motor 775
 (J + J_L)\,\frac{d\omega}{dt} = K_t\,i - B\,\omega - \tau_c\tanh\!\left(\frac{\omega}{\omega_{tc}}\right) - T_L,\qquad J_L = \frac{J_{eje}}{N^2},\quad T_L = \frac{T_{eje}}{N}.
 \label{eq:cc_carga}
 \end{equation}
-La idea de incorporar estas entradas se tomó de un modelo de motor de corriente continua de Simulink consultado como comparación (\code{DC_Motor.slx} \cite{dcmotor2021}). Ese modelo resuelve la misma ecuación eléctrica, pero reúne todo el rozamiento en un término viscoso, calculado en vacío. Aplicado a este motor, a 20 rad/s daría unos 0.27 mN$\cdot$m, frente a 4.8 mN$\cdot$m del modelo con rozamiento seco. Como el mando trabaja a baja velocidad, se conservó el modelo propio. La relación $J_{eje}/N^2$ vale para una inercia constante, y los valores de la reductora todavía no se midieron.
+La idea de incorporar estas entradas se tomó de un modelo de motor de corriente continua de Simulink consultado como comparación (\code{DC_Motor.slx}, del video de Delgado \cite{dcmotor2021}). Ese modelo resuelve la misma ecuación eléctrica, pero reúne todo el rozamiento en un término viscoso, calculado en vacío. Aplicado a este motor, a 20 rad/s daría unos 0.27 mN$\cdot$m, frente a 4.8 mN$\cdot$m del modelo con rozamiento seco. Como el mando trabaja a baja velocidad, se conservó el modelo propio. La relación $J_{eje}/N^2$ vale para una inercia constante, y los valores de la reductora todavía no se midieron.
 
 \begin{figure}[H]
 \centering
